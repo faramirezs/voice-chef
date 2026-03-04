@@ -23,14 +23,13 @@ In case we want to have only data or only schema we could use these flags:
 ```bash
 docker compose down -v   # destroys the volume
 docker compose up        # fresh start, runs 00_ then 01_ for db sql scripts
-
 ```
-
 
 To "ping" postgres
 ```bash
-docker run --rm postgres:17.8 pg_isready -h localhost -p 5432 -U recipe_user
+docker exec -it voice-chef-db-1 pg_isready -h localhost -p 5432 -U recipe_user
 ```
+Or inside the container
 
 ```bash
 psql -U recipe_user -d recipe_db -c "SELECT * FROM recipes WHERE name ILIKE '%curry%';"
