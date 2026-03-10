@@ -1,4 +1,8 @@
 services:
+  fastapi:
+    container_name: fastapi
+    image: fastapi
+    build: 
   db:
     image: postgres:17.8
     volumes:
@@ -18,3 +22,6 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  voice_chef_net:
