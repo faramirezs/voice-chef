@@ -1,8 +1,4 @@
 services:
-  fastapi:
-    container_name: fastapi
-    image: fastapi
-    build: 
   db:
     image: postgres:17.8
     volumes:
@@ -12,13 +8,28 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
+    networks: 
+      - voice_chef_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  fastapi:
+    container_name: fastapi
+    # image: fastapi
+    build: app/
+    depends_on:
+      - db
+    networks: 
+      - voice_chef_net
+    ports:
+      - "8000:80"
+    restart: always
+  
 
 volumes:
   postgres_data:
