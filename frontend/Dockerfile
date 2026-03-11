@@ -11,7 +11,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev", "--", "--host"]
 
 # Inside Docker, localhost means "only inside this container."
-# --host tells Vite to listen on all network interfaces so your
+# --host tells Vite to listen on all network interfaces so the
 # browser (outside the container) can reach it.
 
 # ── Stage 3: build production assets ───────────────────────

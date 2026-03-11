@@ -1,4 +1,36 @@
-# Modern React Stack (Minimal & Production Ready)
+# Frontend
+
+## Docker Compose Workflows
+
+### Development
+By default, Docker Compose auto-merges `docker-compose.yml` and `docker-compose.override.yml`. This setup uses the `dev` stage of the Dockerfile (Vite with Hot Module Replacement).
+
+```bash
+docker compose up --build
+```
+
+### Production (Local Test)
+To test the production build (Nginx serving static files) locally, run the base file **without** the override:
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+---
+
+## Makefile Shortcuts
+For more granular control of the frontend container without Compose, use the [frontend/Makefile](../frontend/Makefile):
+
+| Command | Purpose |
+| :--- | :--- |
+| `make build-dev` | Build the dev image |
+| `make run-dev` | Run dev server on port 5173 |
+| `make build-prod` | Build the Nginx production image |
+| `make run-prod` | Run prod Nginx on port 8080 |
+
+---
+
+## How we created the Vite boilerplate?
 
 Install:
 
@@ -20,9 +52,9 @@ Typical modern stack:
 
 ---
 
-# 1️⃣ Routing
+# Routing
 
-### 📦 React Router (`react-router-dom`)
+### React Router (`react-router-dom`)
 
 **Purpose:** Navigation between pages.
 
@@ -63,9 +95,9 @@ What it provides:
 
 ---
 
-# 2️⃣ Server State (API Data)
+# Server State (API Data)
 
-### 📦 TanStack Query (`@tanstack/react-query`)
+### TanStack Query (`@tanstack/react-query`)
 
 **Purpose:** Manage data coming from APIs.
 
@@ -107,13 +139,11 @@ Features:
 * automatic retries
 * pagination
 
-Most **modern React apps use this**.
-
 ---
 
-# 3️⃣ API Client
+# API Client
 
-### 📦 Axios
+### Axios
 
 **Purpose:** Send HTTP requests to your backend.
 
@@ -141,13 +171,11 @@ Why Axios instead of `fetch`:
 | baseURL           | ✅      | ❌      |
 | error handling    | easier | manual |
 
-Most backend teams prefer Axios.
-
 ---
 
-# 4️⃣ Build Tool
+# Build Tool
 
-### 📦 Vite
+### Vite
 
 Purpose:
 
@@ -171,9 +199,9 @@ npm run dev
 
 ---
 
-# 5️⃣ (Optional but very common)
+# (Optional but very common)
 
-### 📦 Tailwind CSS
+### Tailwind CSS
 
 Purpose: styling
 
@@ -234,73 +262,10 @@ For a clean modern setup:
 ```bash
 npm install react-router-dom @tanstack/react-query axios
 ```
-
 ---
 
-# What Big React Apps Add Later
 
-Large apps also include:
-
-| Tool            | Purpose           |
-| --------------- | ----------------- |
-| Zustand         | global state      |
-| React Hook Form | forms             |
-| Zod             | schema validation |
-| Framer Motion   | animations        |
-
----
-
-✅ **The 3 packages you need right now**
-
-```
-react-router-dom
-@tanstack/react-query
-axios
-```
-
----
-
-# 1️⃣ Tailwind installation
-
-Installing **Tailwind CSS** as a dev dependency is correct:
-
-```bash
-npm install -D @tailwindcss/vite
-```
-
-
----
-
-# 2️⃣ shadcn/ui is NOT installed like a normal package
-
-**shadcn/ui** is **not a dependency** you install with npm.
-
-This will fail or do nothing useful:
-
-```bash
-npm install @shadcn/ui ❌
-```
-
-Instead you use the **CLI tool**:
-
-```bash
-npx shadcn@latest init
-```
-
-This tool:
-
-* configures Tailwind
-* installs required dependencies
-* creates a `components/ui` folder
-* copies UI components into your project
-
-Important: **shadcn does not ship a component library**.
-It **copies the code into your project** so you own it.
-
-
----
-
-### 3️⃣ Install components
+### Install components
 
 Example:
 
@@ -310,10 +275,9 @@ npx shadcn@latest add button
 
 This generates:
 
-```
+```bash
 src/components/ui/button.jsx
 ```
-
 
 Suggested basic components:
 
@@ -324,4 +288,11 @@ npx shadcn@latest add input
 npx shadcn@latest add dialog
 ```
 
+## In Vite + React:
+
+index.html just has a <div id="root"></div> and a <script src="/src/main.tsx">.
+
+src/main.tsx renders your React tree into #root, usually <App />.
+
+Whatever <App /> returns is what you see in the browser.
 
