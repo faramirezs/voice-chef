@@ -21,7 +21,7 @@ services:
   fastapi:
     container_name: fastapi
     # image: fastapi
-    build: app/
+    build: fastapi/
     depends_on:
       - db
     networks: 
