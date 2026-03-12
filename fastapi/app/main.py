@@ -12,4 +12,4 @@ def list_tables():
 
 @app.get("/")
 def tmp():
-    return {"Hello world"}
+    return {"Hello voice-chef"}
