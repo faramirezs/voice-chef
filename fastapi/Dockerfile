@@ -16,8 +16,8 @@ COPY ./app /code/app
 # ---------
     # asdasfafa    
 # NOTE DL: Launching through uvicorn is the advised method
-# CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "80"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "80"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
 
 
 # If running behind a proxy like Nginx or Traefik add --proxy-headers
