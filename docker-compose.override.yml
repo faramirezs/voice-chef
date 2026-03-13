@@ -1,11 +1,12 @@
 services:
   frontend:
     build:
-      context: ./frontend
+      target: dev              # ← stops at dev stage
+    volumes:
+      - ./frontend:/app        # hot reload
+      - /app/node_modules
     ports:
-      - "8080:80"
-    networks:
-      - app-network
+      - "5173:5173"
   # api:
   #   build:
   #     context: ./api
@@ -20,44 +21,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    # ports:
-    #   - "5432:5432"
-    networks: 
-      - voice_chef_net
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
-
-  fastapi:
-    container_name: fastapi
-    # image: fastapi
-    build: fastapi/
-    depends_on:
-      - db
-    networks: 
-      - voice_chef_net
-    ports:
-      - "8000:80"
-    restart: always
-  
-
-  fastapi:
-    container_name: fastapi
-    # image: fastapi
-    build: fastapi/
-    depends_on:
-      - db
-    networks: 
-      - voice_chef_net
-    ports:
-      - "8000:80"
-    restart: always
-  
+    networks:
+      app-network:
 
 volumes:
   postgres_data:
 
 networks:
-  voice_chef_net:
+  app-network:
