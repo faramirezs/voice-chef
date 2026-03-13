@@ -21,7 +21,7 @@ function App() {
         <h2 className="text-xl font-semibold">Card</h2>
         <Card className="max-w-sm">
           <CardHeader>
-            <CardTitle>Example Card</CardTitle>
+            <CardTitle>Example Card changing</CardTitle>
           </CardHeader>
           <CardContent>
             This is a card content area.

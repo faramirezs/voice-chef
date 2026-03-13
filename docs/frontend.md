@@ -1,23 +1,5 @@
 # Frontend
 
-## Docker Compose Workflows
-
-### Development
-By default, Docker Compose auto-merges `docker-compose.yml` and `docker-compose.override.yml`. This setup uses the `dev` stage of the Dockerfile (Vite with Hot Module Replacement).
-
-```bash
-docker compose up --build
-```
-
-### Production (Local Test)
-To test the production build (Nginx serving static files) locally, run the base file **without** the override:
-
-```bash
-docker compose -f docker-compose.yml up --build
-```
-
----
-
 ## Makefile Shortcuts
 For more granular control of the frontend container without Compose, use the [frontend/Makefile](../frontend/Makefile):
 
@@ -28,6 +10,19 @@ For more granular control of the frontend container without Compose, use the [fr
 | `make build-prod` | Build the Nginx production image |
 | `make run-prod` | Run prod Nginx on port 8080 |
 
+---
+
+### Comparing Docker images for frontend:
+
+```bash
+docker images recipes-frontend
+#Returns:
+REPOSITORY         TAG       IMAGE ID       CREATED             SIZE
+recipes-frontend   prod      4000e83b05bc   4 minutes ago       92.1MB
+recipes-frontend   builder   1ca82a22683c   10 minutes ago      1.08GB
+recipes-frontend   dev       268109152cf7   About an hour ago   1.07GB
+recipes-frontend   deps      7c177777c34c   3 hours ago         303MB
+```
 ---
 
 ## How we created the Vite boilerplate?
