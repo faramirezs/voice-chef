@@ -1,11 +1,11 @@
 services:
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend/
     ports:
       - "8080:80"
     networks:
-      - app-network
+      - voice_chef_net
   # api:
   #   build:
   #     context: ./api
@@ -20,8 +20,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    # ports:
-    #   - "5432:5432"
+    ports:
+       - "5432:5432"
     networks: 
       - voice_chef_net
     healthcheck:
@@ -40,21 +40,7 @@ services:
       - voice_chef_net
     ports:
       - "8000:80"
-    restart: always
-  
-
-  fastapi:
-    container_name: fastapi
-    # image: fastapi
-    build: fastapi/
-    depends_on:
-      - db
-    networks: 
-      - voice_chef_net
-    ports:
-      - "8000:80"
-    restart: always
-  
+    restart: always  
 
 volumes:
   postgres_data:
