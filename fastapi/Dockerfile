@@ -13,8 +13,11 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ./app /code/app
 
-CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "80"]
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+# ---------
+    # asdasfafa    
+# NOTE DL: Launching through uvicorn is the advised method
+# CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
 
 
 # If running behind a proxy like Nginx or Traefik add --proxy-headers
