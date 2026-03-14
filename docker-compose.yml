@@ -5,7 +5,9 @@ services:
     ports:
       - "8080:80"
     networks:
-      - voice_chef_net
+      - app-network
+    depends_on:
+      - fastapi
   # api:
   #   build:
   #     context: ./api
@@ -23,7 +25,7 @@ services:
     ports:
        - "5432:5432"
     networks: 
-      - voice_chef_net
+      - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -37,7 +39,7 @@ services:
     depends_on:
       - db
     networks: 
-      - voice_chef_net
+      - app-network
     ports:
       - "8000:80"
     restart: always  
@@ -46,4 +48,4 @@ volumes:
   postgres_data:
 
 networks:
-  voice_chef_net:
+  app-network:

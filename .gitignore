@@ -1,1 +1,17 @@
+# VS Code Settings
+.vscode/
+**/.vscode/
+# Note: If we agreed on shared team settings, we can comment out .vscode/
+
+# passwords, API keys
 .env
+
+# Python virtual environment (search in any folder)
+**/.venv/
+**/venv/
+**/ENV/
+
+# Python cash
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
