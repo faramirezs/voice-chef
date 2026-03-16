@@ -12,7 +12,7 @@ function App() {
         <h2 className="text-xl font-semibold">Buttons</h2>
         <div className="flex gap-2">
           <Button>Default</Button>
-          <Button variant="outline">Outline b</Button>
+          <Button variant="outline">Outline</Button>
           <Button variant="destructive">Destructive</Button>
         </div>
       </section>

@@ -1,9 +1,11 @@
 ## To dump database
 
 ```bash
+ # DATABASE_URL should contain your full Postgres/Neon connection string, e.g.:
+ # export DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require&channel_binding=require"
 docker run --rm postgres:17.8 pg_dump \
   --no-owner --no-acl --inserts \
-  "postgresql://neondb_owner:npg_sfGtpBNm13gy@ep-quiet-rice-alh540v4-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require" \
+  "$DATABASE_URL" \
   > db/init/01_dump.sql
 ```
 
