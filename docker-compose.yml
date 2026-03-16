@@ -6,6 +6,8 @@ services:
       - "8080:80"
     networks:
       - app-network
+    args:
+        VITE_API_URL: ${VITE_API_URL}
   # api:
   #   build:
   #     context: ./api
