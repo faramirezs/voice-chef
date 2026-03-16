@@ -4,33 +4,20 @@
 open -a Docker
 ```
 
-## To dump database
+## Docker Compose Workflows
+
+### Development
+By default, Docker Compose auto-merges `docker-compose.yml` and `docker-compose.override.yml`. This setup uses the `dev` stage of the Dockerfile (Vite with Hot Module Replacement).
 
 ```bash
-docker run --rm postgres:17.8 pg_dump \
-  --no-owner --no-acl --inserts \
-  "postgresql://neondb_owner:npg_sfGtpBNm13gy@ep-quiet-rice-alh540v4-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require" \
-  > db/init/01_dump.sql
+docker compose up --build
 ```
 
-In case we want to have only data or only schema we could use these flags:
+### Production (Local Test)
+To test the production build (Nginx serving static files) locally, run the base file **without** the override:
 
 ```bash
---schema-only	#Only CREATE TABLE, indexes...	Sharing structure without sensitive data
---data-only	#Only INSERT/COPY rows	When schema already exists on target
+docker compose -f docker-compose.yml up --build
 ```
 
-```bash
-docker compose down -v   # destroys the volume
-docker compose up        # fresh start, runs 00_ then 01_ for db sql scripts
-```
-
-To "ping" postgres
-```bash
-docker exec -it voice-chef-db-1 pg_isready -h localhost -p 5432 -U recipe_user
-```
-Or inside the container
-
-```bash
-psql -U recipe_user -d recipe_db -c "SELECT * FROM recipes WHERE name ILIKE '%curry%';"
-```
+---

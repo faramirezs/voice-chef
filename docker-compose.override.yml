@@ -1,13 +1,12 @@
 services:
   frontend:
     build:
-      context: ./frontend
+      target: dev              # ← stops at dev stage
+    volumes:
+      - ./frontend:/app        # hot reload
+      - /app/node_modules
     ports:
-      - "8080:80"
-    networks:
-      - app-network
-    args:
-        VITE_API_URL: ${VITE_API_URL}
+      - "5173:5173"
   # api:
   #   build:
   #     context: ./api
