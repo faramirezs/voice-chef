@@ -109,3 +109,30 @@ Should see something like:
 ```bash
 docker compose exec -T db psql -U recipe_user -d recipe_db < db/scripts/smoke_test_migration_003.sql
 ```
+
+## Reconciliation and canonical backfill (004)
+
+Use this flow on legacy databases restored from dump files where canonical 002 fields may be missing.
+
+1. Apply reconciliation migration:
+
+```bash
+DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 004
+```
+
+2. Run canonical backfill (quantity_grams, price_per_gram, recipe totals):
+
+```bash
+docker compose exec -T db psql -U recipe_user -d recipe_db < db/scripts/backfill_canonical_fields.sql
+```
+
+3. Run full audit report:
+
+```bash
+docker compose exec -T db psql -U recipe_user -d recipe_db < db/scripts/audit_cost_schema_state.sql
+```
+
+Expected outcomes after backfill:
+- Canonical schema objects from 002 + 003 show as present (except tables absent in legacy source, such as shopping_list_items).
+- price_per_gram null rate decreases significantly.
+- canonical coverage (ingredient_id + quantity_grams + price_per_gram) should be much higher than exact unit match.
