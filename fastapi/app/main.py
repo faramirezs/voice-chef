@@ -8,7 +8,7 @@ app = FastAPI()
 
 @app.get("/")
 def hello():
-    return {"Hello voice-chef"}
+    return {"message": "Hello voice-chef"}
 
 # Create a new user (POST)
 @app.post("/users", response_model=schemas.UserOut)
@@ -17,7 +17,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(models.User.username == user.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
-
+    # Check if email already exists
+    existing_email = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
     new_user = models.User(username=user.username, email=user.email, firstname=user.firstname, lastname=user.lastname)
     db.add(new_user)
     db.commit()

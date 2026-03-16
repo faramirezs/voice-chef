@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 COPY ./app /code/app
 
 # ---------
-    # asdasfafa    
 # NOTE DL: Launching through uvicorn is the advised method
 # CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "80"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
