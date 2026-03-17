@@ -86,16 +86,8 @@ UNION ALL SELECT 'ingredients', COUNT(*) FROM public.ingredients;
 \echo ''
 \echo '4) Price coverage metrics (legacy and canonical)'
 WITH latest_price AS (
-    SELECT DISTINCT ON (ingredient_id, COALESCE(unit, ''))
-        ingredient_id,
-        unit,
-        price_per_unit,
-        price_per_gram,
-        currency,
-        updated_at,
-        created_at
-    FROM public.ingredient_prices
-    ORDER BY ingredient_id, COALESCE(unit, ''), updated_at DESC NULLS LAST, created_at DESC NULLS LAST
+    SELECT *
+    FROM public.ingredient_prices_latest
 ),
 exact_match AS (
     SELECT COUNT(*) AS cnt
