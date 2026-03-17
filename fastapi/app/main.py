@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from app.database import get_db, engine, create_db_and_tables
-from app import models2 as models
+from app import models
 from contextlib import asynccontextmanager
 from sqlmodel import Session, select
 from sqlalchemy import inspect
