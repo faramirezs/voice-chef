@@ -8,8 +8,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.base import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
-from sqlalchemy.orm import mapped_column
-
 import uuid
 from pydantic import BaseModel
 
