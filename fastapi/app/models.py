@@ -4,7 +4,6 @@ from sqlmodel import Field, SQLModel
 from pydantic import BaseModel
 
 from typing import Optional
-from decimal import Decimal
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
