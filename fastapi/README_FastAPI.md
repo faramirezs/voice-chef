@@ -58,4 +58,4 @@ SQLAlchemy: Python SQL toolkit and Object Relational Mapper
 Povides the data mapper pattern, where classes can be mapped to the database in open ended, multiple ways - allowing the object model and database schema to develop in a cleanly decoupled way from the beginning.
 
 # sqlacodegen_v2 = scan database to create the SQLAlchemy model
-docker compose exec fastapi sqlacodegen_v2 postgresql+psycopg://recipe_user:recipe_pass123@db:5432/recipe_db --generator sqlmodels > models.py
+docker compose exec fastapi sqlacodegen_v2 "$DATABASE_URL" --generator sqlmodels > models.py
