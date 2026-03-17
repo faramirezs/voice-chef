@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# it is generated content and shouldn’t be committed
+/.vite 

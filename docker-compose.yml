@@ -6,15 +6,11 @@ services:
       - "8080:80"
     networks:
       - app-network
-    # args:
-    #     VITE_API_URL: ${VITE_API_URL}
+    environment:
+        VITE_API_URL: ${VITE_API_URL}
     depends_on:
       - fastapi
-  # api:
-  #   build:
-  #     context: ./api
-  #   networks:
-  #     - app-network
+
   db:
     image: postgres:17.8
     volumes:
@@ -38,17 +34,10 @@ services:
     container_name: fastapi
     # image: fastapi
     build: fastapi/
+    # depends_on:
+    #   - db
     depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    volumes:
-      - ./db/alembic:/code/db/alembic:ro
-      - ./alembic.ini:/code/alembic.ini:ro
-    command: >
-      sh -c "alembic -c /code/alembic.ini upgrade head &&
-      uvicorn app.main:app --host 0.0.0.0 --port 80 --reload"
+      - db
     networks:
       - app-network
     ports:

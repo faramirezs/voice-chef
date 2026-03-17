@@ -17,7 +17,7 @@ CMD ["npm", "run", "dev", "--", "--host"]
 # ── Stage 3: build production assets ───────────────────────
 FROM deps AS builder
 COPY . .
-ARG VITE_API_URL
+# ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
