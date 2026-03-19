@@ -43,9 +43,9 @@ services:
       - app-network
     ports:
       - "80"
-    restart: always
-environment:
+    environment:
       DATABASE_URL: ${DATABASE_URL}
+    restart: always
 
 volumes:
   postgres_data:
