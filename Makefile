@@ -44,7 +44,6 @@ ps:
 
 clean:
 	$(COMPOSE) down --rmi all
-	docker volume prune -f
 
 re: clean all
 
