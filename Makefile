@@ -7,7 +7,13 @@ ENV = .env
 all: up
 
 $(ENV): .env.example
-	cp .env.example $(ENV)
+	@if [ -e "$(ENV)" ]; then \
+		echo "Error: $(ENV) already exists; refusing to overwrite existing environment configuration."; \
+		echo "If you want to regenerate it from .env.example, delete $(ENV) first."; \
+		exit 1; \
+	else \
+		cp .env.example "$(ENV)"; \
+	fi
 
 build: $(ENV)
 	$(COMPOSE) build
