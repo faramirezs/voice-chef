@@ -1,5 +1,67 @@
 # React + TypeScript + Vite
 
+## Getting Started
+
+To run the project in development mode, execute this single command from the project root:
+
+```bash
+docker compose up --build
+```
+
+The application will then be available at [http://localhost:5173](http://localhost:5173).
+
+For local development without Docker, you can install dependencies and run the dev server directly:
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## Makefile Shortcuts
+For more granular control of the frontend container without Compose, use the [frontend/Makefile](../frontend/Makefile):
+
+| Command | Purpose |
+| :--- | :--- |
+| `make build-dev` | Build the dev image |
+| `make run-dev` | Run dev server on port 5173 |
+| `make build-prod` | Build the Nginx production image |
+| `make run-prod` | Run prod Nginx on port 8080 |
+
+---
+
+## Working with shadcn/ui
+
+This section is a "how-to" guide specifically for the `shadcn/ui` library.
+
+`shadcn/ui` works differently from most UI libraries. Instead of installing a single package from `npm` and importing components from it, you use a command-line tool (`npx shadcn-ui@latest add ...`) to copy the source code of individual components (like `button`, `card`, `dialog`) directly into your project's src/components folder.
+
+Example:
+
+```bash
+npx shadcn@latest add button
+```
+
+This generates:
+
+```bash
+src/components/ui/button.jsx
+```
+
+Suggested basic components:
+
+```bash
+npx shadcn@latest add button
+npx shadcn@latest add card
+npx shadcn@latest add input
+npx shadcn@latest add dialog
+```
+
+---
+
+## Advanced Configuration
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
@@ -7,11 +69,11 @@ Currently, two official plugins are available:
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## React Compiler
+### React Compiler
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+### Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
@@ -71,3 +133,21 @@ export default defineConfig([
   },
 ])
 ```
+
+---
+
+## Docker Image Reference
+
+```bash
+docker images recipes-frontend
+#Returns:
+REPOSITORY         TAG       IMAGE ID       CREATED             SIZE
+recipes-frontend   prod      4000e83b05bc   4 minutes ago       92.1MB
+recipes-frontend   builder   1ca82a22683c   10 minutes ago      1.08GB
+recipes-frontend   dev       268109152cf7   About an hour ago   1.07GB
+recipes-frontend   deps      7c177777c34c   3 hours ago         303MB
+```
+
+---
+
+

@@ -1,98 +1,56 @@
 # Frontend
 
-## Makefile Shortcuts
-For more granular control of the frontend container without Compose, use the [frontend/Makefile](../frontend/Makefile):
+This document describes the architecture and technology stack of the frontend application.
 
-| Command | Purpose |
-| :--- | :--- |
-| `make build-dev` | Build the dev image |
-| `make run-dev` | Run dev server on port 5173 |
-| `make build-prod` | Build the Nginx production image |
-| `make run-prod` | Run prod Nginx on port 8080 |
+## Getting Started
+
+To run the project in development mode, execute this single command:
+
+```bash
+docker compose up --build
+```
+
+The application will then be available at [http://localhost:5173](http://localhost:5173).
 
 ---
 
-### Comparing Docker images for frontend:
+## 🛠️ Technology Stack
 
-```bash
-docker images recipes-frontend
-#Returns:
-REPOSITORY         TAG       IMAGE ID       CREATED             SIZE
-recipes-frontend   prod      4000e83b05bc   4 minutes ago       92.1MB
-recipes-frontend   builder   1ca82a22683c   10 minutes ago      1.08GB
-recipes-frontend   dev       268109152cf7   About an hour ago   1.07GB
-recipes-frontend   deps      7c177777c34c   3 hours ago         303MB
-```
----
-
-## How we created the Vite boilerplate?
-
-Install:
-
-```bash
-npm install react-router-dom @tanstack/react-query axios
-```
-
-These three cover **routing, data fetching, and API communication**.
-
-Typical modern stack:
+The core technologies used in this project are:
 
 | Category     | Package               | Purpose              |
 | ------------ | --------------------- | -------------------- |
-| Framework    | React                 | UI components        |
-| Routing      | react-router-dom      | Page navigation      |
-| Server state | @tanstack/react-query | API data management  |
-| HTTP client  | axios                 | API requests         |
-| Build tool   | Vite                  | Dev server + bundler |
+| **Framework** | **React**            | UI components |
+| **Routing** | **React Router** (react-router-dom) | Page navigation |
+| **Server state** | **TanStack Query** (@tanstack/react-query) | API data management |
+| **HTTP Client** | **Axios** | Sending HTTP requests to the backend |
+| **Build Tool**| **Vite** | Fast dev server and project bundling |
+| **UI Components** | **shadcn/ui** | Pre-built, styled, and accessible components |
+| **Styling** | **Tailwind CSS** | A utility-first CSS framework for styling |
 
 ---
 
-# Routing
+## 🏛️ Architecture Overview
 
-### React Router (`react-router-dom`)
+### Routing (React Router)
 
-**Purpose:** Navigation between pages.
+**Purpose:** Navigation between pages in a Single Page Application (SPA).
 
-Without it you cannot do:
+It allows creating routes like `/home`, `/recipes`, and `/recipes/123`.
 
-```
-/home
-/recipes
-/recipes/123
-/profile
-```
-
-Install:
-
-```bash
-npm install react-router-dom
-```
-
-Example:
-
+**Example:**
 ```javascript
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 
 <BrowserRouter>
-  <Routes>
-    <Route path="/" element={<Home />} />
-    <Route path="/recipes" element={<Recipes />} />
-  </Routes>
+	<Routes>
+		<Route path="/" element={<Home />} />
+		<Route path="/recipes" element={<Recipes />} />
+	</Routes>
 </BrowserRouter>
 ```
 
-What it provides:
-
-* SPA navigation
-* dynamic routes (`/recipe/:id`)
-* protected routes
-* nested layouts
-
----
-
-# Server State (API Data)
-
-### TanStack Query (`@tanstack/react-query`)
+### Server State Management (TanStack Query)
 
 **Purpose:** Manage data coming from APIs.
 
@@ -101,8 +59,8 @@ Without it you would write a lot of messy code like:
 ```javascript
 useEffect(() => {
  fetch("/api/recipes")
-  .then(res => res.json())
-  .then(setRecipes)
+	.then(res => res.json())
+	.then(setRecipes)
 }, [])
 ```
 
@@ -115,45 +73,31 @@ Problems with this approach:
 
 React Query solves all that.
 
-Example:
-
+**Example:**
 ```javascript
 import { useQuery } from "@tanstack/react-query"
 
 const { data, isLoading } = useQuery({
-  queryKey: ["recipes"],
-  queryFn: fetchRecipes
+	queryKey: ["recipes"],
+	queryFn: fetchRecipes
 })
 ```
 
-Features:
+### API Client (Axios)
 
-* caching
-* background refetch
-* loading & error states
-* automatic retries
-* pagination
+**Purpose:** Send HTTP requests to your backend. We use Axios for its convenience compared to the native `fetch`.
 
----
-
-# API Client
-
-### Axios
-
-**Purpose:** Send HTTP requests to your backend.
-
-Example backend call:
-
+**Example:**
 ```javascript
 import axios from "axios"
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api"
+	baseURL: "http://localhost:8000/api" // URL of our FastAPI backend
 })
 
 export const fetchRecipes = async () => {
-  const res = await api.get("/recipes")
-  return res.data
+	const res = await api.get("/recipes")
+	return res.data
 }
 ```
 
@@ -168,9 +112,7 @@ Why Axios instead of `fetch`:
 
 ---
 
-# Build Tool
-
-### Vite
+### Build Tool (Vite)
 
 Purpose:
 
@@ -186,28 +128,16 @@ Features:
 | HMR             | instant updates |
 | smaller builds  | faster site     |
 
-Start dev server:
+### Tailwind CSS (Optional but very common)
 
-```bash
-npm run dev
-```
+**Purpose:** styling
 
----
-
-# (Optional but very common)
-
-### Tailwind CSS
-
-Purpose: styling
-
-Example:
-
+**Example:**
 ```html
 <button className="bg-blue-500 text-white px-4 py-2 rounded">
-  Save
+	Save
 </button>
 ```
-
 ---
 
 # Typical Folder Structure
@@ -216,78 +146,42 @@ Modern React apps usually look like this:
 
 ```
 src
- ├── api
+ ├── api								# Axios setup and fetch functions
  │    └── axios.js
- ├── components
- ├── pages
+ ├── components					# UI components (buttons, cards)
+ ├── pages							# Page components (Home, Recipes)
  │    ├── Home.jsx
  │    └── Recipes.jsx
- ├── hooks
- ├── routes
+ ├── hooks							# Custom hooks
+ ├── routes							# Routing configuration
  │    └── router.jsx
- ├── App.jsx
- └── main.jsx
+ ├── App.jsx						# Main application component
+ └── main.jsx						# Entry point where React is mounted to the DOM
 ```
 
 ---
 
-# Example Flow (Real App)
+### Example Flow (Real App)
 
-User opens:
+When a user opens the `/recipes` page:
 
-```
-/recipes
-```
-
-Flow:
-
-1️⃣ **React Router** loads the page
-2️⃣ **React Query** asks for recipes
-3️⃣ **Axios** calls the backend API
-4️⃣ Backend returns JSON
-5️⃣ React Query caches the result
-6️⃣ UI renders instantly
+1.  **React Router** loads the page
+2.  **React Query (TanStack)** initiates a request to fetch the recipes
+3.  **Axios** sends a GET request to the backend
+4.  The backend returns the data in JSON format
+5.  React Query (TanStack) caches the result and provides it to the component
+6.  The UI renders instantly
 
 ---
 
-# Full Install Command
+## Appendix: Boilerplate Creation Notes
 
-For a clean modern setup:
+This section documents the initial command used to add core dependencies after setting up the base Vite project.
+
+**Install Command:**
 
 ```bash
 npm install react-router-dom @tanstack/react-query axios
 ```
+
 ---
-
-
-### Install components
-
-Example:
-
-```bash
-npx shadcn@latest add button
-```
-
-This generates:
-
-```bash
-src/components/ui/button.jsx
-```
-
-Suggested basic components:
-
-```bash
-npx shadcn@latest add button
-npx shadcn@latest add card
-npx shadcn@latest add input
-npx shadcn@latest add dialog
-```
-
-## In Vite + React:
-
-index.html just has a <div id="root"></div> and a <script src="/src/main.tsx">.
-
-src/main.tsx renders your React tree into #root, usually <App />.
-
-Whatever <App /> returns is what you see in the browser.
-
