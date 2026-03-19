@@ -218,6 +218,48 @@ docker compose exec -T db psql -U recipe_user -d recipe_db -c "SELECT id, name, 
 
 ```bash
 docker compose exec -T db psql -U recipe_user -d recipe_db -c "SELECT ingredient_id, COUNT(*) AS price_rows FROM ingredient_prices WHERE ingredient_id IN ('5adfcc26-f8b0-5f48-8191-b118ea08f87d','957a285e-889a-5f8e-9fcc-b73bfd7304ea','c4174230-c859-5c6e-8d91-0d1dd2081aef') GROUP BY ingredient_id ORDER BY ingredient_id;"
+
+## User-confirmed cleanup migration (011)
+
+Alembic `011` applies the approved cleanup scope:
+
+- drops table: `public.ingredient_merge_audit`
+- drops sequence: `public.ingredient_merge_audit_id_seq`
+- drops columns from `public.recipes`:
+	- `branch_ids`
+	- `preference_price`
+	- `ingredient_list_product_pass`
+	- `preference_allergens`
+	- `layout_id`
+	- `row_height`
+	- `rezeptblatt_image_width`
+	- `vat_rate`
+	- `sales_price_points`
+	- `bio_label_eu`
+
+Apply migration:
+
+```bash
+DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 011
+```
+
+Rollback this cleanup only:
+
+```bash
+DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic downgrade 010
+```
+
+Notes:
+
+- Migration `011` is idempotent for drops via `IF EXISTS`.
+- Downgrade restores the dropped columns and recreates `ingredient_merge_audit` with its sequence and primary key.
+- This migration intentionally does not modify FastAPI runtime/schema alignment.
+
+## Runtime/schema drift issue tracking
+
+Per implementation decision, runtime/schema drift is tracked as a dedicated GitHub issue draft (not implemented in this migration scope):
+
+- `docs/issues/fastapi-runtime-schema-drift-issue.md`
 ```
 
 Reusable duplicate audit query (case-insensitive exact-name collisions):
