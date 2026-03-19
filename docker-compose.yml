@@ -2,12 +2,13 @@ services:
   frontend:
     build:
       context: ./frontend/
+      args:
+        # This maps .env variable to the Docker ARG
+        - VITE_API_URL=${VITE_API_URL}
     ports:
       - "8080:80"
     networks:
       - app-network
-    environment:
-        VITE_API_URL: ${VITE_API_URL}
     depends_on:
       - fastapi
 

@@ -147,3 +147,19 @@ recipes-frontend   builder   1ca82a22683c   10 minutes ago      1.08GB
 recipes-frontend   dev       268109152cf7   About an hour ago   1.07GB
 recipes-frontend   deps      7c177777c34c   3 hours ago         303MB
 ```
+
+---
+
+## VITE_API_URL
+
+This variable is the “address” at which your frontend (the user's browser) will look for the backend. The value depends on where your backend is running.
+
+Rule: The value of `VITE_API_URL` should be an address that you can paste into the browser search bar and get a response from the API.
+
+Test VITE_API_URL
+
+You can verify it worked without even opening a browser. Just run this command to peek into your built JS files inside the container:
+
+```bash
+docker exec voice_chef_git-frontend-1 grep -r "fastapi" /usr/share/nginx/html
+```

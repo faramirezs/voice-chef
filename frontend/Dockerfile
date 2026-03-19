@@ -17,8 +17,9 @@ CMD ["npm", "run", "dev", "--", "--host"]
 # ── Stage 3: build production assets ───────────────────────
 FROM deps AS builder
 COPY . .
-# ARG VITE_API_URL
+ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+# Vite finds VITE_API_URL in the environment and bake it into the JavaScript code
 RUN npm run build
 
 # ── Stage 4: production runtime (tiny nginx image) ─────────
