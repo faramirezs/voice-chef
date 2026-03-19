@@ -62,4 +62,30 @@ fclean: clean
 	docker volume prune
 	rm -f .env
 
+
+HELP_TEXT =
+"Available commands:\n"
+	" make build → Build containers"
+	" make up → Start (default)"
+	" make prod → Start in production mode"
+	" make dev → Start in development mode"
+	" make down → Stop and remove containers"
+	" make start → Start existing containers"
+	" make stop → Stop containers"
+	" make logs → Show logs"
+	" make ps → List containers"
+	" make show → Full Docker state"
+	" make clean → Remove containers + images"
+	" make fclean → Full cleanup (volumes + env)\n"
+
+help:
+	@echo ""
+	@printf "%b\n" $(HELP_TEXT)
+
+%:
+	@echo "❌ Unknown command: '$@'"
+	@echo ""
+	@printf "%b\n" $(HELP_TEXT)
+	@EXIT 1
+
 .PHONY: all build up prod dev down re stop start show logs ps clean fclean
