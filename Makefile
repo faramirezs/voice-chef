@@ -59,6 +59,7 @@ re: clean all
 
 fclean: clean
 	$(COMPOSE) down --rmi all -v --remove-orphans
+	docker volume prune
 	rm -f .env
 
 .PHONY: all build up prod dev down re stop start show logs ps clean fclean
