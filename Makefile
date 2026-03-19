@@ -28,13 +28,14 @@ stop:
 	$(COMPOSE) stop
 
 show:
-	@docker compose ps -a
-	@echo "\n"
+	@$(COMPOSE) ps -a
+	@printf '\n'
 	@docker volume ls
-	@echo "\n"
+	@printf '\n'
 	@docker network ls
+	@printf '\n'
 # 	@docker images
-# 	@echo "\n"
+#  	@printf '\n'
 
 logs:
 	$(COMPOSE) logs
