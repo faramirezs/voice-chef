@@ -24,6 +24,9 @@ up: $(ENV)
 prod: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
 
+dev: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build --detach
+
 down:
 	$(COMPOSE) down
 
@@ -58,4 +61,4 @@ fclean: clean
 	$(COMPOSE) down --rmi all -v --remove-orphans
 	rm -f .env
 
-.PHONY: all build up down re stop start show logs ps clean fclean
+.PHONY: all build up prod dev down re stop start show logs ps clean fclean
