@@ -32,12 +32,16 @@ def fetch_recipes(session: Session = Depends(get_db)):
 def create_user(user: models.UserCreate, db: Session = Depends(get_db)):
 
     # Check if username already exists
-    existing = db.query(models.User).filter(models.User.username == user.username).first()
+    existing = db.exec(
+        select(models.User).where(models.User.username == user.username)
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already exists")
     
     # Check if email already exists
-    existing_email = db.query(models.User).filter(models.User.email == user.email).first()
+    existing_email = db.exec(
+        select(models.User).where(models.User.email == user.email)
+    ).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already exists")
     
@@ -53,7 +57,8 @@ def create_user(user: models.UserCreate, db: Session = Depends(get_db)):
 # List all users (GET)
 @app.get("/users", response_model=list[models.UserOut])
 def list_users(db: Session = Depends(get_db)):
-    return db.query(models.User).all()
+    result = db.exec(select(models.User))
+    return result.all()
 
 # List DB tables (GET)
 # NOTE: DL: You cannot fully replace inspect() with SQLModel's own APIs, but this is a simple 
