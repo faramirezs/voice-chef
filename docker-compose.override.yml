@@ -27,7 +27,7 @@ services:
 
   fastapi:
     ports:
-        - "8000:80"
+      - "8000:80"
 
 volumes:
   postgres_data:

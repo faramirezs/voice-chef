@@ -92,7 +92,7 @@ const { data, isLoading } = useQuery({
 import axios from "axios"
 
 const api = axios.create({
-	baseURL: "http://localhost:8000/api" // URL of our FastAPI backend
+	baseURL: "/api" // All requests are sent to a relative /api path
 })
 
 export const fetchRecipes = async () => {
@@ -109,6 +109,18 @@ Why Axios instead of `fetch`:
 | interceptors      | ✅      | ❌      |
 | baseURL           | ✅      | ❌      |
 | error handling    | easier | manual |
+
+---
+
+## Frontend-Backend Communication
+
+To make the frontend build environment-agnostic (build once, deploy anywhere), we use a relative path for all API calls. The application code does not know the actual URL of the backend.
+
+- **Code:** All API requests are sent to a relative path, e.g., `/api/users`.
+- **Development:** The Vite development server is configured to proxy any request from `/api` to the backend container (`http://fastapi:80`). This is handled by `vite.config.ts`.
+- **Production:** The Nginx server is configured to do the same, proxying all `/api` requests to the backend service. This is handled by `nginx.conf`.
+
+This strategy eliminates CORS issues and removes the need to rebuild the frontend for different environments.
 
 ---
 
