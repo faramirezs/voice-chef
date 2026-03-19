@@ -48,7 +48,7 @@ clean:
 re: clean all
 
 fclean: clean
-	$(COMPOSE) down -v --remove-orphans
+	$(COMPOSE) down --rmi all -v --remove-orphans
 	rm -f .env
 
 .PHONY: all build up down re stop start show logs ps clean fclean
