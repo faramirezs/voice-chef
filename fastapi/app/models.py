@@ -11,7 +11,7 @@ from pydantic import BaseModel
 class User(SQLModel, table=True):
     __tablename__ = "users"
 
-    id: int = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, nullable=False)
     email: str = Field(unique=True, nullable=False)
     firstname: str = Field(nullable=False)
@@ -21,7 +21,7 @@ class User(SQLModel, table=True):
 class Hero(SQLModel, table=True):
     __tablename__ = "heroes"
 
-    id: int = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, nullable=False)
     email: str = Field(unique=True, nullable=False)
     firstname: str = Field(nullable=False)
