@@ -1,7 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+ } from "@/components/ui/dialog";
 
 // Note: MP. Test for VITE_API_URL
 import { fetchDbTables } from './api/axios';
@@ -18,7 +25,9 @@ function App() {
     const getTables = async () => {
       setLoading(true);
       const data = await fetchDbTables();
-      setTables(data.tables);
+      if (data && data.tables) {
+        setTables(data.tables);
+      }
       setLoading(false);
     };
 
@@ -62,7 +71,12 @@ function App() {
             <Button>Open dialog Button</Button>
           </DialogTrigger>
           <DialogContent>
-            This is a dialog content.
+            <DialogHeader>
+              <DialogTitle>Are you sure?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
           </DialogContent>
         </Dialog>
       </section>

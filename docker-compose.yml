@@ -35,15 +35,16 @@ services:
     container_name: fastapi
     # image: fastapi
     build: fastapi/
-    # depends_on:
-    #   - db
     depends_on:
       db:
         condition: service_healthy
     networks: 
       - app-network
-    ports:
-      - "80"
+    # ports:
+    #   - "80"
+    # By removing the ports section from the base docker-compose.yml, 
+    # you ensure that only the ports from docker-compose.override.yml 
+    # (- "8000:80") are applied when you run docker compose up
     restart: always
     environment:
       DATABASE_URL: ${DATABASE_URL}
