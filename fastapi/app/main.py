@@ -1,4 +1,3 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from sqlmodel import Session, select
 from sqlalchemy import inspect
@@ -6,14 +5,7 @@ from app.database import get_db, engine, create_db_and_tables
 from app import models
 
 
-@asynccontextmanager
-# Lifespan function to create tables on startup
-async def lifespan(app: FastAPI):
-    create_db_and_tables()
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────

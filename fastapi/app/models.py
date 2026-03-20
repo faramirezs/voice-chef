@@ -3,42 +3,10 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy import text, DateTime, Column
 from sqlmodel import Field, SQLModel
 
 from pydantic import BaseModel
-
-
-class User(SQLModel, table=True):
-    __tablename__ = "users"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(unique=True, nullable=False)
-    email: str = Field(unique=True, nullable=False)
-    firstname: str = Field(nullable=False)
-    lastname: str = Field(nullable=False)
-
-# class Recipe(SQLModel, table=True):
-#     __tablename__ = "recipes"
-
-#     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-#     name: str = Field(nullable=False, max_length=255)
-#     description: Optional[str] = Field(default=None, nullable=True)
-
-class UserCreate(BaseModel):
-    username: str
-    email: str
-    firstname: str
-    lastname: str
-
-class UserOut(BaseModel):
-    id: int
-    username: str
-    email: str
-    firstname: str
-    lastname: str
-
-    class Config:
-        from_attributes = True
 
 
 
@@ -451,12 +419,6 @@ class UserOut(BaseModel):
 
 ## MP: converted table (by LLM)
 
-
-
-
-
-
-
 class Recipe(SQLModel, table=True):
     __tablename__ = "recipes"
 
@@ -468,8 +430,17 @@ class Recipe(SQLModel, table=True):
     status: str = Field(default="draft", max_length=50)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    )
+    updated_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            server_default=text("now()"),
+            onupdate=text("now()"),
+        )
+    )
 
     # Foreign keys
     tenant_id: Optional[UUID] = Field(default=None, foreign_key="tenants.id")
