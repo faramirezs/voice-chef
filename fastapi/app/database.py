@@ -1,8 +1,9 @@
 import os
-from sqlmodel import create_engine, SQLModel
-from sqlalchemy.orm import sessionmaker
+from sqlmodel import create_engine, SQLModel, Session
 
-from app import models
+# -----------------------------------------------------------------------------
+# Constants and Global Instances
+# -----------------------------------------------------------------------------
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
@@ -10,17 +11,31 @@ if not DATABASE_URL:
 
 SQL_ECHO = os.environ.get("SQL_ECHO", "false").lower() in ("1", "true", "yes")
 engine = create_engine(DATABASE_URL, echo=SQL_ECHO)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# NOTE: MP. This is kept for other potential uses but get_db() will 
+# use sqlmodel.Session directly
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# -----------------------------------------------------------------------------
+# Database Session Management
+# -----------------------------------------------------------------------------
+
 
 def create_db_and_tables():
     # Import models so that SQLModel.metadata is populated before creating tables
+    from app import models  # noqa
     SQLModel.metadata.create_all(bind=engine)
 
+# NOTE: MP. Using with statement also ensures the session is automatically 
+# closed, making the `try...finally`` block unnecessary and the code cleaner.
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    with Session(engine) as session:
+        yield session
 
-
+# NOTE: MP. other Phyton synax of the same function
+# def get_db():
+    # db = Session()
+    # try:
+    #     yield db
+    # finally:
+    #     db.close()
