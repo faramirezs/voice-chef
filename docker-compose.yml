@@ -32,10 +32,9 @@ services:
 
   fastapi:
     container_name: fastapi
-    # image: fastapi
-    build: fastapi/
-    # depends_on:
-    #   - db
+    build:
+      context: .
+      dockerfile: fastapi/Dockerfile
     depends_on:
       db:
         condition: service_healthy
@@ -43,9 +42,9 @@ services:
       - app-network
     ports:
       - "80"
-    restart: always
-environment:
+    environment:
       DATABASE_URL: ${DATABASE_URL}
+      SQL_ECHO: ${SQL_ECHO}
 
 volumes:
   postgres_data:
