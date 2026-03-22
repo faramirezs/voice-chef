@@ -46,6 +46,7 @@ services:
     restart: always
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      SQL_ECHO: ${SQL_ECHO}
 
 volumes:
   postgres_data:
