@@ -7,16 +7,16 @@ WORKDIR /code
 #     libpq-dev \
 #     && rm -rf /var/lib/apt/lists/*
 
-COPY fastapi/requirements.txt /code/requirements.txt
+COPY ./requirements.txt /code/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-COPY fastapi/app /code/app
-COPY alembic.ini /code/alembic.ini
-COPY db /code/db
+COPY ./app /code/app
 
-# Run pending migrations before serving API traffic.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 80 --reload"]
+# ---------
+# NOTE DL: Launching through uvicorn is the advised method
+# CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
 
 
 # If running behind a proxy like Nginx or Traefik add --proxy-headers

@@ -17,30 +17,41 @@ $(ENV): .env.example
 		cp .env.example "$(ENV)"; \
 	fi
 
-prod: $(ENV)
-	@echo "Building in prod_mode"
-	$(COMPOSE) -f $(PROD_FILE) up --build --detach
-	@echo "VOICE-CHEF is running in pode_mode"
-
 dev: $(ENV)
 	@echo "Building in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build --detach
 	@echo "VOICE-CHEF is running in dev_mode"
-	
-build: $(ENV)
-	$(COMPOSE) build
 
-up: $(ENV) dev
-	$(COMPOSE) up --build --detach
+prod: $(ENV)
+	@echo "Building in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) up --build --detach
+	@echo "VOICE-CHEF is running in pode_mode"
+	
+# build: $(ENV)
+# 	$(COMPOSE) build
+
+# up: dev
+# 	$(COMPOSE) up --build --detach
+
+# start: $(ENV)
+# 	$(COMPOSE) start
+
+# stop:
+# 	$(COMPOSE) stop
 
 down:
 	$(COMPOSE) down
 
-start: $(ENV)
-	$(COMPOSE) start
+clean:
+	@echo "Stopping the containers and removing them along wiht the images..."
+	$(COMPOSE) down --rmi all
 
-stop:
-	$(COMPOSE) stop
+fclean: clean
+	@echo "Removing the volumes..."
+	$(COMPOSE) down -v --remove-orphans
+	docker volume prune
+
+re: clean dev
 
 show:
 	@printf 'CONTAINERS:\n'
@@ -62,43 +73,24 @@ show:
 logs:
 	$(COMPOSE) logs
 
-ps:
-	$(COMPOSE) ps -a
-
-clean:
-	@echo "Stopping the containers and removing them along wiht the images..."
-	$(COMPOSE) down --rmi all
-
-fclean: clean
-	@echo "Removing the volumes..."
-	$(COMPOSE) down -v --remove-orphans
-	docker volume prune
-
-re: clean dev
-
 # Default target of Makefile is help
 help:
 	@printf "%b\n" $(HELP_TEXT)
 
 %:
-	@echo "Unknown command: '$@'"
+	@echo "Unknown command: '$@'\n"
 	@printf "%b\n" $(HELP_TEXT)
 
 define HELP_TEXT =
 	"Available commands:" \
-	" make build → Build containers" \
-	" make up → Build images and start in detached mode" \
 	" make prod → Build and start in production mode" \
-	" make dev → Build andStart in development mode" \
+	" make dev → Build and start in development mode" \
 	" make down → Stop and remove containers" \
-	" make start → Start existing containers" \
-	" make stop → Stop runninf containers" \
-	" make logs → Show logs" \
-	" make ps → List containers" \
-	" make show → Full Docker state" \
 	" make clean → Remove containers + images" \
 	" make fclean → Full cleanup volumes" \
-	" make re"
+	" make show → Full Docker state" \
+	" make logs → Show logs" \
+	" make re → Clean all then run in dev mode"
 endef
 
 .PHONY: % all help build up prod dev down start stop show logs ps clean fclean re
