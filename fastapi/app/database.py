@@ -12,7 +12,7 @@ if not DATABASE_URL:
 SQL_ECHO = os.environ.get("SQL_ECHO", "false").lower() in ("1", "true", "yes")
 engine = create_engine(DATABASE_URL, echo=SQL_ECHO)
 
-# NOTE: MP. This is kept for other potential uses but get_db() will 
+# NOTE: MP. This is kept for other potential uses but get_db() will
 # use sqlmodel.Session directly
 # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -26,7 +26,7 @@ def create_db_and_tables():
     from app import models  # noqa
     SQLModel.metadata.create_all(bind=engine)
 
-# NOTE: MP. Using with statement also ensures the session is automatically 
+# NOTE: MP. Using with statement also ensures the session is automatically
 # closed, making the `try...finally` block unnecessary and the code cleaner.
 def get_db():
     with Session(engine) as session:
