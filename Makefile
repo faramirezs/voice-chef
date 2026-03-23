@@ -43,7 +43,7 @@ down:
 	$(COMPOSE) down
 
 clean:
-	@echo "Stopping the containers and removing them along wiht the images..."
+	@echo "Stopping the containers and removing them along with the images..."
 	$(COMPOSE) down --rmi all
 
 fclean: clean
