@@ -59,7 +59,7 @@ show:
 	@printf '\n'
 	
 	@printf 'VOLUMES:\n'
-	@$(COMPOSE) volumes
+	@docker volume ls
 	@printf '\n'
 	
 	@printf 'NETWORKS:\n'
