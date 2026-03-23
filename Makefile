@@ -8,9 +8,7 @@ all: help
 
 $(ENV):
 	@if [ ! -f "$(ENV)" ]; then \
-		echo "Error: $(ENV) file not found."; \
-		echo "Please copy-create it manually from .env.example."; \
-		exit 1; \
+		cp .env.example $(ENV); \
 	fi
 
 dev: $(ENV)
