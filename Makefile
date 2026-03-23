@@ -6,15 +6,11 @@ ENV = .env
 
 all: help
 
-$(ENV): .env.example
-
-	@if [ -e "$(ENV)" ]; then \
-		echo 'Error: $(ENV) already exists; refusing to overwrite existing environment configuration.'; \
-		echo "If you want to regenerate it from .env.example, check both files to see if you have any local changes."; \
-		echo "If there are any then copy those changes to .env.example first and delete $(ENV)."; \
+$(ENV):
+	@if [ ! -f "$(ENV)" ]; then \
+		echo "Error: $(ENV) file not found."; \
+		echo "Please copy-create it manually from .env.example."; \
 		exit 1; \
-	else \
-		cp .env.example "$(ENV)"; \
 	fi
 
 dev: $(ENV)
@@ -40,10 +36,11 @@ prod: $(ENV)
 # 	$(COMPOSE) stop
 
 down:
+	@echo "Stopping the containers..."
 	$(COMPOSE) down
 
 clean:
-	@echo "Stopping the containers and removing them along with the images..."
+	@echo "Stopping the containers and removing the images..."
 	$(COMPOSE) down --rmi all
 
 fclean: clean
@@ -59,11 +56,10 @@ show:
 	@printf '\n'
 	
 	@printf 'VOLUMES:\n'
-	@docker volume ls
+	@$(COMPOSE) volumes
 	@printf '\n'
 	
 	@printf 'NETWORKS:\n'
-	@docker network ls
 	@printf '\n'
 
 	@printf 'IMAGES:\n'
