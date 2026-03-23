@@ -93,4 +93,4 @@ define HELP_TEXT =
 	" make re → Clean all then run in dev mode"
 endef
 
-.PHONY: % all help build up prod dev down start stop show logs ps clean fclean re
+.PHONY: all help build up prod dev down start stop show logs ps clean fclean re %
