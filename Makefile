@@ -50,7 +50,7 @@ re: clean dev
 
 show:
 	@printf 'CONTAINERS:\n'
-	@$(COMPOSE) ps -a
+	@$(COMPOSE) ps -a --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"	
 	@printf '\n'
 	
 	@printf 'VOLUMES:\n'
@@ -58,6 +58,7 @@ show:
 	@printf '\n'
 	
 	@printf 'NETWORKS:\n'
+	@docker network ls
 	@printf '\n'
 
 	@printf 'IMAGES:\n'
