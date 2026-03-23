@@ -25,7 +25,7 @@ dev: $(ENV)
 prod: $(ENV)
 	@echo "Building in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
-	@echo "VOICE-CHEF is running in pode_mode"
+	@echo "VOICE-CHEF is running in prod_mode"
 	
 # build: $(ENV)
 # 	$(COMPOSE) build
