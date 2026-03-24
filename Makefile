@@ -6,11 +6,14 @@ ENV = .env
 
 all: help
 
+# Checks if .env exists. If not it copy-creates from .env.example
 $(ENV):
 	@if [ ! -f "$(ENV)" ]; then \
+		echo "Creating $(ENV) from .env.example"; \
 		cp .env.example $(ENV); \
 	fi
 
+# Main targets/commands to build, run and and stop + clean the application
 dev: $(ENV)
 	@echo "Building in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build --detach
@@ -21,48 +24,38 @@ prod: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
 	@echo "VOICE-CHEF is running in prod_mode"
 	
-# build: $(ENV)
-# 	$(COMPOSE) build
-
-# up: dev
-# 	$(COMPOSE) up --build --detach
-
-# start: $(ENV)
-# 	$(COMPOSE) start
-
-# stop:
-# 	$(COMPOSE) stop
-
 down:
-	@echo "Stopping the containers..."
+	@echo "Stopping and removing the containers..."
 	$(COMPOSE) down
-
-clean:
-	@echo "Stopping the containers and removing the images..."
-	$(COMPOSE) down --rmi all
-
-fclean: clean
-	@echo "Removing the volumes..."
-	$(COMPOSE) down -v --remove-orphans
-	docker volume prune
 
 re: clean dev
 
-show:
+# Clean-up targets/commands
+clean:
+	@echo "Stopping the app and removing containers + images..."
+	$(COMPOSE) down --rmi all
+
+fclean:
+	@echo "Stopping the app and removing containers + images + volumes..."
+	$(COMPOSE) down --rmi all -v --remove-orphans
+	docker volume prune
+
+# Targets/commands to show current state, logs and command
+status:
 	@printf 'CONTAINERS:\n'
-	@$(COMPOSE) ps -a --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"	
+	@$(COMPOSE) ps -a --format "table {{.Name}}\t{{.ID}}\t{{.Status}}\t{{.Ports}}"	
 	@printf '\n'
 	
 	@printf 'VOLUMES:\n'
-	@$(COMPOSE) volumes
+	@docker volume ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
 	
 	@printf 'NETWORKS:\n'
-	@docker network ls
+	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
 
 	@printf 'IMAGES:\n'
-	@$(COMPOSE) images
+	@$(COMPOSE) images	
 	@printf '\n'
 
 logs:
@@ -76,16 +69,33 @@ help:
 	@echo "Unknown command: '$@'\n"
 	@printf "%b\n" $(HELP_TEXT)
 
-define HELP_TEXT =
-	"Available commands:" \
-	" make prod → Build and start in production mode" \
-	" make dev → Build and start in development mode" \
-	" make down → Stop and remove containers" \
-	" make clean → Remove containers + images" \
-	" make fclean → Full cleanup volumes" \
-	" make show → Full Docker state" \
-	" make logs → Show logs" \
-	" make re → Clean all then run in dev mode"
+define HELP_TEXT
+	"Available commands:\n" \
+	" make dev:	Build and start in development mode" \
+	" make prod:	Build and start in production mode" \
+	" make down:	Stop and remove containers" \
+	" make re:	Clean all then run in dev mode\n" \
+	" make clean:	Remove containers + images" \
+	" make fclean:	Remove containers + images + volumes\n" \
+	" make status:	Full Docker state" \
+	" make logs:	Show logs" \
+	" make help:	Show available commands\n" \
+	" make build:	Build images from compose file" \
+	" make up:	Calling the command dev" \
+	" make start:	Start the containers" \
+	" make stop:	Stop running containers"
 endef
 
-.PHONY: all help build up prod dev down start stop show logs clean fclean re %
+# Aux targets/commands
+build: $(ENV)
+	$(COMPOSE) build
+
+up: dev
+
+start:
+	$(COMPOSE) start
+
+stop:
+	$(COMPOSE) stop
+
+.PHONY: all dev prod down re clean fclean status logs help % build up start stop
