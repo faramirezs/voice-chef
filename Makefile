@@ -42,20 +42,13 @@ fclean:
 
 # Targets/commands to show current state, logs and command
 status:
-	@printf 'CONTAINERS:\n'
-	@$(COMPOSE) ps -a --format "table {{.Name}}\t{{.ID}}\t{{.Status}}\t{{.Ports}}"	
+	@$(COMPOSE) ps -a --format "table t{{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"	
 	@printf '\n'
 	
-	@printf 'VOLUMES:\n'
 	@docker volume ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
 	
-	@printf 'NETWORKS:\n'
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
-	@printf '\n'
-
-	@printf 'IMAGES:\n'
-	@$(COMPOSE) images	
 	@printf '\n'
 
 logs:
