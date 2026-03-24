@@ -1,28 +1,26 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
+import uuid
 from uuid import UUID, uuid4
 
-from sqlalchemy import text, DateTime, Column
-from sqlmodel import Field, SQLModel
-
-from pydantic import BaseModel
-
+from sqlalchemy import PrimaryKeyConstraint, text, DateTime, Column
+from sqlalchemy import Boolean, CheckConstraint, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, LargeBinary, Numeric, String, Text, UniqueConstraint, Uuid
+from sqlmodel import Field, SQLModel, Relationship
 
 
-# class Additives(SQLModel, table=True):
-#     __table_args__ = (
-#         PrimaryKeyConstraint('id', name='additives_pkey'),
-#         UniqueConstraint('code', name='additives_code_key'),
-#         Index('idx_additives_code', 'code')
-#     )
+class Additives(SQLModel, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint('id', name='additives_pkey'),
+        UniqueConstraint('code', name='additives_code_key'),
+        Index('idx_additives_code', 'code')
+    )
 
-#     id: UUID = Field(sa_column=mapped_column('id', Uuid, server_default=text('uuid_generate_v4()')))
-#     code: str = Field(sa_column=mapped_column('code', Text, nullable=False))
-#     name: str = Field(sa_column=mapped_column('name', Text, nullable=False))
+    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('uuid_generate_v4()')))
+    code: str = Field(sa_column=Column('code', Text, nullable=False))
+    name: str = Field(sa_column=Column('name', Text, nullable=False))
 
-#     ingredient_additives: List['IngredientAdditives'] = Relationship(back_populates='additive')
-
+    ingredient_additives: list['IngredientAdditives'] = Relationship(back_populates='additive')
 
 # class Allergens(SQLModel, table=True):
 #     __table_args__ = (
@@ -161,18 +159,18 @@ from pydantic import BaseModel
 #     recipes: List['Recipes'] = Relationship(back_populates='tenant')
 
 
-# class IngredientAdditives(SQLModel, table=True):
-#     __tablename__ = 'ingredient_additives'
-#     __table_args__ = (
-#         ForeignKeyConstraint(['additive_id'], ['additives.id'], ondelete='CASCADE', name='ingredient_additives_additive_id_fkey'),
-#         PrimaryKeyConstraint('ingredient_id', 'additive_id', name='ingredient_additives_pkey'),
-#         Index('idx_ing_additives_additive', 'additive_id')
-#     )
+class IngredientAdditives(SQLModel, table=True):
+    __tablename__ = 'ingredient_additives'
+    __table_args__ = (
+        ForeignKeyConstraint(['additive_id'], ['additives.id'], ondelete='CASCADE', name='ingredient_additives_additive_id_fkey'),
+        PrimaryKeyConstraint('ingredient_id', 'additive_id', name='ingredient_additives_pkey'),
+        Index('idx_ing_additives_additive', 'additive_id')
+    )
 
-#     ingredient_id: UUID = Field(sa_column=mapped_column('ingredient_id', Uuid, nullable=False))
-#     additive_id: UUID = Field(sa_column=mapped_column('additive_id', Uuid, nullable=False))
+    ingredient_id: uuid.UUID = Field(sa_column=Column('ingredient_id', Uuid, primary_key=True))
+    additive_id: uuid.UUID = Field(sa_column=Column('additive_id', Uuid, primary_key=True))
 
-#     additive: Optional['Additives'] = Relationship(back_populates='ingredient_additives')
+    additive: 'Additives' = Relationship(back_populates='ingredient_additives')
 
 
 # class IngredientAllergens(SQLModel, table=True):
