@@ -16,6 +16,17 @@ In case we want to have only data or only schema we could use these flags:
 --data-only	#Only INSERT/COPY rows	When schema already exists on target
 ```
 
+## Export local schema named by Alembic version
+
+After a fresh start/migration, export only schema and include current Alembic revision in the filename:
+
+```bash
+REV=$(docker compose exec -T db psql -X -A -t -P pager=off -U recipe_user -d recipe_db -c "SELECT version_num FROM public.alembic_version;") && \
+OUT="db/schema_alembic_${REV}.sql" && \
+docker compose exec -T db pg_dump -U recipe_user -d recipe_db --schema-only --no-owner --no-privileges > "$OUT" && \
+echo "Created $OUT"
+```
+
 ```bash
 docker compose down -v   # destroys the volume
 docker compose up        # fresh start, runs 00_ then 01_ for db sql scripts

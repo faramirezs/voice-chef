@@ -1,4 +1,18 @@
+annotated-types==0.7.0
 fastapi[standard]>=0.113.0,<0.114.0
-pydantic>=2.7.0,<3.0.0
-sqlalchemy>=2.0
+greenlet==3.3.2
 psycopg[binary]>=3.1
+alembic>=1.13
+pydantic==2.12.5
+pydantic_core==2.41.5
+SQLAlchemy==2.0.48
+sqlmodel==0.0.37
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+
+inflect==7.5.0
+more_itertools==10.8.0
+typeguard==4.5.1
+
+# psycopg2-binary==2.9.11
+sqlacodegen-v2==0.1.4
