@@ -16,7 +16,7 @@ $(ENV):
 # Main targets/commands to build, run and and stop + clean the application
 dev: $(ENV)
 	@echo "Building in dev_mode"
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build --detach
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
 	@echo "VOICE-CHEF is running in dev_mode"
 
 prod: $(ENV)
