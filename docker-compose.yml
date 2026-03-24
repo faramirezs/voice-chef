@@ -33,8 +33,6 @@ services:
     build:
       context: .
       dockerfile: fastapi/Dockerfile
-    volumes:
-      - ./fastapi/app:/code/app
     depends_on:
       db:
         condition: service_healthy

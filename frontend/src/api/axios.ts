@@ -1,5 +1,3 @@
-// NOTE: MP. Test axios to use a relative path
-
 import axios from 'axios';
 
 const apiClient = axios.create({
