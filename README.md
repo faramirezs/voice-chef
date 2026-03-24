@@ -16,7 +16,7 @@ make prod
 
 To display states of containers, volumes and network
 ```bash
-make show
+make status
 ```
 To stop the application and remove containers and images
 ```bash
