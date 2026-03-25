@@ -1,28 +1,26 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
+import uuid
 from uuid import UUID, uuid4
 
-from sqlalchemy import text, DateTime, Column
-from sqlmodel import Field, SQLModel
-
-from pydantic import BaseModel
-
+from sqlalchemy import PrimaryKeyConstraint, text, DateTime, Column
+from sqlalchemy import Boolean, CheckConstraint, Column, Date, DateTime, ForeignKeyConstraint, Index, Integer, LargeBinary, Numeric, String, Text, UniqueConstraint, Uuid
+from sqlmodel import Field, SQLModel, Relationship
 
 
-# class Additives(SQLModel, table=True):
-#     __table_args__ = (
-#         PrimaryKeyConstraint('id', name='additives_pkey'),
-#         UniqueConstraint('code', name='additives_code_key'),
-#         Index('idx_additives_code', 'code')
-#     )
+class Additives(SQLModel, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint('id', name='additives_pkey'),
+        UniqueConstraint('code', name='additives_code_key'),
+        Index('idx_additives_code', 'code')
+    )
 
-#     id: UUID = Field(sa_column=mapped_column('id', Uuid, server_default=text('uuid_generate_v4()')))
-#     code: str = Field(sa_column=mapped_column('code', Text, nullable=False))
-#     name: str = Field(sa_column=mapped_column('name', Text, nullable=False))
+    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('uuid_generate_v4()')))
+    code: str = Field(sa_column=Column('code', Text, nullable=False))
+    name: str = Field(sa_column=Column('name', Text, nullable=False))
 
-#     ingredient_additives: List['IngredientAdditives'] = Relationship(back_populates='additive')
-
+    ingredient_additives: list['IngredientAdditives'] = Relationship(back_populates='additive')
 
 # class Allergens(SQLModel, table=True):
 #     __table_args__ = (
@@ -161,18 +159,18 @@ from pydantic import BaseModel
 #     recipes: List['Recipes'] = Relationship(back_populates='tenant')
 
 
-# class IngredientAdditives(SQLModel, table=True):
-#     __tablename__ = 'ingredient_additives'
-#     __table_args__ = (
-#         ForeignKeyConstraint(['additive_id'], ['additives.id'], ondelete='CASCADE', name='ingredient_additives_additive_id_fkey'),
-#         PrimaryKeyConstraint('ingredient_id', 'additive_id', name='ingredient_additives_pkey'),
-#         Index('idx_ing_additives_additive', 'additive_id')
-#     )
+class IngredientAdditives(SQLModel, table=True):
+    __tablename__ = 'ingredient_additives'
+    __table_args__ = (
+        ForeignKeyConstraint(['additive_id'], ['additives.id'], ondelete='CASCADE', name='ingredient_additives_additive_id_fkey'),
+        PrimaryKeyConstraint('ingredient_id', 'additive_id', name='ingredient_additives_pkey'),
+        Index('idx_ing_additives_additive', 'additive_id')
+    )
 
-#     ingredient_id: UUID = Field(sa_column=mapped_column('ingredient_id', Uuid, nullable=False))
-#     additive_id: UUID = Field(sa_column=mapped_column('additive_id', Uuid, nullable=False))
+    ingredient_id: uuid.UUID = Field(sa_column=Column('ingredient_id', Uuid, primary_key=True))
+    additive_id: uuid.UUID = Field(sa_column=Column('additive_id', Uuid, primary_key=True))
 
-#     additive: Optional['Additives'] = Relationship(back_populates='ingredient_additives')
+    additive: 'Additives' = Relationship(back_populates='ingredient_additives')
 
 
 # class IngredientAllergens(SQLModel, table=True):
@@ -336,89 +334,6 @@ from pydantic import BaseModel
 
 #     ingredient: Optional['Ingredients'] = Relationship(back_populates='ingredient_prices')
 
-
-# class Recipes(SQLModel, table=True):
-#     __table_args__ = (
-#         ForeignKeyConstraint(['created_by'], ['users.id'], name='recipes_created_by_fkey'),
-#         ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='recipes_tenant_id_fkey'),
-#         PrimaryKeyConstraint('id', name='recipes_pkey'),
-#         Index('idx_recipes_batch_number', 'batch_number'),
-#         Index('idx_recipes_is_component', 'is_component'),
-#         Index('idx_recipes_reduction_factor', 'reduction_factor'),
-#         Index('ix_recipes_name', 'name')
-#     )
-
-#     id: UUID = Field(sa_column=mapped_column('id', Uuid))
-#     created_at: datetime = Field(sa_column=mapped_column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-#     updated_at: datetime = Field(sa_column=mapped_column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-#     name: str = Field(sa_column=mapped_column('name', String(255), nullable=False))
-#     status: str = Field(sa_column=mapped_column('status', String(50), nullable=False, server_default=text("'draft'::character varying")))
-#     tenant_id: Optional[UUID] = Field(default=None, sa_column=mapped_column('tenant_id', Uuid))
-#     description: Optional[str] = Field(default=None, sa_column=mapped_column('description', Text))
-#     yield_amount: Optional[Decimal] = Field(default=None, sa_column=mapped_column('yield_amount', Numeric(10, 2)))
-#     yield_unit: Optional[str] = Field(default=None, sa_column=mapped_column('yield_unit', String(50)))
-#     instructions: Optional[str] = Field(default=None, sa_column=mapped_column('instructions', Text))
-#     created_by: Optional[UUID] = Field(default=None, sa_column=mapped_column('created_by', Uuid))
-#     description_short: Optional[str] = Field(default=None, sa_column=mapped_column('description_short', Text))
-#     serving_recommendation: Optional[str] = Field(default=None, sa_column=mapped_column('serving_recommendation', Text))
-#     side_dishes: Optional[str] = Field(default=None, sa_column=mapped_column('side_dishes', Text))
-#     notes: Optional[str] = Field(default=None, sa_column=mapped_column('notes', Text))
-#     preparation_time: Optional[str] = Field(default=None, sa_column=mapped_column('preparation_time', Text))
-#     waiting_time: Optional[str] = Field(default=None, sa_column=mapped_column('waiting_time', Text))
-#     cooking_time: Optional[str] = Field(default=None, sa_column=mapped_column('cooking_time', Text))
-#     shelf_life: Optional[str] = Field(default=None, sa_column=mapped_column('shelf_life', Text))
-#     reduction_factor: Optional[Decimal] = Field(default=None, sa_column=mapped_column('reduction_factor', Numeric(10, 4)))
-#     eigene_menge: Optional[Decimal] = Field(default=None, sa_column=mapped_column('eigene_menge', Numeric(10, 2)))
-#     recipe_number: Optional[str] = Field(default=None, sa_column=mapped_column('recipe_number', String(100)))
-#     packaging: Optional[str] = Field(default=None, sa_column=mapped_column('packaging', Text))
-#     packaging_material: Optional[str] = Field(default=None, sa_column=mapped_column('packaging_material', Text))
-#     net_weight: Optional[Decimal] = Field(default=None, sa_column=mapped_column('net_weight', Numeric(10, 2)))
-#     fill_weight: Optional[Decimal] = Field(default=None, sa_column=mapped_column('fill_weight', Numeric(10, 2)))
-#     fill_quantity: Optional[Decimal] = Field(default=None, sa_column=mapped_column('fill_quantity', Numeric(10, 2)))
-#     drained_weight: Optional[Decimal] = Field(default=None, sa_column=mapped_column('drained_weight', Numeric(10, 2)))
-#     total_weight: Optional[Decimal] = Field(default=None, sa_column=mapped_column('total_weight', Numeric(10, 2)))
-#     portion_by_weight: Optional[bool] = Field(default=None, sa_column=mapped_column('portion_by_weight', Boolean, server_default=text('false')))
-#     portion_weight: Optional[Decimal] = Field(default=None, sa_column=mapped_column('portion_weight', Numeric(10, 2)))
-#     batch_number: Optional[str] = Field(default=None, sa_column=mapped_column('batch_number', String(100)))
-#     production_date: Optional[date] = Field(default=None, sa_column=mapped_column('production_date', Date))
-#     use_by_date: Optional[date] = Field(default=None, sa_column=mapped_column('use_by_date', Date))
-#     expiry_date: Optional[date] = Field(default=None, sa_column=mapped_column('expiry_date', Date))
-#     storage_text: Optional[str] = Field(default=None, sa_column=mapped_column('storage_text', Text))
-#     storage_temperature: Optional[str] = Field(default=None, sa_column=mapped_column('storage_temperature', String(50)))
-#     bio_label_eu: Optional[bool] = Field(default=None, sa_column=mapped_column('bio_label_eu', Boolean))
-#     origin_fish: Optional[str] = Field(default=None, sa_column=mapped_column('origin_fish', Text))
-#     origin_location: Optional[str] = Field(default=None, sa_column=mapped_column('origin_location', Text))
-#     devices: Optional[str] = Field(default=None, sa_column=mapped_column('devices', Text))
-#     utensils: Optional[str] = Field(default=None, sa_column=mapped_column('utensils', Text))
-#     labor_effort: Optional[str] = Field(default=None, sa_column=mapped_column('labor_effort', String(50)))
-#     margin: Optional[Decimal] = Field(default=None, sa_column=mapped_column('margin', Numeric(10, 2)))
-#     sales_price_points: Optional[Decimal] = Field(default=None, sa_column=mapped_column('sales_price_points', Numeric(10, 2)))
-#     vat_rate: Optional[Decimal] = Field(default=None, sa_column=mapped_column('vat_rate', Numeric(5, 2)))
-#     nutri_score_category: Optional[str] = Field(default=None, sa_column=mapped_column('nutri_score_category', String(10)))
-#     nutri_score_veg_fruits: Optional[Decimal] = Field(default=None, sa_column=mapped_column('nutri_score_veg_fruits', Numeric(5, 2)))
-#     layout_id: Optional[str] = Field(default=None, sa_column=mapped_column('layout_id', String(50)))
-#     row_height: Optional[int] = Field(default=None, sa_column=mapped_column('row_height', Integer))
-#     rezeptblatt_image_width: Optional[int] = Field(default=None, sa_column=mapped_column('rezeptblatt_image_width', Integer))
-#     mise_en_place_display: Optional[bool] = Field(default=None, sa_column=mapped_column('mise_en_place_display', Boolean, server_default=text('true')))
-#     notes_instructions: Optional[str] = Field(default=None, sa_column=mapped_column('notes_instructions', Text))
-#     is_component: Optional[bool] = Field(default=None, sa_column=mapped_column('is_component', Boolean, server_default=text('false')))
-#     branch_ids: Optional[str] = Field(default=None, sa_column=mapped_column('branch_ids', Text))
-#     ingredient_list_custom: Optional[str] = Field(default=None, sa_column=mapped_column('ingredient_list_custom', Text))
-#     ingredient_list_product_pass: Optional[str] = Field(default=None, sa_column=mapped_column('ingredient_list_product_pass', Text))
-#     allergene_source: Optional[str] = Field(default=None, sa_column=mapped_column('allergene_source', Text))
-#     unit_measure: Optional[str] = Field(default=None, sa_column=mapped_column('unit_measure', String(50)))
-#     unit_serving: Optional[str] = Field(default=None, sa_column=mapped_column('unit_serving', String(50)))
-#     preference_allergens: Optional[str] = Field(default=None, sa_column=mapped_column('preference_allergens', Text))
-#     preference_price: Optional[Decimal] = Field(default=None, sa_column=mapped_column('preference_price', Numeric(10, 2)))
-#     preference_nutri_value: Optional[Decimal] = Field(default=None, sa_column=mapped_column('preference_nutri_value', Numeric(10, 2)))
-
-    # users: Optional['Users'] = Relationship(back_populates='recipes')
-    # tenant: Optional['Tenants'] = Relationship(back_populates='recipes')
-    # recipe_ingredients: List['RecipeIngredients'] = Relationship(back_populates='recipe')
-    # recipe_photos: List['RecipePhotos'] = Relationship(back_populates='recipe')
-
-## MP: converted table (by LLM)
-
 class Recipe(SQLModel, table=True):
     __tablename__ = "recipes"
 
@@ -461,9 +376,9 @@ class Recipe(SQLModel, table=True):
     utensils: Optional[str] = None
     packaging: Optional[str] = None
     packaging_material: Optional[str] = None
-    branch_ids: Optional[str] = None
+    # branch_ids: Optional[str] = None
     ingredient_list_custom: Optional[str] = None
-    ingredient_list_product_pass: Optional[str] = None
+    # ingredient_list_product_pass: Optional[str] = None
     allergene_source: Optional[str] = None
 
     # Numeric fields
@@ -477,10 +392,7 @@ class Recipe(SQLModel, table=True):
     total_weight: Optional[Decimal] = None
     portion_weight: Optional[Decimal] = None
     margin: Optional[Decimal] = None
-    sales_price_points: Optional[Decimal] = None
-    vat_rate: Optional[Decimal] = None
     nutri_score_veg_fruits: Optional[Decimal] = None
-    preference_price: Optional[Decimal] = None
     preference_nutri_value: Optional[Decimal] = None
 
     # Strings
@@ -490,19 +402,13 @@ class Recipe(SQLModel, table=True):
     storage_temperature: Optional[str] = Field(default=None, max_length=50)
     labor_effort: Optional[str] = Field(default=None, max_length=50)
     nutri_score_category: Optional[str] = Field(default=None, max_length=10)
-    layout_id: Optional[str] = Field(default=None, max_length=50)
     unit_measure: Optional[str] = Field(default=None, max_length=50)
     unit_serving: Optional[str] = Field(default=None, max_length=50)
 
     # Booleans
     portion_by_weight: bool = Field(default=False)
-    bio_label_eu: Optional[bool] = None
     mise_en_place_display: bool = Field(default=True)
     is_component: bool = Field(default=False)
-
-    # Integers
-    row_height: Optional[int] = None
-    rezeptblatt_image_width: Optional[int] = None
 
     # Dates
     production_date: Optional[date] = None

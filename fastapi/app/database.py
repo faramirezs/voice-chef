@@ -21,11 +21,6 @@ engine = create_engine(DATABASE_URL, echo=SQL_ECHO)
 # -----------------------------------------------------------------------------
 
 
-def create_db_and_tables():
-    # Import models so that SQLModel.metadata is populated before creating tables
-    from app import models  # noqa
-    SQLModel.metadata.create_all(bind=engine)
-
 # NOTE: MP. Using with statement also ensures the session is automatically
 # closed, making the `try...finally` block unnecessary and the code cleaner.
 def get_db():

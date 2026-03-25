@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlmodel import Session, select
 from sqlalchemy import inspect
-from app.database import get_db, engine, create_db_and_tables
+from app.database import get_db, engine
 from app import models
 
 
