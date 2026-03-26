@@ -6,8 +6,6 @@ services:
       - "8080:80"
     networks:
       - app-network
-    environment:
-        VITE_API_URL: ${VITE_API_URL}
     depends_on:
       - fastapi
 
@@ -22,7 +20,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
        - "5432:5432"
-    networks: 
+    networks:
       - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -32,20 +30,19 @@ services:
 
   fastapi:
     container_name: fastapi
-    # image: fastapi
-    build: fastapi/
-    # depends_on:
-    #   - db
+    build:
+      context: .
+      dockerfile: fastapi/Dockerfile
     depends_on:
       db:
         condition: service_healthy
-    networks: 
+    networks:
       - app-network
     ports:
       - "80"
-    restart: always
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      SQL_ECHO: ${SQL_ECHO}
 
 volumes:
   postgres_data:

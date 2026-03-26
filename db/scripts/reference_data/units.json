@@ -1,0 +1,20 @@
+[
+  {"code": "g",     "name_de": "Gramm",       "name_en": "gram",        "grams_per_unit": 1,     "unit_type": "weight", "is_base": true},
+  {"code": "kg",    "name_de": "Kilogramm",   "name_en": "kilogram",    "grams_per_unit": 1000,  "unit_type": "weight", "is_base": false},
+  {"code": "mg",    "name_de": "Milligramm",  "name_en": "milligram",   "grams_per_unit": 0.001, "unit_type": "weight", "is_base": false},
+  {"code": "ml",    "name_de": "Milliliter",  "name_en": "milliliter",  "grams_per_unit": 1,     "unit_type": "volume", "is_base": false},
+  {"code": "cl",    "name_de": "Zentiliter",  "name_en": "centiliter",  "grams_per_unit": 10,    "unit_type": "volume", "is_base": false},
+  {"code": "dl",    "name_de": "Deziliter",   "name_en": "deciliter",   "grams_per_unit": 100,   "unit_type": "volume", "is_base": false},
+  {"code": "l",     "name_de": "Liter",       "name_en": "liter",       "grams_per_unit": 1000,  "unit_type": "volume", "is_base": false},
+  {"code": "el",    "name_de": "Esslöffel",   "name_en": "tablespoon",  "grams_per_unit": 15,    "unit_type": "volume", "is_base": false},
+  {"code": "tl",    "name_de": "Teelöffel",   "name_en": "teaspoon",    "grams_per_unit": 5,     "unit_type": "volume", "is_base": false},
+  {"code": "prise", "name_de": "Prise",       "name_en": "pinch",       "grams_per_unit": 0.5,   "unit_type": "volume", "is_base": false},
+  {"code": "stk",   "name_de": "Stück",       "name_en": "piece",       "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "pck",   "name_de": "Packung",     "name_en": "pack",        "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "bund",  "name_de": "Bund",        "name_en": "bunch",       "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "dose",  "name_de": "Dose",        "name_en": "can",         "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "blatt", "name_de": "Blatt",       "name_en": "leaf/sheet",  "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "zehe",  "name_de": "Zehe",        "name_en": "clove",       "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "scheibe","name_de": "Scheibe",    "name_en": "slice",       "grams_per_unit": null,  "unit_type": "piece",  "is_base": false},
+  {"code": "tasse", "name_de": "Tasse",       "name_en": "cup",         "grams_per_unit": 240,   "unit_type": "volume", "is_base": false}
+]
