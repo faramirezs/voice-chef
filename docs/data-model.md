@@ -1,92 +1,117 @@
-# Data Model (Current Schema 010)
+# Data Model (Schema 011)
 
-Source of truth for current state: `db/schema_alembic_010.sql`.
+Source of truth: Alembic migration chain ending at revision `011_drop_selected_legacy_fields`.
 
-## Current Tables (Schema 010)
+## Schema 011 Delta
 
-### Core
+Revision 011 is a cleanup migration.
+
+Dropped from `recipes`:
+- `branch_ids`
+- `preference_price`
+- `ingredient_list_product_pass`
+- `preference_allergens`
+- `layout_id`
+- `row_height`
+- `rezeptblatt_image_width`
+- `vat_rate`
+- `sales_price_points`
+- `bio_label_eu`
+
+Dropped object:
+- `ingredient_merge_audit`
+
+No new tables were introduced in 011.
+
+## Current Database Objects (Schema 011)
+
+### Tables
+
 - `tenants`
 - `users`
-- `recipes`
+- `agents`
 - `ingredients`
 - `ingredient_nutrition`
-- `units`
-- `ingredient_units`
+- `recipes`
 - `recipe_ingredients`
-
-### Classification and labeling
-- `categories`
-- `tags`
-- `recipe_categories`
-- `recipe_tags`
 - `allergens`
 - `additives`
 - `ingredient_allergens`
 - `ingredient_additives`
-
-### Pricing and nutrition
 - `ingredient_prices`
-- `ingredient_prices_latest` (view)
-- `nutrition_facts`
-- `recipe_nutrition`
-
-### Media, files, versions, audit
-- `files`
-- `recipe_photos`
+- `categories`
+- `tags`
+- `recipe_categories`
+- `recipe_tags`
+- `recipe_nutrition_cache`
 - `recipe_versions`
+- `agent_interactions`
 - `audit_logs`
-- `ingredient_merge_audit`
-
-### Migration metadata
+- `shopping_lists`
+- `shopping_list_items`
+- `task_lists`
+- `task_items`
+- `units`
+- `ingredient_units`
 - `alembic_version`
 
-## Key Model Notes (Current)
+### Views
 
-1. Canonical units and conversions
-- `units` stores global unit definitions and base conversion where applicable.
-- `ingredient_units` stores ingredient-specific overrides (`ingredient_id`, `unit_code`, `grams_per_unit`).
-- `recipe_ingredients.quantity_grams` is stored and used as canonical weight for cost/nutrition/scaling calculations.
+- `ingredient_prices_latest`
 
-2. Yield model on recipes
-- `recipes` includes `yield_mode`, `portion_size_grams`, `total_raw_weight_grams`, `total_cooked_weight_grams`, and `portions_count_resolved`.
-- `recipes` enforces `valid_yield_mode` (`count` or `weight`).
-- `recipes` enforces `weight_mode_requires_portion_size_when_active`.
+## Key Model Notes
 
-3. Pricing model
-- `ingredient_prices` supports multiple supplier rows.
-- Unique behavior is enforced by constraint/index strategy around `(ingredient_id, supplier_id)` and helper indexes.
-- `ingredient_prices_latest` provides latest-price lookup by ingredient/unit ordering.
+### 1. Canonical unit system
 
-4. Recipe and nutrition representation
-- `recipe_nutrition` links `recipe_id` to `nutrition_id` in `nutrition_facts`.
-- Current schema does not use a `recipe_nutrition_cache` table name.
+- `units` stores global unit definitions and optional gram conversion.
+- `ingredient_units` stores ingredient-specific conversion overrides.
+- `recipe_ingredients.quantity_grams` is canonical for deterministic math.
 
-5. Taxonomy tables
-- `allergens` and `additives` currently use `code` (text) and `name` (text).
-- Current schema does not expose `name_de`/`name_en` split columns in these two tables.
+### 2. Canonical pricing
 
-## MVP vs Full Project (Data Layer)
+- `ingredient_prices.price_per_gram` enables direct cost math from canonical grams.
+- `ingredient_prices_latest` is the latest-price read model per `(ingredient_id, unit)`.
 
-### MVP-backed in schema 010
-- Recipes and recipe ingredients
-- Ingredient master and nutrition tables
-- Unit conversion system (`units`, `ingredient_units`, `quantity_grams`, `price_per_gram`)
-- Pricing tables and latest-price view
-- Categories/tags and allergen/additive mapping tables
-- Audit log baseline (`audit_logs`)
+### 3. Yield and scaling model
 
-### Planned / post-MVP (not present in schema 010)
-- `agents` table
-- `agent_interactions` table
-- `shopping_lists`, `shopping_list_items`
-- `task_lists`, `task_items`
-- RLS policies and tenant isolation policy definitions as an enforced runtime model
+- `recipes.yield_mode` supports `count` and `weight` authoring modes.
+- `recipes.portion_size_grams`, `total_raw_weight_grams`, `total_cooked_weight_grams`, and `portions_count_resolved` support deterministic scaling output.
+- `weight_mode_requires_portion_size_when_active` constrains active weight-mode recipes.
 
-## Planned Evolution Notes
+### 4. Taxonomy structure in schema 011
 
-The following structures are intentionally treated as planned, not current:
-- richer multilingual fields for allergens/additives
-- dedicated agent identity and interaction logs
-- first-class shopping and task list entities
+- `allergens` and `additives` use `code` with multilingual columns `name_de` and `name_en`.
 
-If these are introduced, they must be documented as a new schema revision after migration scripts are updated.
+## Schema Presence vs MVP Runtime Scope
+
+| Entity group | Exists in schema 011 | Included in MVP runtime scope |
+|---|---|---|
+| Tenants and users | Yes | Yes |
+| Recipes and recipe_ingredients | Yes | Yes |
+| Ingredients | Yes | Yes |
+| Units and ingredient_units | Yes | Yes |
+| Agent chat endpoint support (`agents`) | Yes | Yes (limited usage) |
+| Agent interaction history (`agent_interactions`) | Yes | No (later) |
+| Nutrition tables (`ingredient_nutrition`, `recipe_nutrition_cache`) | Yes | No (later) |
+| Allergen/additive tables | Yes | No (later) |
+| Categories/tags tables | Yes | No (later) |
+| Shopping/task tables | Yes | No (later) |
+| Export persistence model | No dedicated model | No (later) |
+
+## MVP Data Layer Boundary
+
+### Included now
+
+- User records for signup/login (`users`)
+- Recipe CRUD entities (`recipes`, `recipe_ingredients`)
+- Ingredient CRUD entities (`ingredients`)
+- Canonical conversion tables used by scaling logic (`units`, `ingredient_units`)
+- Canonical quantity/pricing fields (`quantity_grams`, `price_per_gram`)
+
+### Deferred to later
+
+- Nutrition-facing API usage
+- Allergen/additive-facing API usage
+- Agent interaction history API exposure
+- Shopping/task data workflows
+- Export persistence workflows
