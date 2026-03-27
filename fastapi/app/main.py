@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import inspect
 from app.database import get_db, engine
@@ -30,3 +30,14 @@ def fetch_recipes(session: Session = Depends(get_db)):
 def list_tables():
     inspector = inspect(engine)
     return {"tables": inspector.get_table_names()}
+
+
+@app.get("/recipes/{recipe_id}")
+def fetch_recipe(recipe_id: str, session: Session = Depends(get_db)):
+    query = select(models.Recipe).where(models.Recipe.id == recipe_id)
+    recipe = session.exec(query).first()
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    return recipe
