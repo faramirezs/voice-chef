@@ -1,5 +1,15 @@
 # ORM Models Style Guide
 
+## Table of Contents
+
+- [1. ID and Default Value Generation](#1-id-and-default-value-generation)
+- [2. Usage of `Field()` vs. `sa_column=Column()`](#2-usage-of-field-vs-sa_columncolumn)
+- [3. `Column` vs. `mapped_column`](#3-column-vs-mapped_column)
+- [4. Nullable Types (`Optional`)](#4-nullable-types-optional)
+- [5. Declaring Simple Nullable Fields](#5-declaring-simple-nullable-fields)
+- [6. When to use `__table_args__`](#6-when-to-use-__table_args__)
+- [7. `sa_column_kwargs` parameter in SQLModel's `Field()`](#7-sa_column_kwargs-parameter-in-sqlmodels-field)
+
 This document outlines the conventions and best practices for creating SQLModel ORM classes in this project. The goal is to maintain a consistent and readable codebase.
 
 ### 1. ID and Default Value Generation
@@ -41,6 +51,8 @@ updated_at: datetime = Field(
     ),
 )
 ```
+
+The **text()** function tells SQLAlchemy: "Don't try to parse this, just insert this text into the SQL query as is."
 
 ### 3. `Column` vs. `mapped_column`
 
@@ -103,7 +115,7 @@ description: str | None = None
 
 # Also acceptable, but verbose
 # description: str | None = Field(default=None)
-````
+```
 
 ### 6. When to use `__table_args__`
 
@@ -151,3 +163,14 @@ description: str | None = None
         # ... field definitions
         batch_number: str | None = Field(default=None, max_length=100) # Note: index=True is removed here
     ```
+
+### 7. **sa_column_kwargs parameter in SQLModel's Field()**
+
+We use `sa_column_kwargs` instead of `sa_column=Column()` to modify the SQLAlchemy Column that SQLModel creates automatically, rather than completely **replacing** it.
+
+Example: By using:
+
+```python
+sa_column_kwargs={"server_default": text("gen_random_uuid()")}
+```
+you are simply saying: "Hey SQLModel, go ahead and create the primary key column as you normally do, but just add this one extra argument (server_default) to it."
