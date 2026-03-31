@@ -85,4 +85,51 @@ description: str | None = None
 
 # Also acceptable, but verbose
 # description: str | None = Field(default=None)
-```
+````
+
+### 6. When to use `__table_args__`
+
+**Rule:** Use the `__table_args__` attribute to define database constraints that cannot be described on a single column or require explicit naming that `Field()` does not support.
+
+**Reasoning:** While `Field()` is great for simple constraints like `primary_key`, `unique`, or `foreign_key` on a single column, `__table_args__` is the standard SQLAlchemy way to handle more complex, table-wide rules.
+
+**Common Use Cases:**
+
+1.  **Explicitly Named Unique Constraints (`UniqueConstraint`):** This follows the same logic as named indexes. If the database has a unique constraint with a specific name that doesn't match SQLAlchemy's default naming convention, we must define it explicitly.
+
+    In our `Users` model, the database has a constraint named `users_email_key`. The `unique=True` parameter on a `Field` would cause Alembic to expect a different, auto-generated name. To align the model with the database, we define it in `__table_args__`.
+
+    ```python
+    # Example from our Users model
+    class Users(SQLModel, table=True):
+        __table_args__ = (
+            UniqueConstraint('email', name='users_email_key'),
+        )
+
+        # ... field definitions
+        email: str = Field(max_length=255, index=True, nullable=False)
+    ```
+
+2.  **Check Constraints (`CheckConstraint`):** To enforce complex data validation rules at the database level.
+    ```python
+    # Example from our Recipe model
+    __table_args__ = (
+        CheckConstraint("portion_size_grams IS NULL OR portion_size_grams > 0", name="positive_portion_size_grams"),
+    )
+    ```
+
+3.  **Explicitly Named Indexes (`Index`):** When you need to control the exact name of an index to match an existing database or to avoid naming conflicts. This is a key use case in our project.
+
+    In our `Recipe` model, the database has indexes named with an `idx_` prefix (e.g., `idx_recipes_batch_number`). However, the default naming convention used by SQLAlchemy would expect `ix_recipes_batch_number`. To resolve this mismatch without generating a new migration, we explicitly define the index with its correct name in `__table_args__`.
+
+    ```python
+    # Example from our Recipe model
+    class Recipe(SQLModel, table=True):
+        __table_args__ = (
+            # ... other constraints
+            Index('idx_recipes_batch_number', 'batch_number'),
+        )
+
+        # ... field definitions
+        batch_number: str | None = Field(default=None, max_length=100) # Note: index=True is removed here
+    ```
