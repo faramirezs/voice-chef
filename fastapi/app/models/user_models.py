@@ -3,7 +3,7 @@ from typing import List, TYPE_CHECKING
 import uuid
 from uuid import UUID
 
-from sqlalchemy import text, DateTime, Column
+from sqlalchemy import text, DateTime, Column, UniqueConstraint
 from sqlalchemy import Boolean, String
 from sqlmodel import SQLModel, Field, Relationship
 
@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 
 class Users(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint('email', name='users_email_key'),
+    )
     # NOTE: MP. We want the Python code to generate a new UUID 
     # when creating a new instance, so we use default_factory
     id: uuid.UUID = Field(
@@ -53,6 +56,9 @@ class Users(SQLModel, table=True):
 
 
 class Tenants(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint('slug', name='tenants_slug_key'),
+    )
     id: UUID = Field(
         default=None,
         primary_key=True,

@@ -1,9 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Optional, TYPE_CHECKING
-from uuid import UUID, uuid4
+from typing import TYPE_CHECKING
+from uuid import UUID
 
-from sqlalchemy import text, DateTime, Column, Numeric, CheckConstraint
+from sqlalchemy import text, Text, DateTime, Column, Numeric
+from sqlalchemy import CheckConstraint, Index, Boolean
 from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
@@ -27,6 +28,10 @@ class Recipe(SQLModel, table=True):
         CheckConstraint("portions_count_resolved IS NULL OR portions_count_resolved > 0", name="positive_portions_count_resolved"),
         CheckConstraint("total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0", name="positive_total_cooked_weight_grams"),
         CheckConstraint("total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0", name="positive_total_raw_weight_grams"),
+        Index('idx_recipes_batch_number', 'batch_number'),
+        Index('idx_recipes_is_component', 'is_component'),
+        Index('idx_recipes_reduction_factor', 'reduction_factor'),
+        Index('idx_recipes_yield_mode', 'yield_mode'),
     )
 
     id: UUID = Field(
@@ -58,31 +63,31 @@ class Recipe(SQLModel, table=True):
     created_by: UUID | None = Field(default=None, foreign_key="users.id")
 
     # Text fields
-    description: str | None = None
-    description_short: str | None = None
-    instructions: str | None = None
-    notes: str | None = None
-    notes_instructions: str | None = None
-    serving_recommendation: str | None = None
-    side_dishes: str | None = None
-    storage_text: str | None = None
-    origin_fish: str | None = None
-    origin_location: str | None = None
-    devices: str | None = None
-    utensils: str | None = None
-    packaging: str | None = None
-    packaging_material: str | None = None
-    ingredient_list_custom: str | None = None
-    allergene_source: str | None = None
-    preparation_time: str | None = None
-    waiting_time: str | None = None
-    cooking_time: str | None = None
-    shelf_life: str | None = None
+    description: str | None = Field(default=None, sa_column=Column(Text))
+    description_short: str | None = Field(default=None, sa_column=Column(Text))
+    instructions: str | None = Field(default=None, sa_column=Column(Text))
+    notes: str | None = Field(default=None, sa_column=Column(Text))
+    notes_instructions: str | None = Field(default=None, sa_column=Column(Text))
+    serving_recommendation: str | None = Field(default=None, sa_column=Column(Text))
+    side_dishes: str | None = Field(default=None, sa_column=Column(Text))
+    storage_text: str | None = Field(default=None, sa_column=Column(Text))
+    origin_fish: str | None = Field(default=None, sa_column=Column(Text))
+    origin_location: str | None = Field(default=None, sa_column=Column(Text))
+    devices: str | None = Field(default=None, sa_column=Column(Text))
+    utensils: str | None = Field(default=None, sa_column=Column(Text))
+    packaging: str | None = Field(default=None, sa_column=Column(Text))
+    packaging_material: str | None = Field(default=None, sa_column=Column(Text))
+    ingredient_list_custom: str | None = Field(default=None, sa_column=Column(Text))
+    allergene_source: str | None = Field(default=None, sa_column=Column(Text))
+    preparation_time: str | None = Field(default=None, sa_column=Column(Text))
+    waiting_time: str | None = Field(default=None, sa_column=Column(Text))
+    cooking_time: str | None = Field(default=None, sa_column=Column(Text))
+    shelf_life: str | None = Field(default=None, sa_column=Column(Text))
 
     # Numeric fields
     yield_amount: Decimal | None = Field(default=None, sa_column=Column(Numeric(10, 2)))
     reduction_factor: Decimal | None = Field(
-        default=None, sa_column=Column(Numeric(10, 4), index=True)
+        default=None, sa_column=Column(Numeric(10, 4))
     )
     eigene_menge: Decimal | None = Field(default=None, sa_column=Column(Numeric(10, 2)))
     net_weight: Decimal | None = Field(default=None, sa_column=Column(Numeric(10, 2)))
@@ -102,18 +107,27 @@ class Recipe(SQLModel, table=True):
     # Strings
     yield_unit: str | None = Field(default=None, max_length=50)
     recipe_number: str | None = Field(default=None, max_length=100)
-    batch_number: str | None = Field(default=None, max_length=100, index=True)
+    batch_number: str | None = Field(default=None, max_length=100)
     storage_temperature: str | None = Field(default=None, max_length=50)
     labor_effort: str | None = Field(default=None, max_length=50)
     nutri_score_category: str | None = Field(default=None, max_length=10)
     unit_measure: str | None = Field(default=None, max_length=50)
     unit_serving: str | None = Field(default=None, max_length=50)
-    yield_mode: str = Field(default='count', max_length=20, index=True)
+    yield_mode: str = Field(default='count', max_length=20)
 
     # Booleans
-    portion_by_weight: bool = Field(default=False)
-    mise_en_place_display: bool = Field(default=True)
-    is_component: bool = Field(default=False, index=True)
+    portion_by_weight: bool | None = Field(
+        default=False,
+        sa_column=Column(Boolean, server_default=text('false'))
+    )
+    mise_en_place_display: bool | None = Field(
+        default=True, 
+        sa_column=Column(Boolean, server_default=text('true'))
+    )
+    is_component: bool | None = Field(
+        default=False, 
+        sa_column=Column(Boolean, server_default=text('false'))
+    )
 
     # Dates
     production_date: date | None = None
