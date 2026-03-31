@@ -40,7 +40,12 @@ class Recipe(SQLModel, table=True):
         sa_column_kwargs={"server_default": text("gen_random_uuid()")}
     )
     name: str = Field(max_length=255, index=True, nullable=False)
-    status: str = Field(default="draft", max_length=50)
+    status: str = Field(
+        default="draft",
+        max_length=50,
+        nullable=False,
+        sa_column_kwargs={"server_default": text("'draft'::character varying")},
+    )
     created_at: datetime = Field(
         default=None, # Python should not generate a value
         sa_column=Column(
