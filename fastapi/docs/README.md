@@ -47,12 +47,19 @@ psql -U recipe_user -d recipe_db -c "SELECT * FROM recipes WHERE name ILIKE '%cu
 ## Key Libraries & Concepts
 
 ### SQLModel
+
 **SQLModel** is the primary library used for interacting with the database. It is built on top of **Pydantic** and **SQLAlchemy**, combining the best features of both.
 - **Object Relational Mapper (ORM)**: We define our database tables as Python classes (models) in `app/models.py`. These models are used in our application code to query and manipulate data.
 - **Data Validation**: It uses Pydantic's validation to ensure data conforms to the model's schema, both when creating data and when reading it from the database.
 
-### Alembic (Coming Soon)
-Alembic will be our database migration tool. It will allow us to manage incremental changes to the database schema in a structured and version-controlled way.
+## ORM Models Style Guide
+
+To ensure consistency and maintainability across the project, we adhere to a specific style for writing our SQLModel classes. This includes rules for defining primary keys, timestamps, and nullable fields.
+
+**➡️ [Read the full ORM Models Style Guide](./models_style_guide.md)**
+
+### Alembic
+Alembic is our database migration tool. It will allow us to manage incremental changes to the database schema in a structured and version-controlled way.
 
 ### Uvicorn
 Uvicorn is an ASGI web server implementation for Python, used to run the FastAPI application.
