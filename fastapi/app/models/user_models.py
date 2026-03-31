@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 import uuid
 from uuid import UUID
 
@@ -50,8 +50,8 @@ class Users(SQLModel, table=True):
     # Foreign keys
     tenant_id: UUID | None = Field(default=None, foreign_key="tenants.id") 
 
-    # Relationship attributes. 'Tenants | None' is a forward references
-    tenant: 'Tenants | None' = Relationship(back_populates='users')
+    # Relationship attributes. "Tenants" | None is a forward references
+    tenant: Optional["Tenants"] = Relationship(back_populates='users')
     recipes: List["Recipe"] = Relationship(back_populates="created_by_user")
 
 

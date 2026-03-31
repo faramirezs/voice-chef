@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from sqlalchemy import text, Text, DateTime, Column, Numeric
@@ -135,5 +135,5 @@ class Recipe(SQLModel, table=True):
     expiry_date: date | None = None
 
     # Relationship attributes
-    tenant: 'Tenants | None' = Relationship(back_populates="recipes")
-    created_by_user: 'Users | None' = Relationship(back_populates="recipes")
+    tenant: Optional["Tenants"] = Relationship(back_populates="recipes")
+    created_by_user: Optional["Users"] = Relationship(back_populates="recipes")
