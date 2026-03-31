@@ -73,6 +73,24 @@ description: str | None = None
 # tenant_id: Optional[UUID] = Field(default=None, foreign_key="tenants.id")
 ```
 
+**Exception: Optional Forward References in Relationships**
+
+There is one exception. When defining an optional relationship to another model using a string forward reference, you **must** use the classic `Optional["ClassName"]` syntax.
+
+**Reasoning:** The modern `"ClassName" | None` syntax will raise a `TypeError` at runtime. This is because Python tries to apply the `|` operator to a string and `None`, which is not a valid operation. The `Optional[X]` type is specifically designed to correctly handle string-based forward references.
+
+```python
+# Correct for optional forward references
+from typing import Optional
+
+class User(SQLModel, table=True):
+    # ...
+    tenant: Optional["Tenant"] = Relationship(back_populates="users")
+
+# Incorrect: This will raise a TypeError
+#     tenant: "Tenant" | None = Relationship(back_populates="users")
+```
+
 ### 5. Declaring Simple Nullable Fields
 
 **Rule:** For a nullable field that has no other constraints or options, declare it directly without using `Field()`.
