@@ -77,6 +77,9 @@ define HELP_TEXT
 	" make dump-regen:	Regenerate db/init/01_dump.sql from migration head" \
 	" make help:	Show available commands\n" \
 	" make build:	Build images from compose file" \
+	" make agent-build:\tBuild only agent service" \
+	" make agent-build-nocache:\tBuild only agent service without cache" \
+	" make agent-recreate:\tRecreate and run only agent service" \
 	" make up:	Calling the command dev" \
 	" make start:	Start the containers" \
 	" make stop:	Stop running containers"
@@ -85,6 +88,15 @@ endef
 # Aux targets/commands
 build: $(ENV)
 	$(COMPOSE) build
+
+agent-build: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build agent
+
+agent-build-nocache: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache agent
+
+agent-recreate: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate agent
 
 up: dev
 
@@ -110,4 +122,4 @@ drift-gate-local:
 	./db/scripts/run_local_drift_gate.sh
 	@echo "Done: local schema drift gate passed"
 
-.PHONY: all dev prod down re clean fclean status logs help % build up start stop dump-blast-check dump-regen drift-gate-local
+.PHONY: all dev prod down re clean fclean status logs help % build up start stop agent-build agent-build-nocache agent-recreate dump-blast-check dump-regen drift-gate-local
