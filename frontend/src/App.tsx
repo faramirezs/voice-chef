@@ -25,8 +25,8 @@ function App() {
     const getTables = async () => {
       setLoading(true);
       const data = await fetchDbTables();
-      if (data && data.tables) {
-        setTables(data.tables);
+      if (data && data.defined_models) {
+        setTables(data.defined_models);
       }
       setLoading(false);
     };
@@ -83,7 +83,7 @@ function App() {
 
     {/* New block for displaying tables */}
     <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Database Tables (from API)</h2>
+        <h2 className="text-xl font-semibold">All tables that have a defined SQLModel class</h2>
         <Card className="max-w-sm">
           <CardContent className="p-6">
             {loading ? (
