@@ -47,7 +47,7 @@ class Users(SQLModel, table=True):
         default="editor", # default is for Python
         max_length=50,
         nullable=False,
-        sa_column_kwargs={"server_default": text("'editor'")} # server_default is for the database (ALTER TABLE ... DEFAULT ...)
+        sa_column_kwargs={"server_default": text("'editor'::character varying")} # server_default is for the database (ALTER TABLE ... DEFAULT ...)
     )
     is_active: bool = Field(
         default=True,
@@ -67,6 +67,7 @@ class Tenants(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint('slug', name='tenants_slug_key'),
         Index("ix_tenants_slug", "slug", unique=True),
+        Index("ix_tenants_name", "name")
     )
     id: UUID = Field(
         # app-side UUID generation for MVP delivery
@@ -90,13 +91,13 @@ class Tenants(SQLModel, table=True):
             onupdate=text("now()"),
         ),
     )
-    name: str = Field(max_length=255, index=True)
-    slug: str = Field(max_length=100)
+    name: str = Field(max_length=255, nullable=False)
+    slug: str = Field(max_length=100, nullable=False)
     is_active: bool = Field(
         default=True,
         sa_column=Column(Boolean, nullable=False, server_default=text('true'))
     )
-    settings: str | None = Field(default=None) # column is of type character varying
+    settings: str | None = None # column is of type character varying
 
     # Relationship attributes
     users: List['Users'] = Relationship(back_populates='tenant')

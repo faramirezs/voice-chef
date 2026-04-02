@@ -22,9 +22,9 @@ class Recipe(SQLModel, table=True):
     # database-level data validation rules (for example, “the ‘weight’ mode requires that a portion size be specified”)
     __table_args__ = (
         CheckConstraint("portion_size_grams IS NULL OR portion_size_grams > 0", name="positive_portion_size_grams"),
-        CheckConstraint("yield_mode IN ('count', 'weight')", name="valid_yield_mode"),
+        CheckConstraint("yield_mode::text = ANY (ARRAY['count'::text, 'weight'::text])", name="valid_yield_mode"),
         CheckConstraint(
-            "status <> 'active' OR yield_mode <> 'weight' OR (portion_size_grams IS NOT NULL AND portion_size_grams > 0)",
+            "(status)::text <> 'active'::text OR (yield_mode)::text <> 'weight'::text OR (portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric)",
             name="weight_mode_requires_portion_size_when_active"
         ),
         CheckConstraint("portions_count_resolved IS NULL OR portions_count_resolved > 0", name="positive_portions_count_resolved"),
@@ -122,7 +122,12 @@ class Recipe(SQLModel, table=True):
     nutri_score_category: str | None = Field(default=None, max_length=10)
     unit_measure: str | None = Field(default=None, max_length=50)
     unit_serving: str | None = Field(default=None, max_length=50)
-    yield_mode: str = Field(default='count', max_length=20)
+    yield_mode: str = Field(
+        default='count', # default is for Python
+        max_length=20,
+        nullable=False,
+        sa_column_kwargs={"server_default": text("'count'::character varying")} # server_default is for the database
+    )
 
     # Booleans
     portion_by_weight: bool | None = Field(
