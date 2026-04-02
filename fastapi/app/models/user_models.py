@@ -58,7 +58,7 @@ class Users(SQLModel, table=True):
         default="editor", # default is for Python
         max_length=50,
         nullable=False,
-        sa_column_kwargs={"server_default": text("'editor'")} # server_default is for the database (ALTER TABLE ... DEFAULT ...)
+        sa_column_kwargs={"server_default": text("'editor'::character varying")} # server_default is for the database (ALTER TABLE ... DEFAULT ...)
     )
     is_active: bool = Field(
         default=True,
@@ -77,8 +77,14 @@ class Users(SQLModel, table=True):
 
 class Tenants(SQLModel, table=True):
     __table_args__ = (
+<<<<<<< HEAD
         PrimaryKeyConstraint('id', name='tenants_pkey'),
         UniqueConstraint('slug', name='tenants_slug_key')
+=======
+        UniqueConstraint('slug', name='tenants_slug_key'),
+        Index("ix_tenants_slug", "slug", unique=True),
+        Index("ix_tenants_name", "name")
+>>>>>>> 743ea11 (fix. docs and small fixes in models)
     )
 <<<<<<< HEAD
 =======
@@ -104,14 +110,18 @@ class Tenants(SQLModel, table=True):
             onupdate=text("now()"),
         ),
     )
-    name: str = Field(max_length=255, index=True)
-    slug: str = Field(max_length=100)
+    name: str = Field(max_length=255, nullable=False)
+    slug: str = Field(max_length=100, nullable=False)
     is_active: bool = Field(
         default=True,
         sa_column=Column(Boolean, nullable=False, server_default=text('true'))
     )
+<<<<<<< HEAD
     settings: str | None = Field(default=None) # column is of type character varying
 >>>>>>> 113bd3b (fix. UUID generation + doc update on this matter)
+=======
+    settings: str | None = None # column is of type character varying
+>>>>>>> 743ea11 (fix. docs and small fixes in models)
 
     id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
     name: str = Field(sa_column=Column('name', String(255), nullable=False))

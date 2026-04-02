@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 class Recipes(SQLModel, table=True):
     __table_args__ = (
+<<<<<<< HEAD
         CheckConstraint("status IN ('draft', 'active', 'archived')", name='valid_status'),
         CheckConstraint('portion_size_grams IS NULL OR portion_size_grams > 0::numeric', name='positive_portion_size_grams'),
         CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', name='positive_portions_count_resolved'),
@@ -26,6 +27,20 @@ class Recipes(SQLModel, table=True):
         Index('idx_recipes_name', 'name'),
         Index('idx_recipes_status', 'tenant_id', 'status'),
         Index('idx_recipes_tenant', 'tenant_id'),
+=======
+        CheckConstraint("portion_size_grams IS NULL OR portion_size_grams > 0", name="positive_portion_size_grams"),
+        CheckConstraint("yield_mode::text = ANY (ARRAY['count'::text, 'weight'::text])", name="valid_yield_mode"),
+        CheckConstraint(
+            "(status)::text <> 'active'::text OR (yield_mode)::text <> 'weight'::text OR (portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric)",
+            name="weight_mode_requires_portion_size_when_active"
+        ),
+        CheckConstraint("portions_count_resolved IS NULL OR portions_count_resolved > 0", name="positive_portions_count_resolved"),
+        CheckConstraint("total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0", name="positive_total_cooked_weight_grams"),
+        CheckConstraint("total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0", name="positive_total_raw_weight_grams"),
+        Index('idx_recipes_batch_number', 'batch_number'),
+        Index('idx_recipes_is_component', 'is_component'),
+        Index('idx_recipes_reduction_factor', 'reduction_factor'),
+>>>>>>> 743ea11 (fix. docs and small fixes in models)
         Index('idx_recipes_yield_mode', 'yield_mode'),
     )
 
@@ -63,4 +78,45 @@ class Recipes(SQLModel, table=True):
     recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
 
+<<<<<<< HEAD
 Recipe = Recipes
+=======
+    # Strings
+    yield_unit: str | None = Field(default=None, max_length=50)
+    recipe_number: str | None = Field(default=None, max_length=100)
+    batch_number: str | None = Field(default=None, max_length=100)
+    storage_temperature: str | None = Field(default=None, max_length=50)
+    labor_effort: str | None = Field(default=None, max_length=50)
+    nutri_score_category: str | None = Field(default=None, max_length=10)
+    unit_measure: str | None = Field(default=None, max_length=50)
+    unit_serving: str | None = Field(default=None, max_length=50)
+    yield_mode: str = Field(
+        default='count', # default is for Python
+        max_length=20,
+        nullable=False,
+        sa_column_kwargs={"server_default": text("'count'::character varying")} # server_default is for the database
+    )
+
+    # Booleans
+    portion_by_weight: bool | None = Field(
+        default=False,
+        sa_column=Column(Boolean, server_default=text('false'))
+    )
+    mise_en_place_display: bool | None = Field(
+        default=True, 
+        sa_column=Column(Boolean, server_default=text('true'))
+    )
+    is_component: bool | None = Field(
+        default=False, 
+        sa_column=Column(Boolean, server_default=text('false'))
+    )
+
+    # Dates
+    production_date: date | None = None
+    use_by_date: date | None = None
+    expiry_date: date | None = None
+
+    # Relationship attributes
+    tenant: Optional["Tenants"] = Relationship(back_populates="recipes")
+    created_by_user: Optional["Users"] = Relationship(back_populates="recipes")
+>>>>>>> 743ea11 (fix. docs and small fixes in models)
