@@ -1,0 +1,24 @@
+[project]
+name = "your-project"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-alembic>=0.11",       # latest as of 2026
+    "psycopg2-binary>=2.9",
+    "sqlmodel>=0.0.21",
+    "alembic>=1.14",
+    "sqlalchemy>=2.0.36",
+]
+
+[tool.pytest.ini_options]
+# Tell pytest-alembic where the alembic config lives
+addopts = "--alembic"
+# Point at the tests directory
+testpaths = ["tests"]
+# Make pytest-alembic use our fixtures by default
+alembic_config = "alembic.ini"
+
+[tool.pytest.ini_options.markers]
+schema = "schema drift detection tests"

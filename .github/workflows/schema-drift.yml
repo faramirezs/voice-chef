@@ -1,0 +1,98 @@
+name: Schema Drift Gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  # Allow manual trigger for production pre-deploy checks
+  workflow_dispatch:
+
+jobs:
+  schema-drift:
+    name: Detect schema drift
+    runs-on: ubuntu-24.04            # ubuntu-latest resolves to 24.04 in 2026
+
+    services:
+      postgres:
+        image: postgres:17-alpine    # PostgreSQL 17 — latest stable 2026
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+psycopg2://app:secret@localhost:5432/test_db
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python ───────────────────────────────────────────────────────────
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      # ── Dependencies ─────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # ── PostgreSQL setup ─────────────────────────────────────────────────
+      - name: Install pgcrypto extension
+        run: |
+          PGPASSWORD=secret psql \
+            -h localhost -U app -d test_db \
+            -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
+      # ── Migration chain ───────────────────────────────────────────────────
+      - name: Apply all migrations to head
+        run: alembic upgrade head
+
+      # ── Gate 1: Programmatic drift check ─────────────────────────────────
+      - name: Assert no schema drift (compare_metadata)
+        run: python scripts/drift_check.py
+
+      # ── Gate 2: pytest-alembic full suite ────────────────────────────────
+      - name: Run schema drift test suite
+        run: |
+          pytest tests/test_schema_drift.py \
+            -v \
+            --tb=short \
+            -p pytest_alembic \
+            --alembic
+
+      # ── Gate 3: Verify migration chain has a single head ─────────────────
+      - name: Assert single migration head (no branch divergence)
+        run: |
+          HEAD_COUNT=$(alembic heads | grep -c "(head)")
+          if [ "$HEAD_COUNT" -ne 1 ]; then
+            echo "❌ Multiple migration heads detected: $HEAD_COUNT"
+            echo "Run: alembic merge heads -m 'merge'"
+            exit 1
+          fi
+          echo "✅ Single migration head confirmed."
+
+      # ── Gate 4: Verify no pending migrations exist ────────────────────────
+      - name: Assert no pending migrations (models fully committed)
+        run: |
+          PENDING=$(alembic revision --autogenerate -m "ci_check" 2>&1)
+          # If the generated file contains only 'pass', models are in sync.
+          LATEST_FILE=$(ls -t alembic/versions/ | head -1)
+          if grep -qE "op\.(create|drop|add|alter)" "alembic/versions/$LATEST_FILE"; then
+            echo "❌ Pending schema changes found in models not yet in a migration:"
+            grep -E "op\.(create|drop|add|alter)" "alembic/versions/$LATEST_FILE"
+            exit 1
+          fi
+          echo "✅ No pending migrations — models are fully committed."
+          # Clean up the CI-only checkpoint revision
+          rm "alembic/versions/$LATEST_FILE"
