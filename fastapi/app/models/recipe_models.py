@@ -1,11 +1,13 @@
-from datetime import date, datetime
-from decimal import Decimal
-from typing import TYPE_CHECKING, Optional
-from uuid import UUID
-
-from sqlalchemy import text, Text, DateTime, Column, Numeric
-from sqlalchemy import CheckConstraint, Index, Boolean
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import text, Text, Column, Numeric
+from sqlalchemy import CheckConstraint, Index, Boolean
+import uuid
+from uuid import UUID
+from typing import TYPE_CHECKING, Optional
+from sqlalchemy import DateTime     # database column type: `timestamp with time zone`
+from datetime import date, datetime # Python type: type hints and runtime values
+from decimal import Decimal
+
 
 if TYPE_CHECKING:
     from .user_models import Users, Tenants
@@ -35,9 +37,11 @@ class Recipe(SQLModel, table=True):
     )
 
     id: UUID = Field(
-        default=None,
+        # app-side UUID generation for MVP delivery
+        default_factory=uuid.uuid4,
+        # scheduling DB-enforced UUID defaults as post-MVP hardening
+        # sa_column_kwargs={"server_default": text("gen_random_uuid()")}
         primary_key=True,
-        sa_column_kwargs={"server_default": text("gen_random_uuid()")}
     )
     name: str = Field(max_length=255, index=True, nullable=False)
     status: str = Field(

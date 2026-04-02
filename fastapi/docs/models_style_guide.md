@@ -9,6 +9,7 @@
 - [5. Declaring Simple Nullable Fields](#5-declaring-simple-nullable-fields)
 - [6. When to use `__table_args__`](#6-when-to-use-__table_args__)
 - [7. `sa_column_kwargs` parameter in SQLModel's `Field()`](#7-sa_column_kwargs-parameter-in-sqlmodels-field)
+- [8. `UUID generation`](#8-uuid-generation)
 
 This document outlines the conventions and best practices for creating SQLModel ORM classes in this project. The goal is to maintain a consistent and readable codebase.
 
@@ -174,3 +175,30 @@ Example: By using:
 sa_column_kwargs={"server_default": text("gen_random_uuid()")}
 ```
 you are simply saying: "Hey SQLModel, go ahead and create the primary key column as you normally do, but just add this one extra argument (server_default) to it."
+
+### 8. UUID generation (Primary key)
+
+#### **MVP rule**
+
+If in a table the column `id`, type `UUID` has no `Default` value - we implement app-side UUID generation.
+
+```python
+id: uuid.UUID = Field(
+    default_factory=uuid.uuid4,
+    primary_key=True,
+)
+```
+
+If in a table the column `id`, type `UUID` has `gen_random_uuid()` - read **Post-MVP rule** below.
+
+#### **Post-MVP rule**
+
+We schedule DB-side UUID defaults as post-MVP hardening.
+
+```python
+id: uuid.UUID = Field(
+    default=None,
+    primary_key=True,
+    sa_column_kwargs={"server_default": text("gen_random_uuid()")}
+)
+```

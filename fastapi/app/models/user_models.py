@@ -1,11 +1,12 @@
-from datetime import datetime
-from typing import List, TYPE_CHECKING, Optional
+from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import text, Column, UniqueConstraint
+from sqlalchemy import Boolean, Index
 import uuid
 from uuid import UUID
+from typing import List, TYPE_CHECKING, Optional
+from sqlalchemy import DateTime # database column type: `timestamp with time zone`
+from datetime import datetime   # Python type: type hints and runtime values
 
-from sqlalchemy import text, DateTime, Column, UniqueConstraint
-from sqlalchemy import Boolean, Index
-from sqlmodel import SQLModel, Field, Relationship
 
 # NOTE: MP. We provide Pylance with a hint, but in a way that avoids triggering 
 # a circular import during execution.
@@ -19,9 +20,11 @@ class Users(SQLModel, table=True):
         Index("ix_users_email", "email", unique=True),
     )
     id: uuid.UUID = Field(
-        default=None, 
-        primary_key=True, 
-        sa_column_kwargs={"server_default": text("gen_random_uuid()")} # db-side UUID generation
+        # app-side UUID generation for MVP delivery
+        default_factory=uuid.uuid4,
+        # scheduling DB-enforced UUID defaults as post-MVP hardening
+        # sa_column_kwargs={"server_default": text("gen_random_uuid()")}
+        primary_key=True,
     )
     email: str = Field(max_length=255, nullable=False)
     password_hash: str = Field(max_length=255, nullable=False)
@@ -66,9 +69,11 @@ class Tenants(SQLModel, table=True):
         Index("ix_tenants_slug", "slug", unique=True),
     )
     id: UUID = Field(
-        default=None,
+        # app-side UUID generation for MVP delivery
+        default_factory=uuid.uuid4,
+        # scheduling DB-enforced UUID defaults as post-MVP hardening
+        # sa_column_kwargs={"server_default": text("gen_random_uuid()")}
         primary_key=True,
-        sa_column_kwargs={"server_default": text("gen_random_uuid()")}
     )
     created_at: datetime = Field(
         default=None,
