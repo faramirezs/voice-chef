@@ -9,7 +9,6 @@ class RecipeCreate(SQLModel):
     description: Optional[str] = None
     instructions: Optional[str] = None
 
-
 class RecipeRead(SQLModel):
     id: UUID
     name: str
@@ -17,10 +16,9 @@ class RecipeRead(SQLModel):
     instructions: Optional[str] = None
 
 class RecipeUpdate(SQLModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    instructions: Optional[str] = None
-
+    name: str | None = None
+    description: str | None = None
+    instructions: str | None = None
 
 class IngredientCreate(SQLModel):
     name: str

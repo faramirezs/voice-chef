@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import Query, FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import inspect
 from app.database import get_db, engine
@@ -27,16 +27,16 @@ def list_tables():
 # NOTE: DL - this is just a test endpoint to verify that we can fetch recipes from the database. 
 # We will remove this later and implement proper endpoints for recipes.
 @app.get("/recipes")
-def fetch_recipes(session: Session = Depends(get_db)):
-    query = select(models.Recipes)
+def retrieve_recipes(session: Session = Depends(get_db)):
+    query = select(models.Recipe)
     recipes = result = session.exec(query).all()
     return recipes
 
 
-# NOTE: MK - Fetch one recipe by id
+# NOTE: MK - Retrieve one recipe by id
 @app.get("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
-def fetch_recipe(recipe_id: str, session: Session = Depends(get_db)):
-    query = select(models.Recipes).where(models.Recipes.id == recipe_id)
+def retrieve_recipe(recipe_id: str, session: Session = Depends(get_db)):
+    query = select(models.Recipe).where(models.Recipe.id == recipe_id)
     recipe = session.exec(query).first()
 
     if not recipe:
@@ -44,21 +44,21 @@ def fetch_recipe(recipe_id: str, session: Session = Depends(get_db)):
 
     return recipe
 
-# NOTE: MK - Create a recipe 
-@app.post("/recipes", response_model=schemas.RecipeRead)
-def create_recipe(recipe: schemas.RecipeCreate, session: Session = Depends(get_db)):
-    new_recipe = models.Recipes(**recipe.dict())
+# # NOTE: MK - Create a recipe 
+# @app.post("/recipes", response_model=schemas.RecipeRead)
+# def create_recipe(recipe: schemas.RecipeCreate, session: Session = Depends(get_db)):
+#     new_recipe = models.Recipe(**recipe.dict())
     
-    session.add(new_recipe)
-    session.commit()
-    session.refresh(new_recipe)
+#     session.add(new_recipe)
+#     session.commit()
+#     session.refresh(new_recipe)
 
-    return new_recipe
+#     return new_recipe
 
 # NOTE: MK - Update recipe fields with partial merge semantics
 @app.put("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
 def update_recipe(recipe_id: str, recipe_update: schemas.RecipeUpdate, session: Session = Depends(get_db)):
-    query = select(models.Recipes).where(models.Recipes.id == recipe_id)
+    query = select(models.Recipe).where(models.Recipe.id == recipe_id)
     recipe = session.exec(query).first()
 
     if not recipe:
@@ -73,28 +73,32 @@ def update_recipe(recipe_id: str, recipe_update: schemas.RecipeUpdate, session: 
 
     return recipe
 
-# NOTE: MK - Delete recipe
-@app.delete("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
-def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
-    query = select(models.Recipes).where(models.Recipes.id == recipe_id)
-    recipe = session.exec(query).first()
+# # NOTE: MK - Delete recipe
+# @app.delete("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
+# def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
+#     query = select(models.Recipe).where(models.Recipe.id == recipe_id)
+#     recipe = session.exec(query).first()
 
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found for tenant")
+#     if not recipe:
+#         raise HTTPException(status_code=404, detail="Recipe not found for tenant")
 
-    session.delete(recipe)
-    session.commit()
+#     session.delete(recipe)
+#     session.commit()
 
-    return recipe
+#     return recipe
 
 
-# --------------------
-# Ingredient endpoints
-# --------------------
+# # --------------------
+# # Ingredient endpoints
+# # --------------------
 
-# NOTE: MK - Fetch Ingredients
+# NOTE: MK - Retrieve Ingredients
 @app.get("/ingredients")
-def fetch_ingredients(session: Session = Depends(get_db)):
+def retrieve_ingredients(
+    session: Session = Depends(get_db),    
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200)):
+    
     query = select(models.Ingredients)
     ingredients = session.exec(query).all()
     return ingredients
