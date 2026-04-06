@@ -31,7 +31,7 @@ def upgrade() -> None:
         sa.Column("id", UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("slug", sa.String(100), nullable=False, unique=True),
-        sa.Column("settings", JSONB, server_default=sa.text("'{}'")),
+        sa.Column("settings", JSONB, server_default=sa.text("'{}'"), nullable=True),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
@@ -43,7 +43,7 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", UUID, sa.ForeignKey("tenants.id"), nullable=False),
+        sa.Column("tenant_id", UUID, sa.ForeignKey("tenants.id"), nullable=True),
         sa.Column("email", sa.String(320), nullable=False, unique=True),
         sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column("role", sa.String(50), nullable=False, server_default=sa.text("'editor'")),
@@ -113,25 +113,73 @@ def upgrade() -> None:
     op.create_table(
         "recipes",
         sa.Column("id", UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", UUID, sa.ForeignKey("tenants.id"), nullable=False),
+        sa.Column("tenant_id", UUID, sa.ForeignKey("tenants.id"), nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("instructions", sa.Text, nullable=True),
-        sa.Column("yield_amount", sa.Numeric, nullable=True),
+        sa.Column("yield_amount", sa.Numeric(10, 2), nullable=True),
         sa.Column("yield_unit", sa.String(50), nullable=True),
-        sa.Column("reduction_factor", sa.Numeric, nullable=True, server_default=sa.text("1.0")),
+        sa.Column("reduction_factor", sa.Numeric(10, 4), nullable=True),
         sa.Column("status", sa.String(50), nullable=False, server_default=sa.text("'draft'")),
-        sa.Column("is_component", sa.Boolean, nullable=False, server_default=sa.text("false")),
+        sa.Column("is_component", sa.Boolean, nullable=True, server_default=sa.text("false")),
         sa.Column("recipe_number", sa.String(100), nullable=True),
-        sa.Column("preparation_time_minutes", sa.Integer, nullable=True),
-        sa.Column("cooking_time_minutes", sa.Integer, nullable=True),
-        sa.Column("shelf_life_text", sa.Text, nullable=True),
-        sa.Column("storage_temperature", sa.String(50), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
+        sa.Column("storage_temperature", sa.String(50), nullable=True),
         sa.Column("created_by", UUID, sa.ForeignKey("users.id"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.CheckConstraint("status IN ('draft', 'active', 'archived')", name="valid_status"),
+        # Extended model columns (added to match current SQLModel definition)
+        sa.Column("description_short", sa.Text, nullable=True),
+        sa.Column("notes_instructions", sa.Text, nullable=True),
+        sa.Column("serving_recommendation", sa.Text, nullable=True),
+        sa.Column("side_dishes", sa.Text, nullable=True),
+        sa.Column("storage_text", sa.Text, nullable=True),
+        sa.Column("origin_fish", sa.Text, nullable=True),
+        sa.Column("origin_location", sa.Text, nullable=True),
+        sa.Column("devices", sa.Text, nullable=True),
+        sa.Column("utensils", sa.Text, nullable=True),
+        sa.Column("packaging", sa.Text, nullable=True),
+        sa.Column("packaging_material", sa.Text, nullable=True),
+        sa.Column("ingredient_list_custom", sa.Text, nullable=True),
+        sa.Column("allergene_source", sa.Text, nullable=True),
+        sa.Column("preparation_time", sa.Text, nullable=True),
+        sa.Column("waiting_time", sa.Text, nullable=True),
+        sa.Column("cooking_time", sa.Text, nullable=True),
+        sa.Column("shelf_life", sa.Text, nullable=True),
+        sa.Column("batch_number", sa.String(100), nullable=True),
+        sa.Column("labor_effort", sa.String(50), nullable=True),
+        sa.Column("nutri_score_category", sa.String(10), nullable=True),
+        sa.Column("unit_measure", sa.String(50), nullable=True),
+        sa.Column("unit_serving", sa.String(50), nullable=True),
+        sa.Column("eigene_menge", sa.Numeric(10, 2), nullable=True),
+        sa.Column("net_weight", sa.Numeric(10, 2), nullable=True),
+        sa.Column("fill_weight", sa.Numeric(10, 2), nullable=True),
+        sa.Column("fill_quantity", sa.Numeric(10, 2), nullable=True),
+        sa.Column("drained_weight", sa.Numeric(10, 2), nullable=True),
+        sa.Column("total_weight", sa.Numeric(10, 2), nullable=True),
+        sa.Column("portion_weight", sa.Numeric(10, 2), nullable=True),
+        sa.Column("margin", sa.Numeric(10, 2), nullable=True),
+        sa.Column("nutri_score_veg_fruits", sa.Numeric(5, 2), nullable=True),
+        sa.Column("preference_nutri_value", sa.Numeric(10, 2), nullable=True),
+        sa.Column("portion_size_grams", sa.Numeric, nullable=True),
+        sa.Column("total_raw_weight_grams", sa.Numeric, nullable=True),
+        sa.Column("total_cooked_weight_grams", sa.Numeric, nullable=True),
+        sa.Column("portions_count_resolved", sa.Numeric, nullable=True),
+        sa.Column("yield_mode", sa.String(20), nullable=False, server_default=sa.text("'count'")),
+        sa.Column("portion_by_weight", sa.Boolean, nullable=True, server_default=sa.text("false")),
+        sa.Column("mise_en_place_display", sa.Boolean, nullable=True, server_default=sa.text("true")),
+        sa.Column("production_date", sa.Date, nullable=True),
+        sa.Column("use_by_date", sa.Date, nullable=True),
+        sa.Column("expiry_date", sa.Date, nullable=True),
+        sa.CheckConstraint("portion_size_grams IS NULL OR portion_size_grams > 0", name="positive_portion_size_grams"),
+        sa.CheckConstraint("yield_mode::text = ANY (ARRAY['count'::text, 'weight'::text])", name="valid_yield_mode"),
+        sa.CheckConstraint(
+            "(status)::text <> 'active'::text OR (yield_mode)::text <> 'weight'::text OR (portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric)",
+            name="weight_mode_requires_portion_size_when_active"
+        ),
+        sa.CheckConstraint("portions_count_resolved IS NULL OR portions_count_resolved > 0", name="positive_portions_count_resolved"),
+        sa.CheckConstraint("total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0", name="positive_total_cooked_weight_grams"),
+        sa.CheckConstraint("total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0", name="positive_total_raw_weight_grams"),
     )
 
     # ------------------------------------------------------------------ #
@@ -377,7 +425,10 @@ def upgrade() -> None:
     op.create_index("idx_recipes_tenant", "recipes", ["tenant_id"])
     op.create_index("idx_recipes_name", "recipes", ["name"])
     op.create_index("idx_recipes_status", "recipes", ["tenant_id", "status"])
-    op.create_index("idx_recipes_component", "recipes", ["tenant_id", "is_component"])
+    op.create_index("idx_recipes_batch_number", "recipes", ["batch_number"])
+    op.create_index("idx_recipes_is_component", "recipes", ["is_component"])
+    op.create_index("idx_recipes_reduction_factor", "recipes", ["reduction_factor"])
+    op.create_index("idx_recipes_yield_mode", "recipes", ["yield_mode"])
 
     # Ingredients
     op.create_index("idx_ingredients_name", "ingredients", ["name"])
@@ -410,6 +461,13 @@ def upgrade() -> None:
     op.create_index("idx_recipe_tags_tag", "recipe_tags", ["tag_id"])
     op.create_index("idx_ingredient_prices_ing", "ingredient_prices", ["ingredient_id"])
 
+    # Users
+    op.create_index("ix_users_email", "users", ["email"], unique=True)
+
+    # Tenants
+    op.create_index("ix_tenants_slug", "tenants", ["slug"], unique=True)
+    op.create_index("ix_tenants_name", "tenants", ["name"])
+
     # Partial unique indexes for ingredient_prices (NULL-safe supplier_id)
     op.execute("""
         CREATE UNIQUE INDEX uq_ingredient_supplier
@@ -426,35 +484,62 @@ def upgrade() -> None:
     #  ROW LEVEL SECURITY                                                 #
     # ================================================================== #
 
-    tenant_scoped_tables = [
+    # Tables that directly carry tenant_id
+    direct_tenant_tables = [
         "recipes",
-        "recipe_ingredients",
         "shopping_lists",
-        "shopping_list_items",
-        "task_lists",
-        "task_items",
         "audit_logs",
         "agent_interactions",
     ]
 
-    for table in tenant_scoped_tables:
+    for table in direct_tenant_tables:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+        op.execute(f"""
+            CREATE POLICY tenant_isolation ON {table}
+            FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+        """)
 
-        if table in ("shopping_list_items", "task_items"):
-            op.execute(f"""
-                CREATE POLICY tenant_isolation ON {table}
-                FOR ALL USING (
-                    list_id IN (
-                        SELECT id FROM {"shopping_lists" if "shopping" in table else "task_lists"}
-                        WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
-                    )
-                )
-            """)
-        else:
-            op.execute(f"""
-                CREATE POLICY tenant_isolation ON {table}
-                FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
-            """)
+    # recipe_ingredients: no tenant_id column — isolate via parent recipe
+    op.execute("ALTER TABLE recipe_ingredients ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY tenant_isolation ON recipe_ingredients
+        FOR ALL USING (
+            recipe_id IN (
+                SELECT id FROM recipes
+                WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+            )
+        )
+    """)
+
+    # shopping_list_items: no tenant_id — isolate via parent shopping_list
+    op.execute("ALTER TABLE shopping_list_items ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY tenant_isolation ON shopping_list_items
+        FOR ALL USING (
+            list_id IN (
+                SELECT id FROM shopping_lists
+                WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+            )
+        )
+    """)
+
+    # task_lists / task_items
+    op.execute("ALTER TABLE task_lists ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY tenant_isolation ON task_lists
+        FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid)
+    """)
+
+    op.execute("ALTER TABLE task_items ENABLE ROW LEVEL SECURITY")
+    op.execute("""
+        CREATE POLICY tenant_isolation ON task_items
+        FOR ALL USING (
+            list_id IN (
+                SELECT id FROM task_lists
+                WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+            )
+        )
+    """)
 
     # Ingredients: tenant-owned OR shared (NULL tenant_id)
     op.execute("ALTER TABLE ingredients ENABLE ROW LEVEL SECURITY")
