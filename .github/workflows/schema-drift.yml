@@ -1,5 +1,12 @@
 name: Schema Drift Gate
 
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-drift-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, develop]
@@ -12,6 +19,7 @@ jobs:
   schema-drift:
     name: Detect schema drift
     runs-on: ubuntu-24.04            # ubuntu-latest resolves to 24.04 in 2026
+    timeout-minutes: 30
 
     services:
       postgres:
@@ -30,6 +38,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql+psycopg2://app:secret@localhost:5432/test_db
+      PYTHONPATH: ./fastapi
 
     steps:
       # ── Checkout ─────────────────────────────────────────────────────────
@@ -45,7 +54,10 @@ jobs:
 
       # ── Dependencies ─────────────────────────────────────────────────────
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r fastapi/requirements.txt
+          python -m pip install "pytest>=8.3" "pytest-alembic>=0.11" "psycopg2-binary>=2.9"
 
       # ── PostgreSQL setup ─────────────────────────────────────────────────
       - name: Install pgcrypto extension
@@ -60,16 +72,15 @@ jobs:
 
       # ── Gate 1: Programmatic drift check ─────────────────────────────────
       - name: Assert no schema drift (compare_metadata)
-        run: python scripts/drift_check.py
+        run: python db/scripts/drift_check.py
 
       # ── Gate 2: pytest-alembic full suite ────────────────────────────────
       - name: Run schema drift test suite
         run: |
-          pytest tests/test_schema_drift.py \
+          pytest db/test/test_schema_drift.py \
             -v \
             --tb=short \
-            -p pytest_alembic \
-            --alembic
+            --test-alembic
 
       # ── Gate 3: Verify migration chain has a single head ─────────────────
       - name: Assert single migration head (no branch divergence)
@@ -85,14 +96,26 @@ jobs:
       # ── Gate 4: Verify no pending migrations exist ────────────────────────
       - name: Assert no pending migrations (models fully committed)
         run: |
-          PENDING=$(alembic revision --autogenerate -m "ci_check" 2>&1)
+          alembic revision --autogenerate -m "ci_check"
           # If the generated file contains only 'pass', models are in sync.
-          LATEST_FILE=$(ls -t alembic/versions/ | head -1)
-          if grep -qE "op\.(create|drop|add|alter)" "alembic/versions/$LATEST_FILE"; then
+          LATEST_FILE=$(ls -t db/alembic/versions/*ci_check*.py | head -1)
+          if grep -qE "op\.(create|drop|add|alter)" "$LATEST_FILE"; then
             echo "❌ Pending schema changes found in models not yet in a migration:"
-            grep -E "op\.(create|drop|add|alter)" "alembic/versions/$LATEST_FILE"
+            grep -E "op\.(create|drop|add|alter)" "$LATEST_FILE"
             exit 1
           fi
           echo "✅ No pending migrations — models are fully committed."
-          # Clean up the CI-only checkpoint revision
-          rm "alembic/versions/$LATEST_FILE"
+
+      - name: Upload pending migration artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-drift-ci-check-${{ github.run_id }}
+          path: db/alembic/versions/*ci_check*.py
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Clean up CI checkpoint revision
+        if: always()
+        run: |
+          rm -f db/alembic/versions/*ci_check*.py

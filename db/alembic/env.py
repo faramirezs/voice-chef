@@ -1,8 +1,10 @@
 import os
+from importlib import import_module
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from sqlmodel import SQLModel
 
 
 from alembic import context
@@ -23,7 +25,17 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+try:
+    from fastapi.app.models.user_models import Users, Tenants  # noqa: F401
+    from fastapi.app.models.recipe_models import Recipe  # noqa: F401
+except ModuleNotFoundError:
+    user_models = import_module("app.models.user_models")
+    recipe_models = import_module("app.models.recipe_models")
+    Users = user_models.Users
+    Tenants = user_models.Tenants
+    Recipe = recipe_models.Recipe
+
+target_metadata = SQLModel.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
