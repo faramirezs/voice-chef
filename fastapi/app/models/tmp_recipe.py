@@ -9,8 +9,11 @@ from datetime import date, datetime # Python type: type hints and runtime values
 from decimal import Decimal
 
 
+# NOTE: mpeshko. This file was created by mpeshko, and it'll be removed 
+# later,because mekundur works on recipes and he has is version
+
 if TYPE_CHECKING:
-    from .user_models import Users, Tenants
+    from .users import Users, Tenants
 
 
 class Recipe(SQLModel, table=True):

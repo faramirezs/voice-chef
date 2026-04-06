@@ -11,7 +11,7 @@ from datetime import datetime   # Python type: type hints and runtime values
 # NOTE: MP. We provide Pylance with a hint, but in a way that avoids triggering 
 # a circular import during execution.
 if TYPE_CHECKING:
-    from .recipe_models import Recipe
+    from .tmp_recipe import Recipe
 
 
 class Users(SQLModel, table=True):
