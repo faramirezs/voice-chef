@@ -1,10 +1,10 @@
 import os
-from importlib import import_module
+import importlib.util
+from pathlib import Path
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from sqlmodel import SQLModel
 
 
 from alembic import context
@@ -25,17 +25,35 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-try:
-    from fastapi.app.models.user_models import Users, Tenants  # noqa: F401
-    from fastapi.app.models.recipe_models import Recipe  # noqa: F401
-except ModuleNotFoundError:
-    user_models = import_module("app.models.user_models")
-    recipe_models = import_module("app.models.recipe_models")
-    Users = user_models.Users
-    Tenants = user_models.Tenants
-    Recipe = recipe_models.Recipe
+def _load_models_module() -> None:
+    """Load models.py directly so package __init__ imports do not pollute metadata."""
+    repo_root = Path(__file__).resolve().parents[2]
+    candidates = [
+        repo_root / "fastapi" / "app" / "models" / "models.py",
+        Path("/code/app/models/models.py"),
+    ]
+
+    for models_path in candidates:
+        if models_path.exists():
+            spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return
+
+    raise ModuleNotFoundError("Could not locate models.py for Alembic metadata loading")
+
+
+_load_models_module()
+from sqlmodel import SQLModel
 
 target_metadata = SQLModel.metadata
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Include all objects for full-schema autogenerate comparison."""
+    return True
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -61,6 +79,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -82,7 +101,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

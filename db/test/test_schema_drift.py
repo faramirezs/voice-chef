@@ -7,6 +7,8 @@ Three complementary drift detection strategies:
   3. SQLAlchemy inspect()              — surgical column/index/constraint audit
 """
 import re
+import importlib.util
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -15,13 +17,27 @@ from alembic.runtime.migration import MigrationContext
 from sqlalchemy import inspect, text
 from sqlmodel import SQLModel
 
-# Ensure metadata is populated
-try:
-    from fastapi.app.models.user_models import Users, Tenants
-    from fastapi.app.models.recipe_models import Recipe
-except ModuleNotFoundError:
-    from app.models.user_models import Users, Tenants
-    from app.models.recipe_models import Recipe
+def _load_models_module() -> None:
+    """Load models.py directly so package __init__ imports do not pollute metadata."""
+    repo_root = Path(__file__).resolve().parents[2]
+    candidates = [
+        repo_root / "fastapi" / "app" / "models" / "models.py",
+        Path("/code/app/models/models.py"),
+    ]
+
+    for models_path in candidates:
+        if models_path.exists():
+            spec = importlib.util.spec_from_file_location("_test_drift_models", str(models_path))
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return
+
+    raise ModuleNotFoundError("Could not locate models.py for drift test metadata loading")
+
+
+_load_models_module()
 
 MANAGED_TABLES = {"users", "tenants", "recipes"}
 _PG_CAST_RE = re.compile(r"::[a-z _]+", re.IGNORECASE)

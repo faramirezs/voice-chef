@@ -6,20 +6,35 @@ Call at app startup or from CI to block deployment on schema drift.
 """
 import re
 import sys
+import importlib.util
+from pathlib import Path
 from typing import Any
 
 from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy import create_engine, text
 
-# Import ALL models so SQLModel.metadata is fully populated.
-# Every model module must be imported here — missing one = false clean pass.
-try:
-    from fastapi.app.models.user_models import Users, Tenants
-    from fastapi.app.models.recipe_models import Recipe
-except ModuleNotFoundError:
-    from app.models.user_models import Users, Tenants
-    from app.models.recipe_models import Recipe
+def _load_models_module() -> None:
+    """Load models.py directly so package __init__ imports do not pollute metadata."""
+    repo_root = Path(__file__).resolve().parents[2]
+    candidates = [
+        repo_root / "fastapi" / "app" / "models" / "models.py",
+        Path("/code/app/models/models.py"),
+    ]
+
+    for models_path in candidates:
+        if models_path.exists():
+            spec = importlib.util.spec_from_file_location("_drift_models", str(models_path))
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return
+
+    raise ModuleNotFoundError("Could not locate models.py for drift metadata loading")
+
+
+_load_models_module()
 
 from sqlmodel import SQLModel
 
