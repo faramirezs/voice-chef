@@ -532,3 +532,7 @@ class RecipeVersions(SQLModel, table=True):
     created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     recipe: 'Recipes' = Relationship(back_populates='recipe_versions')
+
+
+# Temporary compatibility alias during migration from monolith `Recipes` to split `Recipe`.
+Recipe = Recipes

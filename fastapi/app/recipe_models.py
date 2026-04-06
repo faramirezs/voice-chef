@@ -151,3 +151,7 @@ class Recipe(SQLModel, table=True):
     # Relationship attributes
     tenant: Optional["Tenants"] = Relationship(back_populates="recipes")
     created_by_user: Optional["Users"] = Relationship(back_populates="recipes")
+
+
+# Temporary compatibility alias during migration from `Recipes` -> `Recipe`.
+Recipes = Recipe
