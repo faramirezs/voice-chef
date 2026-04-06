@@ -450,6 +450,16 @@ def upgrade() -> None:
                     )
                 )
             """)
+        elif table == "recipe_ingredients":
+            op.execute("""
+                CREATE POLICY tenant_isolation ON recipe_ingredients
+                FOR ALL USING (
+                    recipe_id IN (
+                        SELECT id FROM recipes
+                        WHERE tenant_id = current_setting('app.current_tenant_id', true)::uuid
+                    )
+                )
+            """)
         else:
             op.execute(f"""
                 CREATE POLICY tenant_isolation ON {table}
