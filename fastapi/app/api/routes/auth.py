@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from uuid import UUID
-# from fastapi.security import OAuth2PasswordRequestForm # to make the "Authorize" button work
-# from typing import Annotated
+from fastapi.security import OAuth2PasswordRequestForm # to make the "Authorize" button work in OpenAPI
+from typing import Annotated
 
 # import our files
 from app.database import get_session
-from app.models.users import Users, UserSignupLogin, UserSignupResponse, Tenants # Token
-from app.auth_utils import get_password_hash, validate_password #, verify_password, create_access_token
+from app.models.users import Users, UserSignupLogin, UserSignupResponse, Tenants, UserLoginResponse, AuthTokenResponse
+from app.auth_utils import get_password_hash, validate_password, verify_password, create_access_token
 
 
 # -----------------------------------------------------------------------------
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
+# ─── SIGNUP ──────────────────────────────────────────────────────────────────
 
 # signup_responses are just documentation/override metadata for OpenAPI, 
 # not the actual runtime response shape.
@@ -126,38 +127,50 @@ async def signup(user_data: UserSignupLogin, session: Session = Depends(get_sess
     session.refresh(new_user)
     return new_user
 
-# @router.post(
-# 	"/login",
-# 	response_model=Token,
-# 	responses={
-# 		401: {
-# 			"description": "Unauthorized",
-# 			"content": {
-# 				"application/json": {
-# 					"example": {"detail": "Invalid email or password"}
-# 				}
-# 			}
-# 		}
-# 	}
-# 	)
-# async def login(
-# 	form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-# 	session: Session = Depends(get_db)
-# ):
-# 	"""Handles user login and issues a JWT"""
-# 	# form_data has 'username' and 'password' fields
-# 	query = select(User).where(User.email == form_data.username)
-# 	result = session.exec(query)
-# 	user = result.scalars().first()
 
-# 	if not user or not verify_password(form_data.password, user.hashed_password):
-# 		raise HTTPException(
-# 			status_code=status.HTTP_401_UNAUTHORIZED,
-# 			detail="Invalid email or password",
-# 			headers={"WWW-Authenticate": "Bearer"}
-# 		)
-	
-# 	access_token = create_access_token(
-# 		data={"sub": user.email, "nickname": user.nickname})
+# ─── LOGIN ──────────────────────────────────────────────────────────────────
 
-# 	return {"access_token": access_token, "token_type": "bearer"}
+login_responses = {
+     401: {
+			"description": "Unauthorized",
+			"content": {
+				"application/json": {
+					"example": {"detail": "Invalid email or password"}
+				}
+			}
+	}
+}
+
+@router.post(
+    "/login",
+    status_code=status.HTTP_200_OK,
+    response_model=AuthTokenResponse,
+    responses=login_responses,
+    )
+async def login(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: Session = Depends(get_session)
+) -> AuthTokenResponse:
+    """Handles user login and issues a JWT"""
+    # form_data has 'username' (email in our case) and 'password' fields
+    query = select(Users).where(Users.email == form_data.username)
+    user = session.exec(query).first()
+    if not user or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
+    access_token = create_access_token(
+        data={"sub": user.email, "id": str(user.id)})
+     
+    # Create the user object for the response
+    user_response = UserLoginResponse.model_validate(user)
+
+    # Return the full token response object
+    return AuthTokenResponse(
+        access_token=access_token,
+        expires_in=3600,
+        user=user_response
+    )

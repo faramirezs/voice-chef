@@ -21,6 +21,20 @@ class UserSignupLogin(UserBase):
 class UserSignupResponse(UserBase):
     id: uuid.UUID
 
+# This model defines the user object inside the token response
+class UserLoginResponse(UserBase):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    role: str
+    is_active: bool
+
+# This is the main response model for the /login endpoint
+class AuthTokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: UserLoginResponse
+
 # ─── Pydantic models for tenants ─────────────────────────────────────────────────
 
 class TenantsBase(SQLModel):
