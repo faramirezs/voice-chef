@@ -21,6 +21,15 @@ class UserSignupLogin(UserBase):
 class UserSignupResponse(UserBase):
     id: uuid.UUID
 
+# ─── Pydantic models for tenants ─────────────────────────────────────────────────
+
+class TenantsBase(SQLModel):
+    name: str
+
+class TenantsResponse(TenantsBase):
+    id: uuid.UUID
+    created_at: datetime.datetime
+
 # ─── Tenants ──────────────────────────────────────────────────────────────────
 
 class Tenants(SQLModel, table=True):
@@ -59,6 +68,7 @@ class Users(SQLModel, table=True):
     id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
     tenant_id: uuid.UUID = Field(sa_column=Column('tenant_id', Uuid, nullable=False))
     email: str = Field(sa_column=Column('email', String(320), nullable=False))
+    # Argon2 default hash is ~97 chars. 255 provides a safe buffer.
     password_hash: str = Field(sa_column=Column('password_hash', String(255), nullable=False))
     role: str = Field(sa_column=Column('role', String(50), nullable=False, server_default=text("'editor'::character varying")))
     is_active: bool = Field(sa_column=Column('is_active', Boolean, nullable=False, server_default=text('true')))

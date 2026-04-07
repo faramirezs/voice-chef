@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 # from auth_utils import oauth2_scheme
 from app.database import get_session
-from app.models.users import Users, UserSignupResponse # Token 
+from app.models.users import Users, UserSignupResponse, Tenants, TenantsResponse # Token 
 # from dependencies import get_current_user
 
 
@@ -30,4 +30,13 @@ async def read_users(session: Session = Depends(get_session)) -> list[UserSignup
     Returns an empty list if no users are found.
     """
     users = session.exec(select(Users)).all()
+    return users
+
+@router.get("/list_all_tenents/", response_model=list[TenantsResponse])
+async def read_users(session: Session = Depends(get_session)) -> list[TenantsResponse]:
+    """
+    Retrieves a list of all tenants from the database.
+    Returns an empty list if no tenants are found.
+    """
+    users = session.exec(select(Tenants)).all()
     return users

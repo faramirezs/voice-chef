@@ -50,26 +50,26 @@ def validate_password(password: str) -> bool:
         return True
 
 
-# def verify_password(inserted_password: str, hashed_password: str) -> bool:
-#     """Checks if a provided password matches the hashed database passowrd"""
-#     try:
-#         ph.verify(hashed_password, inserted_password)
-#         return True
-#     except argon2.exceptions.VerifyMismatchError:
-#         return False
-#     except argon2.exceptions.InvalidHashError:
-#         return False
+def verify_password(inserted_password: str, hashed_password: str) -> bool:
+    """Checks if a provided password matches the hashed database passoword"""
+    try:
+        ph.verify(hashed_password, inserted_password)
+        return True
+    except argon2.exceptions.VerifyMismatchError:
+        return False
+    except argon2.exceptions.InvalidHashError:
+        return False
 
 
-# def create_access_token(data: dict) -> str:
-#     """Generates a JSON Web Token for user sessions."""
-#     to_encode = data.copy()
+def create_access_token(data: dict) -> str:
+    """Generates a JSON Web Token for user sessions."""
+    to_encode = data.copy()
    
-#     # Set expiration time using timezone-aware UTC
-#     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     to_encode.update({"exp": expire})
+    # Set expiration time using timezone-aware UTC
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
    
-#     # Encode into a jwt string
-#     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    # Encode into a jwt string
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     
-#     return encoded_jwt
+    return encoded_jwt
