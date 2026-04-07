@@ -1,9 +1,12 @@
 import os
-import sys
+from importlib import import_module
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from sqlmodel import SQLModel
+
+
 from alembic import context
 
 # ---------------------------------------------------------------------------
@@ -30,20 +33,26 @@ config.set_main_option("sqlalchemy.url", url)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# ---------------------------------------------------------------------------
-# Import ALL models so SQLModel.metadata is fully populated for autogenerate.
-# Every model module must be imported here — missing one = false clean pass.
-# ---------------------------------------------------------------------------
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
 try:
-    from app.models.user_models import Users, Tenants  # noqa: F401
-    from app.models.recipe_models import Recipe         # noqa: F401
-except ModuleNotFoundError:
     from fastapi.app.models.user_models import Users, Tenants  # noqa: F401
-    from fastapi.app.models.recipe_models import Recipe         # noqa: F401
-
-from sqlmodel import SQLModel
+    from fastapi.app.models.recipe_models import Recipe  # noqa: F401
+except ModuleNotFoundError:
+    user_models = import_module("app.models.user_models")
+    recipe_models = import_module("app.models.recipe_models")
+    Users = user_models.Users
+    Tenants = user_models.Tenants
+    Recipe = recipe_models.Recipe
 
 target_metadata = SQLModel.metadata
+
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
 
 
 def run_migrations_offline() -> None:
