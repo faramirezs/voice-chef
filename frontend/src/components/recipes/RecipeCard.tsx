@@ -14,11 +14,11 @@ function ImagePlaceholder({ onView }: { onView: () => void }) {
     <div className="relative w-full h-36 bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 flex items-center justify-center">
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="w-12 h-12 text-orange-300"
+        className="w-18 h-18 text-orange-300"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       >
@@ -31,16 +31,16 @@ function ImagePlaceholder({ onView }: { onView: () => void }) {
       </svg>
 
       {/* Eye icon button */}
-      <button
+      {/* <button
         onClick={(e) => { e.stopPropagation(); onView(); }}
-        className="absolute top-2 right-2 p-2.0    rounded-full bg-white/20 hover:bg-white text-gray-200 hover:text-gray-400 shadow-sm transition-colors"
+        className="absolute top-1 right-1 rounded-full text-gray-200 hover:text-gray-400 transition-colors"
         aria-label="View recipe"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
+          <circle cx="12" cy="12" r="4" />
         </svg>
-      </button>
+      </button> */}
     </div>
   );
 }
@@ -52,10 +52,10 @@ interface RecipeCardProps {
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const navigate = useNavigate();
 
-  const yieldLabel =
-    recipe.yield_amount != null
-      ? `${recipe.yield_amount}${recipe.yield_unit ? ` ${recipe.yield_unit}` : ''}`
-      : null;
+  // const yieldLabel =
+  //   recipe.yield_amount != null
+  //     ? `${recipe.yield_amount}${recipe.yield_unit ? ` ${recipe.yield_unit}` : ''}`
+  //     : null;
 
   const badgeClass = cn(
     'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize',
@@ -63,7 +63,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   );
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer pt-0 gap-3">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer pt-0 gap-2" onClick={() => navigate(`/recipes/${recipe.id}`)}>
       <ImagePlaceholder onView={() => navigate(`/recipes/${recipe.id}`)} />
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -71,7 +71,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <span className={badgeClass}>{recipe.status}</span>
         </div>
       </CardHeader>
-      <CardContent className="text-sm text-muted-foreground space-y-1">
+      {/* <CardContent className="text-sm text-muted-foreground space-y-1">
         {yieldLabel && (
           <p>
             <span className="font-medium text-foreground">Yield:</span> {yieldLabel}
@@ -80,7 +80,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         {recipe.recipe_number && (
           <p className="text-xs font-mono">#{recipe.recipe_number}</p>
         )}
-      </CardContent>
+      </CardContent> */}
     </Card>
   );
 }

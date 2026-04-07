@@ -11,7 +11,9 @@ function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<RecipesPage />} />
+
           <Route path="recipes/:id" element={<RecipeDetailPage />} />
+          
           <Route path="planner" element={<PlannerPage />} />
           <Route path="notes" element={<NotesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
