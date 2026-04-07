@@ -128,6 +128,8 @@ Common error statuses:
 
 `AuthTokenResponse`
 
+Note: `expires_in` is measured in seconds
+
 ```json
 {
   "access_token": "<jwt>",
