@@ -1,6 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 import datetime
 import uuid
+from pydantic import EmailStr
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKeyConstraint, PrimaryKeyConstraint, String, UniqueConstraint, Uuid, text
 from sqlalchemy.dialects.postgresql import JSONB
@@ -9,6 +10,18 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from .tmp_recipe import Recipe
 
+# ─── Pydantic models for users ─────────────────────────────────────────────────
+
+class UserBase(SQLModel):
+    email: EmailStr = Field(max_length=255)
+
+class UserSignupLogin(UserBase):
+    password: str
+
+class UserSignupResponse(UserBase):
+    id: uuid.UUID
+
+# ─── Tenants ──────────────────────────────────────────────────────────────────
 
 class Tenants(SQLModel, table=True):
     __table_args__ = (
@@ -34,6 +47,7 @@ class Tenants(SQLModel, table=True):
     agent_interactions: list['AgentInteractions'] = Relationship(back_populates='tenant')
     recipes: list['Recipe'] = Relationship(back_populates='tenant')
 
+# ─── ORM SQLModel model for users ─────────────────────────────────────────────────
 
 class Users(SQLModel, table=True):
     __table_args__ = (
