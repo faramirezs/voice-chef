@@ -367,8 +367,8 @@ MVP intents:
 
 | Method | Path | Auth | Request Schema | Success Response | Success Status | Error Statuses |
 |---|---|---|---|---|---|---|
-| POST | `/auth/signup` | Public | `AuthSignupRequest` | `AuthTokenResponse` | `201` | `400, 409, 422, 503, 500` |
-| POST | `/auth/login` | Public | `AuthLoginRequest` | `AuthTokenResponse` | `200` | `400, 401, 403, 422, 500` |
+| POST | `/auth/signup` | Public | `UserSignupLogin` | `UserSignupResponse` (later: Auto-Login on Signup: `AuthTokenResponse`) | `201` | `400, 409, 422, 503, 500` |
+| POST | `/auth/login` | Public | `UserSignupLogin` | `AuthTokenResponse` | `200` | `400, 401, 403, 422, 500` |
 | GET | `/recipes` | Bearer | Query: `limit`, `offset`, `status`, `search` | `{ items: RecipeSummaryResponse[], meta }` | `200` | `401, 422, 500` |
 | POST | `/recipes` | Bearer | `RecipeWrite` | `RecipeDetailResponse` | `201` | `400, 401, 404, 409, 422, 500` |
 | GET | `/recipes/{id}` | Bearer | Path: `id` UUID | `RecipeDetailResponse` | `200` | `401, 404, 422, 500` |
@@ -392,7 +392,7 @@ Purpose:
 - Return access token for immediate authenticated session
 
 Request:
-- Body: `AuthSignupRequest`
+- Body: `UserSignupLogin`
 
 Success:
 - `201 Created`
