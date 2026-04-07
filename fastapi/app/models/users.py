@@ -21,7 +21,7 @@ class Users(SQLModel, table=True):
         UniqueConstraint('email', name='users_email_key'),
         Index("ix_users_email", "email", unique=True),
     )
-    id: uuid.UUID = Field(
+    id: UUID = Field(
         # app-side UUID generation for MVP delivery
         default_factory=uuid.uuid4,
         # scheduling DB-enforced UUID defaults as post-MVP hardening
@@ -77,7 +77,7 @@ class UserSignupLogin(UserBase):
 
 # SignUp Responce
 class UserSignupResponse(UserBase):
-    id: uuid.UUID
+    id: UUID
 
 # ─── Tenants ──────────────────────────────────────────────────────────────────
 
@@ -122,3 +122,15 @@ class Tenants(SQLModel, table=True):
     recipes: List['Recipe'] = Relationship(back_populates="tenant")
     # the line below can be uncomment when there is Ingredient table
     # ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
+
+# ─── Pydantic models for tenants ─────────────────────────────────────────────────
+
+class TenantsBase(SQLModel):
+    name: str
+
+# class TenantsSignupLogin(TenantsBase):
+#     pass
+
+class TenantsResponse(TenantsBase):
+    id: UUID
+    created_at: datetime
