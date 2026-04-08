@@ -47,7 +47,7 @@ def _load_models_module() -> None:
 
     for models_path in candidates:
         if models_path.exists():
-            spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
+            spec = importlib.util.spec_from_file_location(f"_alembic_models_{models_path.stem}", str(models_path))
             if spec is None or spec.loader is None:
                 continue
             module = importlib.util.module_from_spec(spec)

@@ -93,6 +93,8 @@ If scope is small but many files are listed, that is expected. Only `Effective s
 	run with `--table <name>` and patch model to DB truth or DB to model truth based on your migration policy.
 - Alembic at head but drift exists:
 	this means runtime schema differs from current metadata; head revision alone does not guarantee parity.
+- `has no type within the model; can't compare`:
+	Gate 4 now treats this as a failure. Add explicit SQLAlchemy types in SQLModel `sa_column=Column(...)` declarations (for example `Integer`, `String`, `Numeric`) so Alembic can compare types.
 
 1. Create migration file (after model change):
 ```bash
