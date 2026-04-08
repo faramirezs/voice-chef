@@ -78,6 +78,24 @@ def _resolve_scope(table_selectors: list[str] | None = None, class_selectors: li
     return selected_tables
 
 
+def _class_table_and_source_maps() -> tuple[dict[str, str], dict[str, str]]:
+    class_to_table: dict[str, str] = {}
+    table_to_source: dict[str, str] = {}
+
+    for cls in SQLModel.__subclasses__():
+        table = getattr(cls, "__table__", None)
+        if table is None:
+            continue
+        class_to_table[cls.__name__] = table.name
+
+        module = sys.modules.get(cls.__module__)
+        module_file = getattr(module, "__file__", None)
+        if isinstance(module_file, str):
+            table_to_source[table.name] = str(Path(module_file).resolve())
+
+    return class_to_table, table_to_source
+
+
 def _load_models_module() -> None:
     """Load split *_models.py modules and fallback models.py without metadata duplication."""
     global _LOADED_MODEL_FILES
@@ -182,12 +200,34 @@ def _include_object(
 
 def assert_no_drift(db_url: str, table_selectors: list[str] | None = None, class_selectors: list[str] | None = None) -> None:
     global MANAGED_TABLES
+    class_to_table, table_to_source = _class_table_and_source_maps()
+
+    selected_classes = _split_selector_values(class_selectors)
+    if selected_classes:
+        missing_classes = [name for name in selected_classes if name not in class_to_table]
+        if missing_classes:
+            known = ", ".join(sorted(class_to_table.keys()))
+            unknown = ", ".join(sorted(missing_classes))
+            raise ValueError(f"Unknown class selector(s): {unknown}. Known classes: {known}")
+
     MANAGED_TABLES = _resolve_scope(table_selectors=table_selectors, class_selectors=class_selectors)
 
     if _LOADED_MODEL_FILES:
         print("ℹ️  Model metadata loaded from:")
         for model_file in _LOADED_MODEL_FILES:
             print(f"   - {model_file}")
+
+    print("ℹ️  Effective scope sources:")
+    for table_name in sorted(MANAGED_TABLES):
+        source = table_to_source.get(table_name, "<unknown>")
+        print(f"   - table '{table_name}' from {source}")
+
+    if selected_classes:
+        print("ℹ️  Requested classes:")
+        for class_name in selected_classes:
+            table_name = class_to_table[class_name]
+            source = table_to_source.get(table_name, "<unknown>")
+            print(f"   - class '{class_name}' -> table '{table_name}' from {source}")
 
     engine = create_engine(db_url, echo=False)
 

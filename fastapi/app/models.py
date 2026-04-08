@@ -7,6 +7,10 @@ from sqlalchemy import Boolean, CheckConstraint, Column, Date, DateTime, Foreign
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
+from app.tenant_models import Tenants
+from app.user_models import Users
+from app.recipe_models import Recipe, Recipes
+
 class Additives(SQLModel, table=True):
     __table_args__ = (
         PrimaryKeyConstraint('id', name='additives_pkey'),
@@ -54,31 +58,6 @@ class AuditLogs(SQLModel, table=True):
     entity_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('entity_id', Uuid))
     old_data: Optional[dict] = Field(default=None, sa_column=Column('old_data', JSONB))
     new_data: Optional[dict] = Field(default=None, sa_column=Column('new_data', JSONB))
-
-
-class Tenants(SQLModel, table=True):
-    __table_args__ = (
-        PrimaryKeyConstraint('id', name='tenants_pkey'),
-        UniqueConstraint('slug', name='tenants_slug_key')
-    )
-
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    name: str = Field(sa_column=Column('name', String(255), nullable=False))
-    slug: str = Field(sa_column=Column('slug', String(100), nullable=False))
-    is_active: bool = Field(sa_column=Column('is_active', Boolean, nullable=False, server_default=text('true')))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-    settings: Optional[dict] = Field(default=None, sa_column=Column('settings', JSONB, server_default=text("'{}'::jsonb")))
-
-    agents: list['Agents'] = Relationship(back_populates='tenant')
-    categories: list['Categories'] = Relationship(back_populates='tenant')
-    ingredients: list['Ingredients'] = Relationship(back_populates='tenant')
-    shopping_lists: list['ShoppingLists'] = Relationship(back_populates='tenant')
-    tags: list['Tags'] = Relationship(back_populates='tenant')
-    task_lists: list['TaskLists'] = Relationship(back_populates='tenant')
-    users: list['Users'] = Relationship(back_populates='tenant')
-    agent_interactions: list['AgentInteractions'] = Relationship(back_populates='tenant')
-    recipes: list['Recipes'] = Relationship(back_populates='tenant')
 
 
 class Units(SQLModel, table=True):
@@ -210,27 +189,6 @@ class TaskLists(SQLModel, table=True):
     task_items: list['TaskItems'] = Relationship(back_populates='list')
 
 
-class Users(SQLModel, table=True):
-    __table_args__ = (
-        ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='users_tenant_id_fkey'),
-        Index('ix_users_email', 'email', unique=True),
-        PrimaryKeyConstraint('id', name='users_pkey'),
-        UniqueConstraint('email', name='users_email_key')
-    )
-
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
-    tenant_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('tenant_id', Uuid))
-    email: str = Field(sa_column=Column('email', String(255), nullable=False))
-    password_hash: str = Field(sa_column=Column('password_hash', String(255), nullable=False))
-    role: str = Field(sa_column=Column('role', String(50), nullable=False, server_default=text("'editor'::character varying")))
-    is_active: bool = Field(sa_column=Column('is_active', Boolean, nullable=False, server_default=text('true')))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-
-    tenant: 'Tenants' = Relationship(back_populates='users')
-    recipes: list['Recipes'] = Relationship(back_populates='users')
-
-
 class AgentInteractions(SQLModel, table=True):
     __tablename__ = 'agent_interactions'
     __table_args__ = (
@@ -352,58 +310,6 @@ class IngredientUnits(SQLModel, table=True):
     label: Optional[str] = Field(default=None, sa_column=Column('label', String(100)))
 
     ingredient: 'Ingredients' = Relationship(back_populates='ingredient_units')
-
-
-class Recipes(SQLModel, table=True):
-    __table_args__ = (
-        CheckConstraint('portion_size_grams IS NULL OR portion_size_grams > 0::numeric', name='positive_portion_size_grams'),
-        CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', name='positive_portions_count_resolved'),
-        CheckConstraint("status::text <> 'active'::text OR yield_mode::text <> 'weight'::text OR portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric", name='weight_mode_requires_portion_size_when_active'),
-        CheckConstraint("status::text = ANY (ARRAY['draft'::character varying, 'active'::character varying, 'archived'::character varying]::text[])", name='valid_status'),
-        CheckConstraint('total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric', name='positive_total_cooked_weight_grams'),
-        CheckConstraint('total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric', name='positive_total_raw_weight_grams'),
-        CheckConstraint("yield_mode::text = ANY (ARRAY['count'::character varying, 'weight'::character varying]::text[])", name='valid_yield_mode'),
-        ForeignKeyConstraint(['created_by'], ['users.id'], name='recipes_created_by_fkey'),
-        ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='recipes_tenant_id_fkey'),
-        PrimaryKeyConstraint('id', name='recipes_pkey'),
-        Index('idx_recipes_component', 'tenant_id', 'is_component'),
-        Index('idx_recipes_name', 'name'),
-        Index('idx_recipes_status', 'tenant_id', 'status'),
-        Index('idx_recipes_tenant', 'tenant_id'),
-        Index('idx_recipes_yield_mode', 'yield_mode')
-    )
-
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    tenant_id: uuid.UUID = Field(sa_column=Column('tenant_id', Uuid, nullable=False))
-    name: str = Field(sa_column=Column('name', String(255), nullable=False))
-    status: str = Field(sa_column=Column('status', String(50), nullable=False, server_default=text("'draft'::character varying")))
-    is_component: bool = Field(sa_column=Column('is_component', Boolean, nullable=False, server_default=text('false')))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-    yield_mode: str = Field(sa_column=Column('yield_mode', String(20), nullable=False, server_default=text("'count'::character varying")))
-    description: Optional[str] = Field(default=None, sa_column=Column('description', Text))
-    instructions: Optional[str] = Field(default=None, sa_column=Column('instructions', Text))
-    yield_amount: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('yield_amount', Numeric))
-    yield_unit: Optional[str] = Field(default=None, sa_column=Column('yield_unit', String(50)))
-    reduction_factor: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('reduction_factor', Numeric, server_default=text('1.0')))
-    recipe_number: Optional[str] = Field(default=None, sa_column=Column('recipe_number', String(100)))
-    preparation_time_minutes: Optional[int] = Field(default=None, sa_column=Column('preparation_time_minutes', Integer))
-    cooking_time_minutes: Optional[int] = Field(default=None, sa_column=Column('cooking_time_minutes', Integer))
-    shelf_life_text: Optional[str] = Field(default=None, sa_column=Column('shelf_life_text', Text))
-    storage_temperature: Optional[str] = Field(default=None, sa_column=Column('storage_temperature', String(50)))
-    notes: Optional[str] = Field(default=None, sa_column=Column('notes', Text))
-    created_by: Optional[uuid.UUID] = Field(default=None, sa_column=Column('created_by', Uuid))
-    portion_size_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('portion_size_grams', Numeric))
-    total_raw_weight_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('total_raw_weight_grams', Numeric))
-    total_cooked_weight_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('total_cooked_weight_grams', Numeric))
-    portions_count_resolved: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('portions_count_resolved', Numeric))
-
-    category: list['Categories'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_categories'})
-    users: Optional['Users'] = Relationship(back_populates='recipes')
-    tenant: 'Tenants' = Relationship(back_populates='recipes')
-    tag: list['Tags'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
-    recipe_ingredients: list['RecipeIngredients'] = Relationship(back_populates='recipe')
-    recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
 
 class ShoppingListItems(SQLModel, table=True):
@@ -534,6 +440,3 @@ class RecipeVersions(SQLModel, table=True):
 
     recipe: 'Recipes' = Relationship(back_populates='recipe_versions')
 
-
-# Temporary compatibility alias during migration from monolith `Recipes` to split `Recipe`.
-Recipe = Recipes
