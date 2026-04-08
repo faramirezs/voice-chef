@@ -15,4 +15,4 @@
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
-logs/
+logs/*.log

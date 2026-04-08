@@ -39,6 +39,10 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
+echo "[dump-regen] ensuring pgcrypto extension exists"
+docker exec "$TMP_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" \
+  -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" >/dev/null
+
 echo "[dump-regen] applying migrations to head"
 DATABASE_URL="$DB_URL" .venv/bin/alembic -c alembic.ini upgrade head
 
