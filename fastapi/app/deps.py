@@ -24,8 +24,15 @@ ALGORITHM = "HS256"
 # -----------------------------------------------------------------------------
 
 
+# NOTE: mpeshko. Learning notes.
+# Step 1. The oauth2_scheme object was created with 
+# OAuth2PasswordBearer(tokenUrl="/auth/login"). This special object tells 
+# FastAPI: "Look for an Authorization header in the request, make sure it 
+# starts with `Bearer``, and extract the token string that comes after it." 
+# If the header is missing or malformed, it immediately stops and returns 
+# a 401 Unauthorized error.
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    token: Annotated[str, Depends(oauth2_scheme)], # <--- Step 1
     session: Session = Depends(get_session),
 ) -> Users:
     """Decode the JWT and return the full User from the database."""
@@ -35,7 +42,7 @@ def get_current_user(
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = session.exec(select(Users).where(Users.email == email)).scalars().first()
+    user = session.exec(select(Users).where(Users.email == email)).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
