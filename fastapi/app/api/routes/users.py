@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends #, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-# import jwt
-# import os
-# from typing import Annotated
-# from collections import defaultdict
+import jwt
+import os
+from typing import Annotated
 
-# from auth_utils import oauth2_scheme
+from app.auth_utils import oauth2_scheme
 from app.database import get_session
 from app.models.users import Users, UserSignupResponse, Tenants, TenantsResponse # Token 
-# from dependencies import get_current_user
+from app.deps import get_current_user
 
 
 # -----------------------------------------------------------------------------
@@ -17,8 +16,8 @@ from app.models.users import Users, UserSignupResponse, Tenants, TenantsResponse
 
 router = APIRouter(prefix="/user", tags=["Users"])
 
-# SECRET_KEY = os.getenv("SECRET_KEY")
-# ALGORITHM = "HS256"
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = "HS256"
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -40,3 +39,17 @@ async def read_users(session: Session = Depends(get_session)) -> list[TenantsRes
     """
     users = session.exec(select(Tenants)).all()
     return users
+
+# NOTE: Mpeshko. Endpoint to test and learn how JWT token works.
+@router.get("/me")
+async def read_users_me(
+	token: Annotated[str, Depends(oauth2_scheme)]
+):
+	"""
+    Decodes the JWT that is provided in the request's Authorization header
+    """
+	try: # Here you use your PyJWT for validation
+		payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+		return {"user_data": payload}
+	except jwt.PyJWTError:
+		raise HTTPException(status_code=401, detail="Invalid token")

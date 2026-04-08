@@ -70,7 +70,7 @@ signup_responses = {
     },
 }
 
-# TO DO: mpreshko "tenant_id": "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0" is hard-coded
+# mpreshko "tenant_id": "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0" is hard-coded
 @router.post(
     "/signup", 
     status_code=status.HTTP_201_CREATED,
