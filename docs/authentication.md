@@ -41,6 +41,13 @@ This means:
 -   `argon2-cffi`: For securely hashing and verifying user passwords. We **never** store passwords in plain text.
 -   `PyJWT`: For creating and verifying the JSON Web Tokens (JWTs) used for session management.
 
+### Password validation
+
+Backend uses `password-validator` package for password validation.
+
+The rule for a strong password is defined in `faspapi/app/auth_utils.py`: it must be from 8 to 22 characters long, contains uppercase, lowercase, digits, symbols, and doesn't contain spaces.
+
+
 ### Login
 
 The login endpoint expects `x-www-form-urlencoded` (not JSON) because it uses FastAPI's `OAuth2PasswordRequestForm`. The field is called `username` but we send the email.
