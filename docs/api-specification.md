@@ -119,12 +119,29 @@ Common error statuses:
 
 `AuthLoginRequest`
 
-```json
+> The login endpoint expects `x-www-form-urlencoded` (not JSON) because it uses FastAPI's `OAuth2PasswordRequestForm`. The field is called `username` but we send the email.
+
+*Note: `application/x-www-form-urlencoded` encodes form data as key-value pairs, separated by `&`, with `=` separating keys and values (e.g., `name=John+Doe&age=25`). Non-alphanumeric characters are percent-encoded (e.g., spaces become `+` or `%20`).*
+
+**Request Body:**
+
+The body must be sent as `x-www-form-urlencoded` data (like a standard HTML form submission), not as JSON.
+
+- `username`: The user's email address. (string, **required**)
+- `password`: The user's password. (string, **required**)
+
+**Example of raw request body:**
+
+```
+username=user%40example.com&password=strongpassword123
+```
+
+<!-- ```json
 {
   "email": "chef-admin@kitchen.local",
   "password": "StrongPassword123!"
 }
-```
+``` -->
 
 `AuthTokenResponse`
 
