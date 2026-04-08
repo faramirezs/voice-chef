@@ -16,3 +16,4 @@
 **/*.py[cod]
 **/*$py.class
 logs/*.log
+logs/drift_gate_local.log

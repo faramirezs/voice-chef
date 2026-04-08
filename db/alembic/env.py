@@ -62,10 +62,26 @@ _load_models_module()
 from sqlmodel import SQLModel
 
 target_metadata = SQLModel.metadata
+MODEL_TABLE_NAMES = set(target_metadata.tables.keys())
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    """Include all objects for full-schema autogenerate comparison."""
+    """Limit autogenerate scope to SQLModel-managed tables and related objects."""
+    if type_ == "table":
+        return name in MODEL_TABLE_NAMES
+
+    if type_ in {"column", "index", "unique_constraint", "foreign_key_constraint", "primary_key_constraint"}:
+        table_name = None
+        parent = getattr(object, "table", None)
+        if parent is not None:
+            table_name = getattr(parent, "name", None)
+        if table_name is None and compare_to is not None:
+            compare_parent = getattr(compare_to, "table", None)
+            if compare_parent is not None:
+                table_name = getattr(compare_parent, "name", None)
+        if table_name is not None:
+            return table_name in MODEL_TABLE_NAMES
+
     return True
 
 # other values from the config, defined by the needs of env.py,
