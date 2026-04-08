@@ -41,7 +41,7 @@ services:
     ports:
       - "80"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SQL_ECHO: ${SQL_ECHO}
 
 volumes:

@@ -1,5 +1,99 @@
 # Migration workflow
 
+## Drift gate runbook
+
+Use this section for fast schema parity checks before/after model changes.
+
+### 1) Prerequisites
+
+```bash
+docker compose up -d db
+source .venv/bin/activate
+export DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db
+```
+
+### 2) Full gate (all metadata)
+
+Recommended one-command local run (matches CI strict Gate 4 policy):
+
+```bash
+make drift-gate-local
+```
+
+Log output:
+
+```bash
+logs/drift_gate_local.log
+```
+
+Manual equivalent:
+
+1. Migration state check:
+
+```bash
+.venv/bin/alembic -c alembic.ini -x db_url="$DATABASE_URL" current
+```
+
+2. Programmatic drift check:
+
+```bash
+.venv/bin/python db/scripts/drift_check.py
+```
+
+3. Pytest drift suite:
+
+```bash
+.venv/bin/pytest db/test/test_schema_drift.py --test-alembic -q
+```
+
+4. Pending-autogenerate check (manual review):
+
+```bash
+DATABASE_URL="$DATABASE_URL" .venv/bin/alembic -c alembic.ini revision --autogenerate -m "drift_check_tmp"
+```
+
+If the generated revision contains no operations, pending drift is effectively zero. Delete the temporary revision after review.
+
+```bash
+rm db/alembic/versions/*_drift_check_tmp.py
+```
+
+Note:
+- CI-equivalent Gate 4 policy fails on any pending autogenerate operation.
+- Treat every pending `op.create*`, `op.drop*`, `op.add*`, or `op.alter*` as actionable drift.
+
+### 3) Scoped gate examples (split-model work)
+
+Check only Users/Tenants/Recipes:
+
+```bash
+.venv/bin/python db/scripts/drift_check.py --class Users --class Tenants --class Recipes
+.venv/bin/pytest db/test/test_schema_drift.py --test-alembic --drift-class Users --drift-class Tenants --drift-class Recipes -q
+```
+
+Check one table only:
+
+```bash
+.venv/bin/python db/scripts/drift_check.py --table users
+```
+
+### 4) What output to trust
+
+- `Model metadata loaded from`: all modules imported to build SQLModel metadata.
+- `Effective scope sources`: exact source file for each selected table.
+- `Requested classes`: class -> table -> source mapping for `--class` selectors.
+
+If scope is small but many files are listed, that is expected. Only `Effective scope sources` and `Requested classes` describe what is evaluated.
+
+### 5) Troubleshooting
+
+- `ModuleNotFoundError: No module named 'app'`:
+	use the repo-root command form shown above (the script now bootstraps package paths).
+- Drift on one table only:
+	run with `--table <name>` and patch model to DB truth or DB to model truth based on your migration policy.
+- Alembic at head but drift exists:
+	this means runtime schema differs from current metadata; head revision alone does not guarantee parity.
+
 1. Create migration file (after model change):
 ```bash
 DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic revision -m "describe_change"
@@ -40,6 +134,32 @@ On every FastAPI container start, this command runs automatically:
 - then uvicorn starts
 
 So if the DB is behind, it migrates forward before serving traffic.
+
+## Dump safety and regeneration
+
+Use these commands to keep dump-based local bootstrap aligned with migration head.
+
+1. Blast-radius safety check (fresh dump-init DB, then `alembic upgrade head`):
+
+```bash
+make dump-blast-check
+```
+
+Log output:
+
+```bash
+logs/dump_upgrade_blast_check.log
+```
+
+2. Regenerate `db/init/01_dump.sql` from migration head:
+
+```bash
+make dump-regen
+```
+
+Important:
+- `make dump-regen` resets DB volume.
+- After regeneration, review `db/init/02_align_alembic_revision.sql` and align/remove revision pinning as needed.
 
 Natural next steps
 
@@ -218,6 +338,7 @@ docker compose exec -T db psql -U recipe_user -d recipe_db -c "SELECT id, name, 
 
 ```bash
 docker compose exec -T db psql -U recipe_user -d recipe_db -c "SELECT ingredient_id, COUNT(*) AS price_rows FROM ingredient_prices WHERE ingredient_id IN ('5adfcc26-f8b0-5f48-8191-b118ea08f87d','957a285e-889a-5f8e-9fcc-b73bfd7304ea','c4174230-c859-5c6e-8d91-0d1dd2081aef') GROUP BY ingredient_id ORDER BY ingredient_id;"
+```
 
 ## User-confirmed cleanup migration (011)
 
@@ -260,7 +381,6 @@ Notes:
 Per implementation decision, runtime/schema drift is tracked as a dedicated GitHub issue draft (not implemented in this migration scope):
 
 - `docs/issues/fastapi-runtime-schema-drift-issue.md`
-```
 
 Reusable duplicate audit query (case-insensitive exact-name collisions):
 

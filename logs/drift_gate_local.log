@@ -1,0 +1,31 @@
+Schema drift local run started at 2026-04-08T19:20:01Z
+== GATE 1: alembic upgrade head ==
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+== GATE 2: drift_check.py ==
+ℹ️  Model metadata loaded from:
+   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/models.py
+   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/recipe_models.py
+   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/tenant_models.py
+   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/user_models.py
+ℹ️  Effective scope sources:
+   - table 'recipes' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/recipe_models.py
+   - table 'tenants' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/tenant_models.py
+   - table 'users' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/user_models.py
+✅  No schema drift — models are in sync with the database.
+== GATE 3: pytest schema drift ==
+.................                                                        [100%]
+17 passed in 0.53s
+== GATE 4: pending autogenerate check ==
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.schemas
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.tables
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.types
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
+INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
+  Generating /Users/alejandroramirez/Nextcloud/Documents/Ko
+  kitchen/voice-chef/db/alembic/versions/pending_check_tmp_loc
+  al_verify_no_pending_local_gate.py ...  done
+RESULT migration=0 drift_script=0 pytest_drift=0 pending_autogen=0
