@@ -14,7 +14,7 @@ export DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:54
 
 ### 2) Full gate (all metadata)
 
-Recommended one-command local run (matches CI Gate 4 managed-scope policy):
+Recommended one-command local run (matches CI strict Gate 4 policy):
 
 ```bash
 make drift-gate-local
@@ -59,8 +59,8 @@ rm db/alembic/versions/*_drift_check_tmp.py
 ```
 
 Note:
-- CI-equivalent Gate 4 policy fails only for pending operations involving managed tables: `users`, `tenants`, `recipes`.
-- Pending operations outside this managed scope are logged as informational and do not fail the gate.
+- CI-equivalent Gate 4 policy fails on any pending autogenerate operation.
+- Treat every pending `op.create*`, `op.drop*`, `op.add*`, or `op.alter*` as actionable drift.
 
 ### 3) Scoped gate examples (split-model work)
 

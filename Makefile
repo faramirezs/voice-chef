@@ -72,7 +72,7 @@ define HELP_TEXT
 	" make fclean:	Remove containers + images + volumes\n" \
 	" make status:	Full Docker state" \
 	" make logs:	Show logs" \
-	" make drift-gate-local:	Run local 4-gate schema drift check (CI-equivalent managed scope)" \
+	" make drift-gate-local:	Run local 4-gate schema drift check (strict pending-autogen gate)" \
 	" make dump-blast-check:	Reset DB volume and test dump-init -> alembic head upgrade" \
 	" make dump-regen:	Regenerate db/init/01_dump.sql from migration head" \
 	" make help:	Show available commands\n" \
