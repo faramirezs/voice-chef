@@ -3,7 +3,7 @@ import datetime
 import decimal
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, Numeric, PrimaryKeyConstraint, String, Text, Uuid, text
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, String, Text, Uuid, text
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -37,8 +37,8 @@ class Recipes(SQLModel, table=True):
 	status: str = Field(sa_column=Column('status', String(50), nullable=False, server_default=text("'draft'::character varying")))
 	is_component: bool = Field(sa_column=Column('is_component', Boolean, nullable=False, server_default=text('false')))
 	recipe_number: Optional[str] = Field(default=None, sa_column=Column('recipe_number', String(100)))
-	preparation_time_minutes: Optional[int] = Field(default=None, sa_column=Column('preparation_time_minutes', nullable=True))
-	cooking_time_minutes: Optional[int] = Field(default=None, sa_column=Column('cooking_time_minutes', nullable=True))
+	preparation_time_minutes: Optional[int] = Field(default=None, sa_column=Column('preparation_time_minutes', Integer, nullable=True))
+	cooking_time_minutes: Optional[int] = Field(default=None, sa_column=Column('cooking_time_minutes', Integer, nullable=True))
 	shelf_life_text: Optional[str] = Field(default=None, sa_column=Column('shelf_life_text', Text))
 	storage_temperature: Optional[str] = Field(default=None, sa_column=Column('storage_temperature', String(50)))
 	notes: Optional[str] = Field(default=None, sa_column=Column('notes', Text))

@@ -1,4 +1,4 @@
-Schema drift local run started at 2026-04-08T19:03:35Z
+Schema drift local run started at 2026-04-08T19:09:40Z
 == GATE 1: alembic upgrade head ==
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
@@ -15,7 +15,7 @@ INFO  [alembic.runtime.migration] Will assume transactional DDL.
 ✅  No schema drift — models are in sync with the database.
 == GATE 3: pytest schema drift ==
 .................                                                        [100%]
-17 passed in 0.53s
+17 passed in 0.54s
 == GATE 4: pending autogenerate check ==
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
@@ -25,143 +25,140 @@ INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogener
 INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
 INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
 INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_shopping_items_list' on 'shopping_list_items'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'shopping_list_items'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_categories_cat' on 'recipe_categories'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_categories'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'shopping_lists'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_ingredients_ingredient' on 'recipe_ingredients'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_ingredients_recipe' on 'recipe_ingredients'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_ingredients'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'agents'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'task_lists'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_task_items_list' on 'task_items'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'task_items'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'allergens'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_versions_recipe' on 'recipe_versions'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_versions'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_allergens_allergen' on 'ingredient_allergens'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_allergens'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'categories'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_nutrition'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'additives'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_entity' on 'audit_logs'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_tenant' on 'audit_logs'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'audit_logs'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'shopping_lists'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_nutrition_cache'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_additives_additive' on 'ingredient_additives'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_additives'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'task_lists'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_shopping_items_list' on 'shopping_list_items'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'shopping_list_items'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_agent_interactions_agent' on 'agent_interactions'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_agent_interactions_tenant' on 'agent_interactions'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'agent_interactions'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_ingredients_ingredient' on 'recipe_ingredients'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_ingredients_recipe' on 'recipe_ingredients'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_ingredients'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'tags'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_units_ingredient' on 'ingredient_units'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_units'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'agents'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_prices_ing' on 'ingredient_prices'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_prices_latest_lookup' on 'ingredient_prices'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'uq_ingredient_no_supplier' on 'ingredient_prices'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'uq_ingredient_supplier' on 'ingredient_prices'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_prices'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'units'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_agent_interactions_agent' on 'agent_interactions'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_agent_interactions_tenant' on 'agent_interactions'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'agent_interactions'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_tags_tag' on 'recipe_tags'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_tags'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_nutrition_cache'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_task_items_list' on 'task_items'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'task_items'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_name' on 'ingredients'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_parent' on 'ingredients'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_tenant' on 'ingredients'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredients'
-INFO  [alembic.autogenerate.compare.types] Column 'recipes.preparation_time_minutes' has no type within the model; can't compare
-INFO  [alembic.autogenerate.compare.types] Column 'recipes.preparation_time_minutes' has no type within the model; can't compare
-INFO  [alembic.autogenerate.compare.types] Column 'recipes.cooking_time_minutes' has no type within the model; can't compare
-INFO  [alembic.autogenerate.compare.types] Column 'recipes.cooking_time_minutes' has no type within the model; can't compare
-  Generating /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-
-  chef/db/alembic/versions/pending_check_tmp_local_verify_no_pending_local_gate.py ...  done
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_tags_tag' on 'recipe_tags'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_tags'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_versions_recipe' on 'recipe_versions'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_versions'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'allergens'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'units'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'additives'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_allergens_allergen' on 'ingredient_allergens'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_allergens'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_units_ingredient' on 'ingredient_units'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_units'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_categories_cat' on 'recipe_categories'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_categories'
+  Generating /Users/alejandroramirez/Nextcloud/Documents/Ko
+  kitchen/voice-chef/db/alembic/versions/pending_check_tmp_local_verify_
+  no_pending_local_gate.py ...  done
 ❌ Pending schema operations detected in autogenerated migration.
-    op.drop_index(op.f('idx_shopping_items_list'), table_name='shopping_list_items')
-    op.drop_table('shopping_list_items')
-    op.drop_index(op.f('idx_recipe_categories_cat'), table_name='recipe_categories')
-    op.drop_table('recipe_categories')
-    op.drop_table('shopping_lists')
-    op.drop_index(op.f('idx_recipe_ingredients_ingredient'), table_name='recipe_ingredients')
-    op.drop_index(op.f('idx_recipe_ingredients_recipe'), table_name='recipe_ingredients')
-    op.drop_table('recipe_ingredients')
-    op.drop_table('agents')
-    op.drop_table('task_lists')
-    op.drop_index(op.f('idx_task_items_list'), table_name='task_items')
-    op.drop_table('task_items')
-    op.drop_table('allergens')
-    op.drop_index(op.f('idx_recipe_versions_recipe'), table_name='recipe_versions')
-    op.drop_table('recipe_versions')
-    op.drop_index(op.f('idx_ing_allergens_allergen'), table_name='ingredient_allergens')
-    op.drop_table('ingredient_allergens')
     op.drop_table('categories')
     op.drop_table('ingredient_nutrition')
-    op.drop_table('additives')
     op.drop_index(op.f('idx_audit_logs_entity'), table_name='audit_logs')
     op.drop_index(op.f('idx_audit_logs_tenant'), table_name='audit_logs')
     op.drop_table('audit_logs')
+    op.drop_table('shopping_lists')
+    op.drop_table('recipe_nutrition_cache')
     op.drop_index(op.f('idx_ing_additives_additive'), table_name='ingredient_additives')
     op.drop_table('ingredient_additives')
+    op.drop_table('task_lists')
+    op.drop_index(op.f('idx_shopping_items_list'), table_name='shopping_list_items')
+    op.drop_table('shopping_list_items')
+    op.drop_index(op.f('idx_agent_interactions_agent'), table_name='agent_interactions')
+    op.drop_index(op.f('idx_agent_interactions_tenant'), table_name='agent_interactions')
+    op.drop_table('agent_interactions')
+    op.drop_index(op.f('idx_recipe_ingredients_ingredient'), table_name='recipe_ingredients')
+    op.drop_index(op.f('idx_recipe_ingredients_recipe'), table_name='recipe_ingredients')
+    op.drop_table('recipe_ingredients')
     op.drop_table('tags')
-    op.drop_index(op.f('idx_ingredient_units_ingredient'), table_name='ingredient_units')
-    op.drop_table('ingredient_units')
+    op.drop_table('agents')
     op.drop_index(op.f('idx_ingredient_prices_ing'), table_name='ingredient_prices')
     op.drop_index(op.f('idx_ingredient_prices_latest_lookup'), table_name='ingredient_prices')
     op.drop_index(op.f('uq_ingredient_no_supplier'), table_name='ingredient_prices', postgresql_where='(supplier_id IS NULL)')
     op.drop_index(op.f('uq_ingredient_supplier'), table_name='ingredient_prices', postgresql_where='(supplier_id IS NOT NULL)')
     op.drop_table('ingredient_prices')
-    op.drop_table('units')
-    op.drop_index(op.f('idx_agent_interactions_agent'), table_name='agent_interactions')
-    op.drop_index(op.f('idx_agent_interactions_tenant'), table_name='agent_interactions')
-    op.drop_table('agent_interactions')
-    op.drop_index(op.f('idx_recipe_tags_tag'), table_name='recipe_tags')
-    op.drop_table('recipe_tags')
-    op.drop_table('recipe_nutrition_cache')
+    op.drop_index(op.f('idx_task_items_list'), table_name='task_items')
+    op.drop_table('task_items')
     op.drop_index(op.f('idx_ingredients_name'), table_name='ingredients')
     op.drop_index(op.f('idx_ingredients_parent'), table_name='ingredients')
     op.drop_index(op.f('idx_ingredients_tenant'), table_name='ingredients')
     op.drop_table('ingredients')
+    op.drop_index(op.f('idx_recipe_tags_tag'), table_name='recipe_tags')
+    op.drop_table('recipe_tags')
+    op.drop_index(op.f('idx_recipe_versions_recipe'), table_name='recipe_versions')
+    op.drop_table('recipe_versions')
+    op.drop_table('allergens')
+    op.drop_table('units')
+    op.drop_table('additives')
+    op.drop_index(op.f('idx_ing_allergens_allergen'), table_name='ingredient_allergens')
+    op.drop_table('ingredient_allergens')
+    op.drop_index(op.f('idx_ingredient_units_ingredient'), table_name='ingredient_units')
+    op.drop_table('ingredient_units')
+    op.drop_index(op.f('idx_recipe_categories_cat'), table_name='recipe_categories')
+    op.drop_table('recipe_categories')
+    op.create_table('recipe_categories',
+    op.create_index(op.f('idx_recipe_categories_cat'), 'recipe_categories', ['category_id'], unique=False)
+    op.create_table('ingredient_units',
+    op.create_index(op.f('idx_ingredient_units_ingredient'), 'ingredient_units', ['ingredient_id'], unique=False)
+    op.create_table('ingredient_allergens',
+    op.create_index(op.f('idx_ing_allergens_allergen'), 'ingredient_allergens', ['allergen_id'], unique=False)
+    op.create_table('additives',
+    op.create_table('units',
+    op.create_table('allergens',
+    op.create_table('recipe_versions',
+    op.create_index(op.f('idx_recipe_versions_recipe'), 'recipe_versions', ['recipe_id'], unique=False)
+    op.create_table('recipe_tags',
+    op.create_index(op.f('idx_recipe_tags_tag'), 'recipe_tags', ['tag_id'], unique=False)
     op.create_table('ingredients',
     op.create_index(op.f('idx_ingredients_tenant'), 'ingredients', ['tenant_id'], unique=False)
     op.create_index(op.f('idx_ingredients_parent'), 'ingredients', ['parent_id'], unique=False)
     op.create_index(op.f('idx_ingredients_name'), 'ingredients', ['name'], unique=False)
-    op.create_table('recipe_nutrition_cache',
-    op.create_table('recipe_tags',
-    op.create_index(op.f('idx_recipe_tags_tag'), 'recipe_tags', ['tag_id'], unique=False)
-    op.create_table('agent_interactions',
-    op.create_index(op.f('idx_agent_interactions_tenant'), 'agent_interactions', ['tenant_id', sa.literal_column('created_at DESC')], unique=False)
-    op.create_index(op.f('idx_agent_interactions_agent'), 'agent_interactions', ['agent_id', sa.literal_column('created_at DESC')], unique=False)
-    op.create_table('units',
+    op.create_table('task_items',
+    op.create_index(op.f('idx_task_items_list'), 'task_items', ['list_id'], unique=False)
     op.create_table('ingredient_prices',
     op.create_index(op.f('uq_ingredient_supplier'), 'ingredient_prices', ['ingredient_id', 'supplier_id'], unique=True, postgresql_where='(supplier_id IS NOT NULL)')
     op.create_index(op.f('uq_ingredient_no_supplier'), 'ingredient_prices', ['ingredient_id'], unique=True, postgresql_where='(supplier_id IS NULL)')
     op.create_index(op.f('idx_ingredient_prices_latest_lookup'), 'ingredient_prices', ['ingredient_id', 'unit', sa.literal_column('updated_at DESC'), sa.literal_column('created_at DESC'), sa.literal_column('id DESC')], unique=False)
     op.create_index(op.f('idx_ingredient_prices_ing'), 'ingredient_prices', ['ingredient_id'], unique=False)
-    op.create_table('ingredient_units',
-    op.create_index(op.f('idx_ingredient_units_ingredient'), 'ingredient_units', ['ingredient_id'], unique=False)
-    op.create_table('tags',
-    op.create_table('ingredient_additives',
-    op.create_index(op.f('idx_ing_additives_additive'), 'ingredient_additives', ['additive_id'], unique=False)
-    op.create_table('audit_logs',
-    op.create_index(op.f('idx_audit_logs_tenant'), 'audit_logs', ['tenant_id', sa.literal_column('created_at DESC')], unique=False)
-    op.create_index(op.f('idx_audit_logs_entity'), 'audit_logs', ['entity', 'entity_id'], unique=False)
-    op.create_table('additives',
-    op.create_table('ingredient_nutrition',
-    op.create_table('categories',
-    op.create_table('ingredient_allergens',
-    op.create_index(op.f('idx_ing_allergens_allergen'), 'ingredient_allergens', ['allergen_id'], unique=False)
-    op.create_table('recipe_versions',
-    op.create_index(op.f('idx_recipe_versions_recipe'), 'recipe_versions', ['recipe_id'], unique=False)
-    op.create_table('allergens',
-    op.create_table('task_items',
-    op.create_index(op.f('idx_task_items_list'), 'task_items', ['list_id'], unique=False)
-    op.create_table('task_lists',
     op.create_table('agents',
+    op.create_table('tags',
     op.create_table('recipe_ingredients',
     op.create_index(op.f('idx_recipe_ingredients_recipe'), 'recipe_ingredients', ['recipe_id'], unique=False)
     op.create_index(op.f('idx_recipe_ingredients_ingredient'), 'recipe_ingredients', ['ingredient_id'], unique=False)
-    op.create_table('shopping_lists',
-    op.create_table('recipe_categories',
-    op.create_index(op.f('idx_recipe_categories_cat'), 'recipe_categories', ['category_id'], unique=False)
+    op.create_table('agent_interactions',
+    op.create_index(op.f('idx_agent_interactions_tenant'), 'agent_interactions', ['tenant_id', sa.literal_column('created_at DESC')], unique=False)
+    op.create_index(op.f('idx_agent_interactions_agent'), 'agent_interactions', ['agent_id', sa.literal_column('created_at DESC')], unique=False)
     op.create_table('shopping_list_items',
     op.create_index(op.f('idx_shopping_items_list'), 'shopping_list_items', ['list_id'], unique=False)
+    op.create_table('task_lists',
+    op.create_table('ingredient_additives',
+    op.create_index(op.f('idx_ing_additives_additive'), 'ingredient_additives', ['additive_id'], unique=False)
+    op.create_table('recipe_nutrition_cache',
+    op.create_table('shopping_lists',
+    op.create_table('audit_logs',
+    op.create_index(op.f('idx_audit_logs_tenant'), 'audit_logs', ['tenant_id', sa.literal_column('created_at DESC')], unique=False)
+    op.create_index(op.f('idx_audit_logs_entity'), 'audit_logs', ['entity', 'entity_id'], unique=False)
+    op.create_table('ingredient_nutrition',
+    op.create_table('categories',
 RESULT migration=0 drift_script=0 pytest_drift=0 pending_autogen=1

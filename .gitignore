@@ -15,4 +15,4 @@
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
-logs/drift_gate_local.log
+logs/
