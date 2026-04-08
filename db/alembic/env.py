@@ -37,17 +37,25 @@ def _load_models_module() -> None:
     for app_dir in app_dirs:
         if not app_dir.exists():
             continue
-        split_models = sorted(app_dir.glob("*_models.py"))
-        if split_models:
-            candidates.extend(split_models)
+        models_subdir = app_dir / "models"
+        if models_subdir.is_dir():
+            for p in sorted(models_subdir.glob("*.py")):
+                if p.stem == "__init__":
+                    continue
+                candidates.append(p)
             continue
+        split_models = sorted(app_dir.glob("*_models.py"))
+        candidates.extend(split_models)
         fallback = app_dir / "models.py"
         if fallback.exists():
             candidates.append(fallback)
 
     for models_path in candidates:
         if models_path.exists():
-            spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
+            spec = importlib.util.spec_from_file_location(
+                f"_alembic_models_{models_path.stem}",
+                str(models_path),
+            )
             if spec is None or spec.loader is None:
                 continue
             module = importlib.util.module_from_spec(spec)

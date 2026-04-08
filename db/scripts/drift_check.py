@@ -120,9 +120,17 @@ def _load_models_module() -> None:
         # Package-first load to avoid redefining SQLModel tables via duplicate module names.
         if (app_dir / "__init__.py").exists():
             module_names: list[str] = []
-            if (app_dir / "models.py").exists():
-                module_names.append("app.models")
-            module_names.extend(f"app.{p.stem}" for p in sorted(app_dir.glob("*_models.py")))
+            models_subdir = app_dir / "models"
+            if models_subdir.is_dir():
+                module_names.extend(
+                    f"app.models.{p.stem}"
+                    for p in sorted(models_subdir.glob("*.py"))
+                    if p.stem != "__init__"
+                )
+            else:
+                if (app_dir / "models.py").exists():
+                    module_names.append("app.models")
+                module_names.extend(f"app.{p.stem}" for p in sorted(app_dir.glob("*_models.py")))
 
             seen: set[str] = set()
             for module_name in module_names:
@@ -137,11 +145,21 @@ def _load_models_module() -> None:
             continue
 
         # Fallback for non-package paths.
-        split_models = sorted(app_dir.glob("*_models.py"))
-        fallback = app_dir / "models.py"
-        candidates = split_models + ([fallback] if fallback.exists() else [])
-        for idx, models_path in enumerate(candidates):
-            spec = importlib.util.spec_from_file_location(f"_drift_models_{idx}", str(models_path))
+        models_subdir = app_dir / "models"
+        if models_subdir.is_dir():
+            candidates = sorted(
+                p for p in models_subdir.glob("*.py")
+                if p.stem != "__init__"
+            )
+        else:
+            split_models = sorted(app_dir.glob("*_models.py"))
+            fallback = app_dir / "models.py"
+            candidates = split_models + ([fallback] if fallback.exists() else [])
+        for models_path in candidates:
+            spec = importlib.util.spec_from_file_location(
+                f"_drift_models_{models_path.stem}",
+                str(models_path),
+            )
             if spec is None or spec.loader is None:
                 continue
             module = importlib.util.module_from_spec(spec)
