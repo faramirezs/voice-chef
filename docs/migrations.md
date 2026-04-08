@@ -14,6 +14,20 @@ export DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:54
 
 ### 2) Full gate (all metadata)
 
+Recommended one-command local run (matches CI Gate 4 managed-scope policy):
+
+```bash
+make drift-gate-local
+```
+
+Log output:
+
+```bash
+logs/drift_gate_local.log
+```
+
+Manual equivalent:
+
 1. Migration state check:
 
 ```bash
@@ -43,6 +57,10 @@ If the generated revision contains no operations, pending drift is effectively z
 ```bash
 rm db/alembic/versions/*_drift_check_tmp.py
 ```
+
+Note:
+- CI-equivalent Gate 4 policy fails only for pending operations involving managed tables: `users`, `tenants`, `recipes`.
+- Pending operations outside this managed scope are logged as informational and do not fail the gate.
 
 ### 3) Scoped gate examples (split-model work)
 
@@ -116,6 +134,32 @@ On every FastAPI container start, this command runs automatically:
 - then uvicorn starts
 
 So if the DB is behind, it migrates forward before serving traffic.
+
+## Dump safety and regeneration
+
+Use these commands to keep dump-based local bootstrap aligned with migration head.
+
+1. Blast-radius safety check (fresh dump-init DB, then `alembic upgrade head`):
+
+```bash
+make dump-blast-check
+```
+
+Log output:
+
+```bash
+logs/dump_upgrade_blast_check.log
+```
+
+2. Regenerate `db/init/01_dump.sql` from migration head:
+
+```bash
+make dump-regen
+```
+
+Important:
+- `make dump-regen` resets DB volume.
+- After regeneration, review `db/init/02_align_alembic_revision.sql` and align/remove revision pinning as needed.
 
 Natural next steps
 

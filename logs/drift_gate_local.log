@@ -1,4 +1,4 @@
-Schema drift local run started at 2026-04-08T15:07:22Z
+Schema drift local run started at 2026-04-08T18:23:53Z
 == GATE 1: alembic upgrade head ==
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
@@ -12,140 +12,10 @@ INFO  [alembic.runtime.migration] Will assume transactional DDL.
    - table 'recipes' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/recipe_models.py
    - table 'tenants' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/tenant_models.py
    - table 'users' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/user_models.py
-❌  Schema drift detected — 60 difference(s):
-
-  1. ('add_column', None, 'recipes', Column('preparation_time_minutes', NullType(), table=<recipes>))
-  2. ('add_column', None, 'recipes', Column('cooking_time_minutes', NullType(), table=<recipes>))
-  3. ('add_column', None, 'recipes', Column('shelf_life_text', Text(), table=<recipes>))
-  4. [('modify_default', None, 'recipes', 'id', {'existing_nullable': False, 'existing_type': UUID(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107fc6b50>, for_update=False))]
-  5. [('modify_nullable', None, 'recipes', 'tenant_id', {'existing_type': UUID(), 'existing_server_default': False, 'existing_comment': None}, True, False)]
-  6. [('modify_default', None, 'recipes', 'reduction_factor', {'existing_nullable': True, 'existing_type': NUMERIC(precision=10, scale=4), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107fc7890>, for_update=False))]
-  7. [('modify_nullable', None, 'recipes', 'is_component', {'existing_type': BOOLEAN(), 'existing_server_default': DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x1091e9cd0>, for_update=False), 'existing_comment': None}, True, False)]
-  8. ('remove_index', Index('idx_recipes_batch_number', Column('batch_number', VARCHAR(length=100), table=<recipes>)))
-  9. ('remove_index', Index('idx_recipes_is_component', Column('is_component', BOOLEAN(), table=<recipes>, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x1091e9cd0>, for_update=False))))
-  10. ('remove_index', Index('idx_recipes_reduction_factor', Column('reduction_factor', NUMERIC(precision=10, scale=4), table=<recipes>)))
-  11. ('remove_index', Index('ix_recipes_name', Column('name', VARCHAR(length=255), table=<recipes>, nullable=False)))
-  12. ('add_index', Index('idx_recipes_component', Column('tenant_id', Uuid(), table=<recipes>, nullable=False), Column('is_component', Boolean(), table=<recipes>, nullable=False, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107fc7e10>, for_update=False))))
-  13. ('add_index', Index('idx_recipes_name', Column('name', String(length=255), table=<recipes>, nullable=False)))
-  14. ('add_index', Index('idx_recipes_status', Column('tenant_id', Uuid(), table=<recipes>, nullable=False), Column('status', String(length=50), table=<recipes>, nullable=False, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107fc7b90>, for_update=False))))
-  15. ('add_index', Index('idx_recipes_tenant', Column('tenant_id', Uuid(), table=<recipes>, nullable=False)))
-  16. ('remove_column', None, 'recipes', Column('cooking_time', TEXT(), table=<recipes>))
-  17. ('remove_column', None, 'recipes', Column('shelf_life', TEXT(), table=<recipes>))
-  18. ('remove_column', None, 'recipes', Column('packaging', TEXT(), table=<recipes>))
-  19. ('remove_column', None, 'recipes', Column('unit_measure', VARCHAR(length=50), table=<recipes>))
-  20. ('remove_column', None, 'recipes', Column('labor_effort', VARCHAR(length=50), table=<recipes>))
-  21. ('remove_column', None, 'recipes', Column('nutri_score_veg_fruits', NUMERIC(precision=5, scale=2), table=<recipes>))
-  22. ('remove_column', None, 'recipes', Column('drained_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-  23. ('remove_column', None, 'recipes', Column('utensils', TEXT(), table=<recipes>))
-  24. ('remove_column', None, 'recipes', Column('preference_nutri_value', NUMERIC(precision=10, scale=2), table=<recipes>))
-  25. ('remove_column', None, 'recipes', Column('unit_serving', VARCHAR(length=50), table=<recipes>))
-  26. ('remove_column', None, 'recipes', Column('nutri_score_category', VARCHAR(length=10), table=<recipes>))
-  27. ('remove_column', None, 'recipes', Column('storage_text', TEXT(), table=<recipes>))
-  28. ('remove_column', None, 'recipes', Column('allergene_source', TEXT(), table=<recipes>))
-  29. ('remove_column', None, 'recipes', Column('portion_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-  30. ('remove_column', None, 'recipes', Column('net_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-  31. ('remove_column', None, 'recipes', Column('eigene_menge', NUMERIC(precision=10, scale=2), table=<recipes>))
-  32. ('remove_column', None, 'recipes', Column('fill_quantity', NUMERIC(precision=10, scale=2), table=<recipes>))
-  33. ('remove_column', None, 'recipes', Column('origin_fish', TEXT(), table=<recipes>))
-  34. ('remove_column', None, 'recipes', Column('mise_en_place_display', BOOLEAN(), table=<recipes>, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x1091e9790>, for_update=False)))
-  35. ('remove_column', None, 'recipes', Column('preparation_time', TEXT(), table=<recipes>))
-  36. ('remove_column', None, 'recipes', Column('portion_by_weight', BOOLEAN(), table=<recipes>, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x1091e8110>, for_update=False)))
-  37. ('remove_column', None, 'recipes', Column('waiting_time', TEXT(), table=<recipes>))
-  38. ('remove_column', None, 'recipes', Column('serving_recommendation', TEXT(), table=<recipes>))
-  39. ('remove_column', None, 'recipes', Column('origin_location', TEXT(), table=<recipes>))
-  40. ('remove_column', None, 'recipes', Column('side_dishes', TEXT(), table=<recipes>))
-  41. ('remove_column', None, 'recipes', Column('notes_instructions', TEXT(), table=<recipes>))
-  42. ('remove_column', None, 'recipes', Column('description_short', TEXT(), table=<recipes>))
-  43. ('remove_column', None, 'recipes', Column('ingredient_list_custom', TEXT(), table=<recipes>))
-  44. ('remove_column', None, 'recipes', Column('batch_number', VARCHAR(length=100), table=<recipes>))
-  45. ('remove_column', None, 'recipes', Column('packaging_material', TEXT(), table=<recipes>))
-  46. ('remove_column', None, 'recipes', Column('total_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-  47. ('remove_column', None, 'recipes', Column('expiry_date', DATE(), table=<recipes>))
-  48. ('remove_column', None, 'recipes', Column('margin', NUMERIC(precision=10, scale=2), table=<recipes>))
-  49. ('remove_column', None, 'recipes', Column('fill_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-  50. ('remove_column', None, 'recipes', Column('production_date', DATE(), table=<recipes>))
-  51. ('remove_column', None, 'recipes', Column('use_by_date', DATE(), table=<recipes>))
-  52. ('remove_column', None, 'recipes', Column('devices', TEXT(), table=<recipes>))
-  53. [('modify_default', None, 'tenants', 'id', {'existing_nullable': False, 'existing_type': UUID(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107f8dc90>, for_update=False))]
-  54. [('modify_type', None, 'tenants', 'settings', {'existing_nullable': True, 'existing_server_default': None, 'existing_comment': None}, VARCHAR(), JSONB(astext_type=Text())), ('modify_default', None, 'tenants', 'settings', {'existing_nullable': True, 'existing_type': VARCHAR(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107f8e8d0>, for_update=False))]
-  55. ('remove_index', Index('ix_tenants_name', Column('name', VARCHAR(length=255), table=<tenants>, nullable=False)))
-  56. ('remove_index', Index('ix_tenants_slug', Column('slug', VARCHAR(length=100), table=<tenants>, nullable=False), unique=True))
-  57. [('modify_default', None, 'users', 'id', {'existing_nullable': False, 'existing_type': UUID(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x107fab2d0>, for_update=False))]
-  58. [('modify_nullable', None, 'users', 'tenant_id', {'existing_type': UUID(), 'existing_server_default': False, 'existing_comment': None}, True, False)]
-  59. [('modify_type', None, 'users', 'email', {'existing_nullable': False, 'existing_server_default': False, 'existing_comment': None}, VARCHAR(length=255), String(length=320))]
-  60. ('remove_index', Index('ix_users_email', Column('email', VARCHAR(length=255), table=<users>, nullable=False), unique=True))
+✅  No schema drift — models are in sync with the database.
 == GATE 3: pytest schema drift ==
-F
-=================================== FAILURES ===================================
-_____________________ TestCompareMeta.test_no_schema_drift _____________________
-db/test/test_schema_drift.py:112: in test_no_schema_drift
-    assert not diffs, (
-E   AssertionError: 60 schema difference(s) detected between models and DB:
-E       • ('add_column', None, 'recipes', Column('preparation_time_minutes', NullType(), table=<recipes>))
-E       • ('add_column', None, 'recipes', Column('cooking_time_minutes', NullType(), table=<recipes>))
-E       • ('add_column', None, 'recipes', Column('shelf_life_text', Text(), table=<recipes>))
-E       • [('modify_default', None, 'recipes', 'id', {'existing_nullable': False, 'existing_type': UUID(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x10381ef10>, for_update=False))]
-E       • [('modify_nullable', None, 'recipes', 'tenant_id', {'existing_type': UUID(), 'existing_server_default': False, 'existing_comment': None}, True, False)]
-E       • [('modify_default', None, 'recipes', 'reduction_factor', {'existing_nullable': True, 'existing_type': NUMERIC(precision=10, scale=4), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x10381fdd0>, for_update=False))]
-E       • [('modify_nullable', None, 'recipes', 'is_component', {'existing_type': BOOLEAN(), 'existing_server_default': DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x104bd1010>, for_update=False), 'existing_comment': None}, True, False)]
-E       • ('remove_index', Index('idx_recipes_batch_number', Column('batch_number', VARCHAR(length=100), table=<recipes>)))
-E       • ('remove_index', Index('idx_recipes_is_component', Column('is_component', BOOLEAN(), table=<recipes>, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x104bd1010>, for_update=False))))
-E       • ('remove_index', Index('idx_recipes_reduction_factor', Column('reduction_factor', NUMERIC(precision=10, scale=4), table=<recipes>)))
-E       • ('remove_index', Index('ix_recipes_name', Column('name', VARCHAR(length=255), table=<recipes>, nullable=False)))
-E       • ('add_index', Index('idx_recipes_component', Column('tenant_id', Uuid(), table=<recipes>, nullable=False), Column('is_component', Boolean(), table=<recipes>, nullable=False, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x103830310>, for_update=False))))
-E       • ('add_index', Index('idx_recipes_name', Column('name', String(length=255), table=<recipes>, nullable=False)))
-E       • ('add_index', Index('idx_recipes_status', Column('tenant_id', Uuid(), table=<recipes>, nullable=False), Column('status', String(length=50), table=<recipes>, nullable=False, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x1038300d0>, for_update=False))))
-E       • ('add_index', Index('idx_recipes_tenant', Column('tenant_id', Uuid(), table=<recipes>, nullable=False)))
-E       • ('remove_column', None, 'recipes', Column('labor_effort', VARCHAR(length=50), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('nutri_score_veg_fruits', NUMERIC(precision=5, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('batch_number', VARCHAR(length=100), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('origin_location', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('notes_instructions', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('unit_serving', VARCHAR(length=50), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('portion_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('fill_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('eigene_menge', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('origin_fish', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('preparation_time', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('unit_measure', VARCHAR(length=50), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('packaging', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('portion_by_weight', BOOLEAN(), table=<recipes>, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x104bc6d90>, for_update=False)))
-E       • ('remove_column', None, 'recipes', Column('packaging_material', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('preference_nutri_value', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('production_date', DATE(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('description_short', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('mise_en_place_display', BOOLEAN(), table=<recipes>, server_default=DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x104bd0890>, for_update=False)))
-E       • ('remove_column', None, 'recipes', Column('utensils', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('ingredient_list_custom', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('drained_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('cooking_time', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('margin', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('nutri_score_category', VARCHAR(length=10), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('net_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('shelf_life', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('serving_recommendation', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('side_dishes', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('storage_text', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('allergene_source', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('devices', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('waiting_time', TEXT(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('fill_quantity', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('use_by_date', DATE(), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('total_weight', NUMERIC(precision=10, scale=2), table=<recipes>))
-E       • ('remove_column', None, 'recipes', Column('expiry_date', DATE(), table=<recipes>))
-E       • [('modify_default', None, 'tenants', 'id', {'existing_nullable': False, 'existing_type': UUID(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x10386b4d0>, for_update=False))]
-E       • [('modify_type', None, 'tenants', 'settings', {'existing_nullable': True, 'existing_server_default': None, 'existing_comment': None}, VARCHAR(), JSONB(astext_type=Text())), ('modify_default', None, 'tenants', 'settings', {'existing_nullable': True, 'existing_type': VARCHAR(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x10386bfd0>, for_update=False))]
-E       • ('remove_index', Index('ix_tenants_name', Column('name', VARCHAR(length=255), table=<tenants>, nullable=False)))
-E       • ('remove_index', Index('ix_tenants_slug', Column('slug', VARCHAR(length=100), table=<tenants>, nullable=False), unique=True))
-E       • [('modify_default', None, 'users', 'id', {'existing_nullable': False, 'existing_type': UUID(), 'existing_comment': None}, None, DefaultClause(<sqlalchemy.sql.elements.TextClause object at 0x103854550>, for_update=False))]
-E       • [('modify_nullable', None, 'users', 'tenant_id', {'existing_type': UUID(), 'existing_server_default': False, 'existing_comment': None}, True, False)]
-E       • [('modify_type', None, 'users', 'email', {'existing_nullable': False, 'existing_server_default': False, 'existing_comment': None}, VARCHAR(length=255), String(length=320))]
-E       • ('remove_index', Index('ix_users_email', Column('email', VARCHAR(length=255), table=<users>, nullable=False), unique=True))
-E   assert not [('add_column', None, 'recipes', Column('preparation_time_minutes', NullType(), table=<recipes>)), ('add_column', None...existing_comment': None, 'existing_nullable': True, 'existing_type': NUMERIC(precision=10, scale=4)}, None, ...)], ...]
-=========================== short test summary info ============================
-FAILED db/test/test_schema_drift.py::TestCompareMeta::test_no_schema_drift - ...
-!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-1 failed in 0.20s
+.................                                                        [100%]
+17 passed in 0.52s
 == GATE 4: pending autogenerate check ==
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
@@ -155,311 +25,56 @@ INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogener
 INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
 INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
 INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_allergens_allergen' on 'ingredient_allergens'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_allergens'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_tags_name' on 'tags'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'tags'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_recipe_ingredients_ingredient_id' on 'recipe_ingredients'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_recipe_ingredients_recipe_id' on 'recipe_ingredients'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_recipe_ingredients_sort_order' on 'recipe_ingredients'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_versions_recipe' on 'recipe_versions'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_versions'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'task_lists'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'units'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'agents'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_categories_cat' on 'recipe_categories'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_categories'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'shopping_lists'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_shopping_items_list' on 'shopping_list_items'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'shopping_list_items'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'categories'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_name' on 'ingredients'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_parent' on 'ingredients'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_tenant' on 'ingredients'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredients'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_tags_tag' on 'recipe_tags'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_tags'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_additives_additive' on 'ingredient_additives'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_additives'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'allergens'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_ingredients_ingredient' on 'recipe_ingredients'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_ingredients_recipe' on 'recipe_ingredients'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_ingredients'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_units_ingredient' on 'ingredient_units'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_units'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_nutrition'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_parent_id' on 'ingredients'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredients_usage_count' on 'ingredients'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_ingredients_name' on 'ingredients'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredients'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_additives_additive' on 'ingredient_additives'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_additives'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'units'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_nutrition_nutrition' on 'recipe_nutrition'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_nutrition'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'nutrition_facts'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_tags_tag' on 'recipe_tags'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_tags'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_versions_data' on 'recipe_versions'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_versions_recipe' on 'recipe_versions'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_versions'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_additives_code' on 'additives'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'additives'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_files_recipe' on 'files'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'files'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_created' on 'audit_logs'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_entity' on 'audit_logs'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_user' on 'audit_logs'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'audit_logs'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_allergens_code' on 'allergens'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'allergens'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_prices_ingredient' on 'ingredient_prices'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_nutrition'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_agent_interactions_agent' on 'agent_interactions'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_agent_interactions_tenant' on 'agent_interactions'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'agent_interactions'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_prices_ing' on 'ingredient_prices'
 INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ingredient_prices_latest_lookup' on 'ingredient_prices'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'uq_ingredient_no_supplier' on 'ingredient_prices'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'uq_ingredient_supplier' on 'ingredient_prices'
 INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_prices'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_cat_category' on 'recipe_categories'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_categories'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_categories_name' on 'categories'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'categories'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipe_photos_recipe' on 'recipe_photos'
-INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_photos'
-INFO  [alembic.autogenerate.compare.tables] Detected added column 'recipes.preparation_time_minutes'
-INFO  [alembic.autogenerate.compare.tables] Detected added column 'recipes.cooking_time_minutes'
-INFO  [alembic.autogenerate.compare.tables] Detected added column 'recipes.shelf_life_text'
-INFO  [alembic.autogenerate.compare.constraints] Detected NOT NULL on column 'recipes.tenant_id'
-INFO  [alembic.autogenerate.compare.constraints] Detected NOT NULL on column 'recipes.is_component'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipes_batch_number' on 'recipes'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipes_is_component' on 'recipes'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_recipes_reduction_factor' on 'recipes'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_recipes_name' on 'recipes'
-INFO  [alembic.autogenerate.compare.constraints] Detected added index 'idx_recipes_component' on '('tenant_id', 'is_component')'
-INFO  [alembic.autogenerate.compare.constraints] Detected added index 'idx_recipes_name' on '('name',)'
-INFO  [alembic.autogenerate.compare.constraints] Detected added index 'idx_recipes_status' on '('tenant_id', 'status')'
-INFO  [alembic.autogenerate.compare.constraints] Detected added index 'idx_recipes_tenant' on '('tenant_id',)'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.mise_en_place_display'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.origin_location'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.labor_effort'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.portion_weight'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.expiry_date'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.fill_quantity'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.production_date'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.nutri_score_veg_fruits'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.margin'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.ingredient_list_custom'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.serving_recommendation'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.waiting_time'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.portion_by_weight'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.preparation_time'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.eigene_menge'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.drained_weight'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.preference_nutri_value'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.allergene_source'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.unit_measure'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.storage_text'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.origin_fish'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.unit_serving'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.packaging_material'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.batch_number'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.cooking_time'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.packaging'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.fill_weight'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.shelf_life'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.net_weight'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.devices'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.description_short'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.notes_instructions'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.total_weight'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.utensils'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.side_dishes'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.use_by_date'
-INFO  [alembic.autogenerate.compare.tables] Detected removed column 'recipes.nutri_score_category'
-INFO  [alembic.autogenerate.compare.types] Detected type change from VARCHAR() to JSONB(astext_type=Text()) on 'tenants.settings'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_tenants_name' on 'tenants'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_tenants_slug' on 'tenants'
-INFO  [alembic.autogenerate.compare.constraints] Detected NOT NULL on column 'users.tenant_id'
-INFO  [alembic.autogenerate.compare.types] Detected type change from VARCHAR(length=255) to String(length=320) on 'users.email'
-INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'ix_users_email' on 'users'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_ing_allergens_allergen' on 'ingredient_allergens'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'ingredient_allergens'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'recipe_nutrition_cache'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_task_items_list' on 'task_items'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'task_items'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_entity' on 'audit_logs'
+INFO  [alembic.autogenerate.compare.constraints] Detected removed index 'idx_audit_logs_tenant' on 'audit_logs'
+INFO  [alembic.autogenerate.compare.tables] Detected removed table 'audit_logs'
+INFO  [alembic.autogenerate.compare.types] Column 'recipes.preparation_time_minutes' has no type within the model; can't compare
+INFO  [alembic.autogenerate.compare.types] Column 'recipes.preparation_time_minutes' has no type within the model; can't compare
+INFO  [alembic.autogenerate.compare.types] Column 'recipes.cooking_time_minutes' has no type within the model; can't compare
+INFO  [alembic.autogenerate.compare.types] Column 'recipes.cooking_time_minutes' has no type within the model; can't compare
   Generating /Users/alejandroramirez/Nextcloud/Documents/Ko
-  kitchen/voice-chef/db/alembic/versions/pending_local_tmp_verif
-  y_no_pending_local.py ...  done
-❌ Pending schema operations detected in autogenerated migration.
-    op.drop_index(op.f('idx_ing_allergens_allergen'), table_name='ingredient_allergens')
-    op.drop_table('ingredient_allergens')
-    op.drop_index(op.f('idx_tags_name'), table_name='tags')
-    op.drop_table('tags')
-    op.drop_index(op.f('ix_recipe_ingredients_ingredient_id'), table_name='recipe_ingredients')
-    op.drop_index(op.f('ix_recipe_ingredients_recipe_id'), table_name='recipe_ingredients')
-    op.drop_index(op.f('ix_recipe_ingredients_sort_order'), table_name='recipe_ingredients')
-    op.drop_table('recipe_ingredients')
-    op.drop_index(op.f('idx_ingredient_units_ingredient'), table_name='ingredient_units')
-    op.drop_table('ingredient_units')
-    op.drop_table('ingredient_nutrition')
-    op.drop_index(op.f('idx_ingredients_parent_id'), table_name='ingredients')
-    op.drop_index(op.f('idx_ingredients_usage_count'), table_name='ingredients')
-    op.drop_index(op.f('ix_ingredients_name'), table_name='ingredients')
-    op.drop_table('ingredients')
-    op.drop_index(op.f('idx_ing_additives_additive'), table_name='ingredient_additives')
-    op.drop_table('ingredient_additives')
-    op.drop_table('units')
-    op.drop_index(op.f('idx_recipe_nutrition_nutrition'), table_name='recipe_nutrition')
-    op.drop_table('recipe_nutrition')
-    op.drop_table('nutrition_facts')
-    op.drop_index(op.f('idx_recipe_tags_tag'), table_name='recipe_tags')
-    op.drop_table('recipe_tags')
-    op.drop_index(op.f('idx_recipe_versions_data'), table_name='recipe_versions', postgresql_using='gin')
-    op.drop_index(op.f('idx_recipe_versions_recipe'), table_name='recipe_versions')
-    op.drop_table('recipe_versions')
-    op.drop_index(op.f('idx_additives_code'), table_name='additives')
-    op.drop_table('additives')
-    op.drop_index(op.f('idx_files_recipe'), table_name='files')
-    op.drop_table('files')
-    op.drop_index(op.f('idx_audit_logs_created'), table_name='audit_logs')
-    op.drop_index(op.f('idx_audit_logs_entity'), table_name='audit_logs')
-    op.drop_index(op.f('idx_audit_logs_user'), table_name='audit_logs')
-    op.drop_table('audit_logs')
-    op.drop_index(op.f('idx_allergens_code'), table_name='allergens')
-    op.drop_table('allergens')
-    op.drop_index(op.f('idx_ingredient_prices_ingredient'), table_name='ingredient_prices')
-    op.drop_index(op.f('idx_ingredient_prices_latest_lookup'), table_name='ingredient_prices')
-    op.drop_table('ingredient_prices')
-    op.drop_index(op.f('idx_recipe_cat_category'), table_name='recipe_categories')
-    op.drop_table('recipe_categories')
-    op.drop_index(op.f('idx_categories_name'), table_name='categories')
-    op.drop_table('categories')
-    op.drop_index(op.f('idx_recipe_photos_recipe'), table_name='recipe_photos')
-    op.drop_table('recipe_photos')
-    op.add_column('recipes', sa.Column('preparation_time_minutes', sa.NullType(), nullable=True))
-    op.add_column('recipes', sa.Column('cooking_time_minutes', sa.NullType(), nullable=True))
-    op.add_column('recipes', sa.Column('shelf_life_text', sa.Text(), nullable=True))
-    op.alter_column('recipes', 'tenant_id',
-    op.alter_column('recipes', 'is_component',
-    op.drop_index(op.f('idx_recipes_batch_number'), table_name='recipes')
-    op.drop_index(op.f('idx_recipes_is_component'), table_name='recipes')
-    op.drop_index(op.f('idx_recipes_reduction_factor'), table_name='recipes')
-    op.drop_index(op.f('ix_recipes_name'), table_name='recipes')
-    op.create_index('idx_recipes_component', 'recipes', ['tenant_id', 'is_component'], unique=False)
-    op.create_index('idx_recipes_name', 'recipes', ['name'], unique=False)
-    op.create_index('idx_recipes_status', 'recipes', ['tenant_id', 'status'], unique=False)
-    op.create_index('idx_recipes_tenant', 'recipes', ['tenant_id'], unique=False)
-    op.drop_column('recipes', 'mise_en_place_display')
-    op.drop_column('recipes', 'origin_location')
-    op.drop_column('recipes', 'labor_effort')
-    op.drop_column('recipes', 'portion_weight')
-    op.drop_column('recipes', 'expiry_date')
-    op.drop_column('recipes', 'fill_quantity')
-    op.drop_column('recipes', 'production_date')
-    op.drop_column('recipes', 'nutri_score_veg_fruits')
-    op.drop_column('recipes', 'margin')
-    op.drop_column('recipes', 'ingredient_list_custom')
-    op.drop_column('recipes', 'serving_recommendation')
-    op.drop_column('recipes', 'waiting_time')
-    op.drop_column('recipes', 'portion_by_weight')
-    op.drop_column('recipes', 'preparation_time')
-    op.drop_column('recipes', 'eigene_menge')
-    op.drop_column('recipes', 'drained_weight')
-    op.drop_column('recipes', 'preference_nutri_value')
-    op.drop_column('recipes', 'allergene_source')
-    op.drop_column('recipes', 'unit_measure')
-    op.drop_column('recipes', 'storage_text')
-    op.drop_column('recipes', 'origin_fish')
-    op.drop_column('recipes', 'unit_serving')
-    op.drop_column('recipes', 'packaging_material')
-    op.drop_column('recipes', 'batch_number')
-    op.drop_column('recipes', 'cooking_time')
-    op.drop_column('recipes', 'packaging')
-    op.drop_column('recipes', 'fill_weight')
-    op.drop_column('recipes', 'shelf_life')
-    op.drop_column('recipes', 'net_weight')
-    op.drop_column('recipes', 'devices')
-    op.drop_column('recipes', 'description_short')
-    op.drop_column('recipes', 'notes_instructions')
-    op.drop_column('recipes', 'total_weight')
-    op.drop_column('recipes', 'utensils')
-    op.drop_column('recipes', 'side_dishes')
-    op.drop_column('recipes', 'use_by_date')
-    op.drop_column('recipes', 'nutri_score_category')
-    op.alter_column('tenants', 'settings',
-    op.drop_index(op.f('ix_tenants_name'), table_name='tenants')
-    op.drop_index(op.f('ix_tenants_slug'), table_name='tenants')
-    op.alter_column('users', 'tenant_id',
-    op.alter_column('users', 'email',
-    op.drop_index(op.f('ix_users_email'), table_name='users')
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
-    op.alter_column('users', 'email',
-    op.alter_column('users', 'tenant_id',
-    op.create_index(op.f('ix_tenants_slug'), 'tenants', ['slug'], unique=True)
-    op.create_index(op.f('ix_tenants_name'), 'tenants', ['name'], unique=False)
-    op.alter_column('tenants', 'settings',
-    op.add_column('recipes', sa.Column('nutri_score_category', sa.VARCHAR(length=10), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('use_by_date', sa.DATE(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('side_dishes', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('utensils', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('total_weight', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('notes_instructions', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('description_short', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('devices', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('net_weight', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('shelf_life', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('fill_weight', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('packaging', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('cooking_time', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('batch_number', sa.VARCHAR(length=100), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('packaging_material', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('unit_serving', sa.VARCHAR(length=50), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('origin_fish', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('storage_text', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('unit_measure', sa.VARCHAR(length=50), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('allergene_source', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('preference_nutri_value', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('drained_weight', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('eigene_menge', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('preparation_time', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('portion_by_weight', sa.BOOLEAN(), server_default=sa.text('false'), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('waiting_time', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('serving_recommendation', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('ingredient_list_custom', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('margin', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('nutri_score_veg_fruits', sa.NUMERIC(precision=5, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('production_date', sa.DATE(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('fill_quantity', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('expiry_date', sa.DATE(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('portion_weight', sa.NUMERIC(precision=10, scale=2), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('labor_effort', sa.VARCHAR(length=50), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('origin_location', sa.TEXT(), autoincrement=False, nullable=True))
-    op.add_column('recipes', sa.Column('mise_en_place_display', sa.BOOLEAN(), server_default=sa.text('true'), autoincrement=False, nullable=True))
-    op.drop_index('idx_recipes_tenant', table_name='recipes')
-    op.drop_index('idx_recipes_status', table_name='recipes')
-    op.drop_index('idx_recipes_name', table_name='recipes')
-    op.drop_index('idx_recipes_component', table_name='recipes')
-    op.create_index(op.f('ix_recipes_name'), 'recipes', ['name'], unique=False)
-    op.create_index(op.f('idx_recipes_reduction_factor'), 'recipes', ['reduction_factor'], unique=False)
-    op.create_index(op.f('idx_recipes_is_component'), 'recipes', ['is_component'], unique=False)
-    op.create_index(op.f('idx_recipes_batch_number'), 'recipes', ['batch_number'], unique=False)
-    op.alter_column('recipes', 'is_component',
-    op.alter_column('recipes', 'tenant_id',
-    op.drop_column('recipes', 'shelf_life_text')
-    op.drop_column('recipes', 'cooking_time_minutes')
-    op.drop_column('recipes', 'preparation_time_minutes')
-    op.create_table('recipe_photos',
-    op.create_index(op.f('idx_recipe_photos_recipe'), 'recipe_photos', ['recipe_id'], unique=False)
-    op.create_table('categories',
-    op.create_index(op.f('idx_categories_name'), 'categories', ['name'], unique=False)
-    op.create_table('recipe_categories',
-    op.create_index(op.f('idx_recipe_cat_category'), 'recipe_categories', ['category_id'], unique=False)
-    op.create_table('ingredient_prices',
-    op.create_index(op.f('idx_ingredient_prices_latest_lookup'), 'ingredient_prices', ['ingredient_id', 'unit', sa.literal_column('updated_at DESC'), sa.literal_column('created_at DESC'), sa.literal_column('id DESC')], unique=False)
-    op.create_index(op.f('idx_ingredient_prices_ingredient'), 'ingredient_prices', ['ingredient_id'], unique=False)
-    op.create_table('allergens',
-    op.create_index(op.f('idx_allergens_code'), 'allergens', ['code'], unique=False)
-    op.create_table('audit_logs',
-    op.create_index(op.f('idx_audit_logs_user'), 'audit_logs', ['user_id'], unique=False)
-    op.create_index(op.f('idx_audit_logs_entity'), 'audit_logs', ['entity', 'entity_id'], unique=False)
-    op.create_index(op.f('idx_audit_logs_created'), 'audit_logs', ['created_at'], unique=False)
-    op.create_table('files',
-    op.create_index(op.f('idx_files_recipe'), 'files', ['recipe_id'], unique=False)
-    op.create_table('additives',
-    op.create_index(op.f('idx_additives_code'), 'additives', ['code'], unique=False)
-    op.create_table('recipe_versions',
-    op.create_index(op.f('idx_recipe_versions_recipe'), 'recipe_versions', ['recipe_id'], unique=False)
-    op.create_index(op.f('idx_recipe_versions_data'), 'recipe_versions', ['data'], unique=False, postgresql_using='gin')
-    op.create_table('recipe_tags',
-    op.create_index(op.f('idx_recipe_tags_tag'), 'recipe_tags', ['tag_id'], unique=False)
-    op.create_table('nutrition_facts',
-    op.create_table('recipe_nutrition',
-    op.create_index(op.f('idx_recipe_nutrition_nutrition'), 'recipe_nutrition', ['nutrition_id'], unique=False)
-    op.create_table('units',
-    op.create_table('ingredient_additives',
-    op.create_index(op.f('idx_ing_additives_additive'), 'ingredient_additives', ['additive_id'], unique=False)
-    op.create_table('ingredients',
-    op.create_index(op.f('ix_ingredients_name'), 'ingredients', ['name'], unique=False)
-    op.create_index(op.f('idx_ingredients_usage_count'), 'ingredients', ['usage_count'], unique=False)
-    op.create_index(op.f('idx_ingredients_parent_id'), 'ingredients', ['parent_id'], unique=False)
-    op.create_table('ingredient_nutrition',
-    op.create_table('ingredient_units',
-    op.create_index(op.f('idx_ingredient_units_ingredient'), 'ingredient_units', ['ingredient_id'], unique=False)
-    op.create_table('recipe_ingredients',
-    op.create_index(op.f('ix_recipe_ingredients_sort_order'), 'recipe_ingredients', ['sort_order'], unique=False)
-    op.create_index(op.f('ix_recipe_ingredients_recipe_id'), 'recipe_ingredients', ['recipe_id'], unique=False)
-    op.create_index(op.f('ix_recipe_ingredients_ingredient_id'), 'recipe_ingredients', ['ingredient_id'], unique=False)
-    op.create_table('tags',
-    op.create_index(op.f('idx_tags_name'), 'tags', ['name'], unique=False)
-    op.create_table('ingredient_allergens',
-    op.create_index(op.f('idx_ing_allergens_allergen'), 'ingredient_allergens', ['allergen_id'], unique=False)
-RESULT migration=0 drift_script=1 pytest_drift=1 pending_autogen=1
+  kitchen/voice-chef/db/alembic/versions/pending_check_tmp_local_
+  verify_no_pending_local_gate.py ...  done
+ℹ️ Pending autogenerate operations detected only outside managed scope; Gate 4 pass.
+RESULT migration=0 drift_script=0 pytest_drift=0 pending_autogen=0
