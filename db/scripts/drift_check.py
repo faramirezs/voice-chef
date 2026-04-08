@@ -6,6 +6,7 @@ Call at app startup or from CI to block deployment on schema drift.
 """
 import re
 import sys
+import importlib
 import importlib.util
 import argparse
 from pathlib import Path
@@ -14,8 +15,10 @@ from typing import Any
 from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy import create_engine, text
+from sqlmodel import SQLModel
 
 MANAGED_TABLES = {"users", "tenants", "recipes"}
+_LOADED_MODEL_FILES: list[str] = []
 
 
 def _split_selector_values(raw_values: list[str] | None) -> list[str]:
@@ -76,7 +79,8 @@ def _resolve_scope(table_selectors: list[str] | None = None, class_selectors: li
 
 
 def _load_models_module() -> None:
-    """Load split *_models.py modules first, then fallback to models.py."""
+    """Load split *_models.py modules and fallback models.py without metadata duplication."""
+    global _LOADED_MODEL_FILES
     repo_root = Path(__file__).resolve().parents[2]
 
     # Ensure 'app.*' imports inside split model wrappers resolve when called from repo root.
@@ -89,35 +93,58 @@ def _load_models_module() -> None:
         repo_root / "fastapi" / "app",
         Path("/code/app"),
     ]
-    candidates: list[Path] = []
+    loaded = False
+    loaded_files: list[str] = []
 
     for app_dir in app_dirs:
         if not app_dir.exists():
             continue
-        split_models = sorted(app_dir.glob("*_models.py"))
-        if split_models:
-            candidates.extend(split_models)
-            continue
-        fallback = app_dir / "models.py"
-        if fallback.exists():
-            candidates.append(fallback)
+        # Package-first load to avoid redefining SQLModel tables via duplicate module names.
+        if (app_dir / "__init__.py").exists():
+            module_names: list[str] = []
+            if (app_dir / "models.py").exists():
+                module_names.append("app.models")
+            module_names.extend(f"app.{p.stem}" for p in sorted(app_dir.glob("*_models.py")))
 
-    for models_path in candidates:
-        if models_path.exists():
-            spec = importlib.util.spec_from_file_location("_drift_models", str(models_path))
+            seen: set[str] = set()
+            for module_name in module_names:
+                if module_name in seen:
+                    continue
+                seen.add(module_name)
+                module = importlib.import_module(module_name)
+                module_file = getattr(module, "__file__", None)
+                if module_file:
+                    loaded_files.append(str(Path(module_file).resolve()))
+                loaded = True
+            continue
+
+        # Fallback for non-package paths.
+        split_models = sorted(app_dir.glob("*_models.py"))
+        fallback = app_dir / "models.py"
+        candidates = split_models + ([fallback] if fallback.exists() else [])
+        for idx, models_path in enumerate(candidates):
+            spec = importlib.util.spec_from_file_location(f"_drift_models_{idx}", str(models_path))
             if spec is None or spec.loader is None:
                 continue
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-    if candidates:
+            loaded_files.append(str(models_path.resolve()))
+            loaded = True
+
+    if loaded:
+        deduped: list[str] = []
+        seen_files: set[str] = set()
+        for f in loaded_files:
+            if f not in seen_files:
+                seen_files.add(f)
+                deduped.append(f)
+        _LOADED_MODEL_FILES = deduped
         return
 
     raise ModuleNotFoundError("Could not locate split *_models.py or fallback models.py for drift metadata loading")
 
 
 _load_models_module()
-
-from sqlmodel import SQLModel
 
 _PG_CAST_RE = re.compile(r"::[a-z _]+", re.IGNORECASE)
 
@@ -156,6 +183,11 @@ def _include_object(
 def assert_no_drift(db_url: str, table_selectors: list[str] | None = None, class_selectors: list[str] | None = None) -> None:
     global MANAGED_TABLES
     MANAGED_TABLES = _resolve_scope(table_selectors=table_selectors, class_selectors=class_selectors)
+
+    if _LOADED_MODEL_FILES:
+        print("ℹ️  Model metadata loaded from:")
+        for model_file in _LOADED_MODEL_FILES:
+            print(f"   - {model_file}")
 
     engine = create_engine(db_url, echo=False)
 
