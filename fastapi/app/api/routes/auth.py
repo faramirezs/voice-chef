@@ -131,14 +131,45 @@ async def signup(user_data: UserSignupLogin, session: Session = Depends(get_sess
 # ─── LOGIN ──────────────────────────────────────────────────────────────────
 
 login_responses = {
-     401: {
-			"description": "Unauthorized",
-			"content": {
-				"application/json": {
-					"example": {"detail": "Invalid email or password"}
-				}
-			}
-	}
+    status.HTTP_200_OK: {
+        "description": "User logged in successfully",
+        "content": {
+            "application/json": {
+                "example": {
+                    "access_token": "<jwt>",
+                    "token_type": "bearer",
+                    "expires_in": 3600,
+                    "user": {
+                        "id": "b4cce9a0-7a56-4687-9aab-16cdf55f6961",
+                        "tenant_id": "98aa2780-6ad4-4de0-8908-3fa799eb67db",
+                        "email": "chef-admin@kitchen.local",
+                        "role": "editor",
+                        "is_active": "true"
+                        }
+                    }
+                }
+            },
+        },
+    status.HTTP_401_UNAUTHORIZED: {
+        "description": "Unauthorized",
+        "content": {
+            "application/json": {
+                "example": {
+                    "detail": "Invalid email or password"
+                }
+            }
+        }
+    },
+    status.HTTP_403_FORBIDDEN: {
+        "description": "Forbidden",
+        "content": {
+            "application/json": {
+                "example": {
+                    "detail": "Account disabled. Please contact your administrator"
+                }
+            }
+        }
+    }
 }
 
 @router.post(
@@ -152,9 +183,12 @@ async def login(
     session: Session = Depends(get_session)
 ) -> AuthTokenResponse:
     """Handles user login and issues a JWT"""
-    # form_data has 'username' (email in our case) and 'password' fields
+
+    # 1. Fetch user from DB. form_data has 'username' (email in our case) and 'password' fields
     query = select(Users).where(Users.email == form_data.username)
     user = session.exec(query).first()
+    
+    # 2. Check credentials
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -162,13 +196,21 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"}
         )
     
+    # 3. Check if account is disabled
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account disabled. Please contact your administrator."
+        )
+    
+    # 4. Success: Create token
     access_token = create_access_token(
         data={"sub": user.email, "id": str(user.id)})
      
-    # Create the user object for the response
+    # 5. Create the user object for the response
     user_response = UserLoginResponse.model_validate(user)
 
-    # Return the full token response object
+    # 6. Return the full token response object
     return AuthTokenResponse(
         access_token=access_token,
         expires_in=3600,

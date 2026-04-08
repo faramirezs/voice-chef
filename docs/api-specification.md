@@ -421,8 +421,10 @@ Success:
 
 Errors:
 - `401` invalid credentials
-- `403` account disabled
+- `403` Forbidden - account disabled
 - `422` payload type/shape invalid
+
+NOTE: `Status Code 403`: Unlike 401 (which says "I don't know who you are"), 403 says "I know exactly who you are, but you are not allowed to be here."
 
 ### 3) GET `/recipes`
 
