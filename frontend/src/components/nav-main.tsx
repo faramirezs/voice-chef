@@ -61,6 +61,20 @@ const NAV_ITEMS = [
 		icon: (
 			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
 		)
+	},
+		{
+		title: "Ingredients",
+		url: "/ingredients",
+		icon: (
+			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+		)
+	},
+			{
+		title: "Analytics",
+		url: "/analytics",
+		icon: (
+			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+		)
 	}
 ]
 
@@ -113,9 +127,9 @@ export function NavMain({
                   {item.items?.map((subItem) => (
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton asChild>
-                        <a href={subItem.url}>
+												<NavLink to={subItem.url} className={({ isActive }) => isActive ? "bg-primary/10 text-primary" : ""}>
                           <span>{subItem.title}</span>
-                        </a>
+                        </NavLink>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}

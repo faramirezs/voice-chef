@@ -102,7 +102,7 @@ const data = {
       items: [
         {
           title: "General",
-          url: "#",
+          url: "/settings/",
         },
         {
           title: "Team",
@@ -121,21 +121,21 @@ const data = {
   ],
   projects: [
     {
-      name: "Design Engineering",
+      name: "Mozarella Sticks",
       url: "#",
       icon: (
         <HugeiconsIcon icon={CropIcon} strokeWidth={2} />
       ),
     },
     {
-      name: "Sales & Marketing",
+      name: "Mashed Potatoes",
       url: "#",
       icon: (
         <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />
       ),
     },
     {
-      name: "Travel",
+      name: "New York Cheesecake",
       url: "#",
       icon: (
         <HugeiconsIcon icon={MapsIcon} strokeWidth={2} />

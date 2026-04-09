@@ -8,6 +8,9 @@ import { TasksPage } from '@/pages/TasksPage';
 import { CalculatorPage } from '@/pages/CalculatorPage';
 import { StartingPage } from '@/pages/StartingPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { SettingsGeneralPage } from '@/pages/SettingsGeneral';
+import { IngredientsPage } from '@/pages/IngredientsPage';
+import { AnalyticsPage } from '@/pages/AnalyticsPage';
 
 function App() {
   return (
@@ -19,7 +22,6 @@ function App() {
         
           <Route index element={<StartingPage />} />
 
-
           <Route path="recipes" element={<RecipesPage />} />
           <Route path="recipes/:id" element={<RecipeDetailPage />} />
           
@@ -27,6 +29,11 @@ function App() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="calculator" element={<CalculatorPage />} />
           <Route path="notes" element={<NotesPage />} />
+
+          <Route path="ingredients" element={<IngredientsPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+
+          <Route path="settings/*" element={<SettingsGeneralPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
