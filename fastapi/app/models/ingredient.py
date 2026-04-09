@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import List, Optional, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Index, CheckConstraint, Column, Text, text, Boolean, DateTime, Numeric
+from sqlalchemy import Index, Integer, Column, text, Boolean, DateTime, Numeric
 
 if TYPE_CHECKING:
     from app.models.recipe import Recipe
@@ -12,6 +12,11 @@ if TYPE_CHECKING:
 
 class Ingredient(SQLModel, table=True):
     __tablename__ = "ingredients"
+    __table_args__ = (
+        Index("ix_ingredients_name", "name"),
+        Index("idx_ingredients_parent_id", "parent_id"),
+        Index("idx_ingredients_usage_count", "usage_count"),
+    )
 
     # Primary key, Core fields, Timestamps
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -19,32 +24,37 @@ class Ingredient(SQLModel, table=True):
     created_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
     updated_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
 
-    # Foreign keys
-    tenant_id: UUID | None = Field(foreign_key="tenants.id") 
-    parent_id: UUID | None = Field(foreign_key="ingredients.id", index=True)
-    nutrition_id: UUID | None = Field(foreign_key="nutrition_facts.id")
-
     # Varying character fields
     default_unit: str | None = Field(max_length=50)
     ingredient_type: str | None = Field(max_length=50)
     bls_key: str | None = Field(max_length=100)
 
     # Integers
-    usage_count: int | None = Field(default=0, sa_column=Column(Boolean))
-    recipe_count: int | None = Field(default=0, sa_column=Column(Boolean))
+    usage_count: int | None = Field(default=0, sa_column=Column(Integer, server_default=text("0")))
+    recipe_count: int | None = Field(default=0, sa_column=Column(Integer, server_default=text("0")))
 
     # Booleans
     is_custom: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
     has_parent: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
 
+    # Foreign keys
+    tenant_id: UUID | None = Field(foreign_key="tenants.id") 
+    parent_id: UUID | None = Field(foreign_key="ingredients.id")
+
+    # Optional foreign keys (for future relationships)    
+    nutrition_id: UUID | None = None
     initial_recipe_id: UUID | None = None
 
-    # parent: Optional['Ingredient'] = Relationship(back_populates='children', sa_relationship_kwargs={"remote_side": "Ingredient.id"})
-    # children: List['Ingredient'] = Relationship(back_populates='parent')
-    # tenant: Optional['Tenants'] = Relationship(back_populates='ingredients')
+    # Relationship attributes
+    parent: Optional['Ingredient'] = Relationship(back_populates='children', sa_relationship_kwargs={"remote_side": "Ingredient.id"})
+    children: List['Ingredient'] = Relationship(back_populates='parent')
+    tenant: Optional['Tenants'] = Relationship(back_populates='ingredients')
     # ingredient_nutrition: Optional['IngredientNutrition'] = Relationship(sa_relationship_kwargs={'uselist': False}, back_populates='ingredient')
     # ingredient_prices: List['IngredientPrices'] = Relationship(back_populates='ingredient')
     recipe_ingredients: List['RecipeIngredient'] = Relationship(back_populates='ingredient')
+
+
+
 
 
 class NutritionFacts(SQLModel, table=True):

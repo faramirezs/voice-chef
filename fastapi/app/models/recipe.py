@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import List, Optional, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Index, CheckConstraint, Column, Text, text, Boolean, DateTime, Numeric
+from sqlalchemy import Index, CheckConstraint, Column, Text, text, Boolean, DateTime, Numeric, DATE
 
 if TYPE_CHECKING:
     from app.models.users import Users, Tenants
@@ -18,13 +18,13 @@ class Recipe(SQLModel, table=True):
         Index("idx_recipes_reduction_factor", "reduction_factor"),
         Index("idx_recipes_yield_mode", "yield_mode"),
         Index("ix_recipes_name", "name"),
-        CheckConstraint("portion_size_grams IS NULL OR portion_size_grams > 0", 
+        CheckConstraint("portion_size_grams IS NULL OR portion_size_grams > 0::numeric", 
                         name="positive_portion_size_grams"),
-        CheckConstraint("portions_count_resolved IS NULL OR portions_count_resolved > 0", 
+        CheckConstraint("portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric", 
                         name="positive_portions_count_resolved"),
-        CheckConstraint("total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0", 
+        CheckConstraint("total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric", 
                         name="positive_total_cooked_weight_grams"),
-        CheckConstraint("total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0", 
+        CheckConstraint("total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric", 
                         name="positive_total_raw_weight_grams"),
         CheckConstraint("yield_mode::text = ANY (ARRAY['count'::character varying, 'weight'::character varying]::text[])", 
                         name="valid_yield_mode",),
@@ -34,7 +34,7 @@ class Recipe(SQLModel, table=True):
 
     # Primary key, Core fields, Timestamps
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str = Field(max_length=255)
+    name: str = Field(max_length=255)   
     status: str = Field(default="draft", max_length=50)
     created_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
     updated_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
@@ -96,9 +96,9 @@ class Recipe(SQLModel, table=True):
     is_component: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
 
     # Dates
-    production_date: datetime | None = Field(sa_column=Column(DateTime(timezone=True)))
-    use_by_date: datetime | None = Field(sa_column=Column(DateTime(timezone=True)))
-    expiry_date: datetime | None = Field(sa_column=Column(DateTime(timezone=True)))
+    production_date: datetime | None = Field(sa_column=Column(DATE))
+    use_by_date: datetime | None = Field(sa_column=Column(DATE))
+    expiry_date: datetime | None = Field(sa_column=Column(DATE))
 
     # Foreign keys
     tenant_id: UUID | None = Field(foreign_key="tenants.id")
