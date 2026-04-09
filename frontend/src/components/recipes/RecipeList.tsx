@@ -17,23 +17,39 @@ function RecipeSkeleton() {
 
 export function RecipeList() {
   const [statusFilter, setStatusFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
 
   const { data: recipes, isLoading, isError, error } = useRecipes(
     statusFilter ? { status: statusFilter } : undefined,
   );
 
+  const normalizedNameFilter = nameFilter.trim().toLowerCase();
+  const visibleRecipes = recipes?.filter((recipe) => {
+    if (!normalizedNameFilter) {
+      return true;
+    }
+
+    return recipe.name.toLowerCase().includes(normalizedNameFilter);
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
+        <Input
+          placeholder="Filter by name..."
+          className="max-w-sm"
+          value={nameFilter}
+          onChange={(e) => setNameFilter(e.target.value)}
+        />
         <Input
           placeholder="Filter by status (e.g. draft, active)…"
           className="max-w-sm"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         />
-        {!isLoading && recipes && (
+        {!isLoading && visibleRecipes && (
           <span className="text-sm text-muted-foreground">
-            {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
+            {visibleRecipes.length} recipe{visibleRecipes.length !== 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -53,15 +69,15 @@ export function RecipeList() {
         </div>
       )}
 
-      {!isLoading && !isError && recipes?.length === 0 && (
+      {!isLoading && !isError && visibleRecipes?.length === 0 && (
         <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
           No recipes found.
         </div>
       )}
 
-      {!isLoading && recipes && recipes.length > 0 && (
+      {!isLoading && visibleRecipes && visibleRecipes.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          {recipes.map((recipe) => (
+          {visibleRecipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>

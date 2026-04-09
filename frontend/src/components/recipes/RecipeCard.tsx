@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Recipe } from '@/types/recipe';
+import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -9,39 +10,13 @@ const STATUS_STYLES: Record<string, string> = {
   archived: 'bg-gray-100 text-gray-600',
 };
 
-function ImagePlaceholder({ onView }: { onView: () => void }) {
+function ImagePlaceholder() {
   return (
-    <div className="relative w-full h-36 bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100 flex items-center justify-center">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-18 h-18 text-orange-300"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="6" y1="2" x2="6" y2="6" />
-        <line x1="10" y1="2" x2="10" y2="6" />
-        <path d="M6 6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2" />
-        <line x1="8" y1="8" x2="8" y2="22" />
-        <path d="M16 2l2 4-4 4 2 12" />
-      </svg>
-
-      {/* Eye icon button */}
-      {/* <button
-        onClick={(e) => { e.stopPropagation(); onView(); }}
-        className="absolute top-1 right-1 rounded-full text-gray-200 hover:text-gray-400 transition-colors"
-        aria-label="View recipe"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="4" />
-        </svg>
-      </button> */}
-    </div>
+    <div
+      className="relative flex h-36 w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${recipeImage})` }}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -64,7 +39,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
   return (
     <Card className="hover:shadow-md transition-shadow cursor-pointer pt-0 gap-2" onClick={() => navigate(`/recipes/${recipe.id}`)}>
-      <ImagePlaceholder onView={() => navigate(`/recipes/${recipe.id}`)} />
+      <ImagePlaceholder />
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base leading-snug">{recipe.name}</CardTitle>

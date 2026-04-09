@@ -3,6 +3,7 @@ import { useRecipe } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -106,9 +107,25 @@ export function RecipeDetailPage() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-4">
         <Button size="sm" onClick={() => navigate('/')}>← Back</Button>
+        <div
+          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${recipeImage})` }}
+          aria-hidden="true"
+        />
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-semibold">{recipe.name}</h1>
           <span className={badgeClass}>{recipe.status}</span>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
+            Edit recipe
+          </Button>
+          <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
+            Duplicate recipe
+          </Button>
+          <Button size="lg" variant="destructive" onClick={() => alert('Delete recipe functionality coming soon!')}>
+            Delete recipe
+          </Button>
         </div>
         {recipe.description_short && (
           <p className="text-muted-foreground">{recipe.description_short}</p>
