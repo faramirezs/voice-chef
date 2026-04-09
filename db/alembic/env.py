@@ -48,7 +48,7 @@ def include_object(object, name, type_, reflected, compare_to):
     """
     # We only want to compare the tables we have refactored.
     # tables_to_check = ["users", "tenants", "recipes", "ingredients", "nutritionfacts"]
-    tables_to_check = {"recipes", "users", "tenants", "ingredients"}  # <-- Adjust this list to include only the tables you want to check
+    tables_to_check = {"recipes", "users", "tenants", "ingredients", "recipe_ingredients"}  # <-- Adjust this list to include only the tables you want to check
     if type_ == "table" and name not in tables_to_check:
         return False
     

@@ -105,14 +105,8 @@ class Recipe(SQLModel, table=True):
     created_by: UUID | None = Field(foreign_key="users.id")
 
     # Relationship attributes
+    recipe_ingredients: list["RecipeIngredient"] = Relationship(back_populates="recipe")
+    # recipe_photos: list["RecipePhoto"] = Relationship(back_populates="recipe")
     created_by_user: Optional["Users"] = Relationship(back_populates="recipes")
     tenant: Optional["Tenants"] = Relationship(back_populates="recipes")
-    # created_by: Optional["Users"] = Relationship(back_populates="recipes")
 
-    recipe_ingredients: list["RecipeIngredient"] = Relationship(
-        back_populates="recipe"
-    )
-
-    # recipe_photos: list["RecipePhoto"] = Relationship(
-    #     back_populates="recipe"
-    # )
