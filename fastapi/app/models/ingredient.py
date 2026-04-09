@@ -24,18 +24,20 @@ class Ingredient(SQLModel, table=True):
     parent_id: UUID | None = Field(foreign_key="ingredients.id", index=True)
     nutrition_id: UUID | None = Field(foreign_key="nutrition_facts.id")
 
-    # Text fields
+    # Varying character fields
     default_unit: str | None = Field(max_length=50)
     ingredient_type: str | None = Field(max_length=50)
     bls_key: str | None = Field(max_length=100)
 
-    # Booleans
-    usage_count: int | None = Field(default=0, index=True)
-    recipe_count: int | None = Field(default=0)
-    is_custom: bool = Field(default=False)
-    has_parent: bool = Field(default=False)
+    # Integers
+    usage_count: int | None = Field(default=0, sa_column=Column(Boolean))
+    recipe_count: int | None = Field(default=0, sa_column=Column(Boolean))
 
-    initial_recipe_id: UUID | None = Field(default=None)
+    # Booleans
+    is_custom: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
+    has_parent: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
+
+    initial_recipe_id: UUID | None = None
 
     # parent: Optional['Ingredient'] = Relationship(back_populates='children', sa_relationship_kwargs={"remote_side": "Ingredient.id"})
     # children: List['Ingredient'] = Relationship(back_populates='parent')
