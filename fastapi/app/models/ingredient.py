@@ -8,6 +8,7 @@ from sqlalchemy import Index, CheckConstraint, Column, Text, text, Boolean, Date
 if TYPE_CHECKING:
     from app.models.recipe import Recipe
     from app.models.users import Users, Tenants
+    from app.models.recipe_ingredients import RecipeIngredient
 
 class Ingredient(SQLModel, table=True):
     __tablename__ = "ingredients"
@@ -41,7 +42,7 @@ class Ingredient(SQLModel, table=True):
     # tenant: Optional['Tenants'] = Relationship(back_populates='ingredients')
     # ingredient_nutrition: Optional['IngredientNutrition'] = Relationship(sa_relationship_kwargs={'uselist': False}, back_populates='ingredient')
     # ingredient_prices: List['IngredientPrices'] = Relationship(back_populates='ingredient')
-    # recipe_ingredients: List['RecipeIngredients'] = Relationship(back_populates='ingredient')
+    recipe_ingredients: List['RecipeIngredient'] = Relationship(back_populates='ingredient')
 
 
 class NutritionFacts(SQLModel, table=True):
