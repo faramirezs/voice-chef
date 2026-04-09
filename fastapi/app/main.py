@@ -1,9 +1,13 @@
 from fastapi import Query, FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import inspect
-from app.database import get_db, engine
-from app import models
-from app import schemas
+from app.core.database import get_db, engine
+from app.models.recipe import Recipe
+from app.models.ingredient import Ingredient
+from app.schemas.recipe import RecipeRead, RecipeUpdate, RecipeCreate
+from app.schemas.ingredient import IngredientWrite
+from app.models.users import Users
+
 
 app = FastAPI()
 
@@ -28,15 +32,15 @@ def list_tables():
 # We will remove this later and implement proper endpoints for recipes.
 @app.get("/recipes")
 def retrieve_recipes(session: Session = Depends(get_db)):
-    query = select(models.Recipe)
-    recipes = result = session.exec(query).all()
+    query = select(Recipe)
+    recipes = session.exec(query).all()
     return recipes
 
 
 # NOTE: MK - Retrieve one recipe by id
-@app.get("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
+@app.get("/recipes/{recipe_id}", response_model=RecipeRead)
 def retrieve_recipe(recipe_id: str, session: Session = Depends(get_db)):
-    query = select(models.Recipe).where(models.Recipe.id == recipe_id)
+    query = select(Recipe).where(Recipe.id == recipe_id)
     recipe = session.exec(query).first()
 
     if not recipe:
@@ -44,21 +48,21 @@ def retrieve_recipe(recipe_id: str, session: Session = Depends(get_db)):
 
     return recipe
 
-# # NOTE: MK - Create a recipe 
-# @app.post("/recipes", response_model=schemas.RecipeRead)
-# def create_recipe(recipe: schemas.RecipeCreate, session: Session = Depends(get_db)):
-#     new_recipe = models.Recipe(**recipe.dict())
+# NOTE: MK - Create a recipe 
+@app.post("/recipes", response_model=RecipeRead)
+def create_recipe(recipe: RecipeCreate, session: Session = Depends(get_db)):
+    new_recipe = Recipe(**recipe.dict())
     
-#     session.add(new_recipe)
-#     session.commit()
-#     session.refresh(new_recipe)
+    session.add(new_recipe)
+    session.commit()
+    session.refresh(new_recipe)
 
-#     return new_recipe
+    return new_recipe
 
 # NOTE: MK - Update recipe fields with partial merge semantics
-@app.put("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
-def update_recipe(recipe_id: str, recipe_update: schemas.RecipeUpdate, session: Session = Depends(get_db)):
-    query = select(models.Recipe).where(models.Recipe.id == recipe_id)
+@app.put("/recipes/{recipe_id}", response_model=RecipeRead)
+def update_recipe(recipe_id: str, recipe_update: RecipeUpdate, session: Session = Depends(get_db)):
+    query = select(Recipe).where(Recipe.id == recipe_id)
     recipe = session.exec(query).first()
 
     if not recipe:
@@ -76,7 +80,7 @@ def update_recipe(recipe_id: str, recipe_update: schemas.RecipeUpdate, session: 
 # # NOTE: MK - Delete recipe
 # @app.delete("/recipes/{recipe_id}", response_model=schemas.RecipeRead)
 # def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
-#     query = select(models.Recipe).where(models.Recipe.id == recipe_id)
+#     query = select(Recipe).where(Recipe.id == recipe_id)
 #     recipe = session.exec(query).first()
 
 #     if not recipe:
@@ -97,16 +101,16 @@ def update_recipe(recipe_id: str, recipe_update: schemas.RecipeUpdate, session: 
 def retrieve_ingredients(
     session: Session = Depends(get_db),    
     offset: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200)):
-    
-    query = select(models.Ingredients)
+    limit: int = Query(20, ge=1, le=100)):
+
+    query = select(Ingredient).offset(offset).limit(limit)
     ingredients = session.exec(query).all()
     return ingredients
 
 
 @app.post("/ingredients")
-def create_ingredient(ingredient: schemas.IngredientCreate, session: Session = Depends(get_db)):
-    new_ingredient = models.Ingredients(**ingredient.dict())
+def create_ingredient(ingredient: IngredientWrite, session: Session = Depends(get_db)):
+    new_ingredient = Ingredient(**ingredient.dict())
     
     session.add(new_ingredient)
     session.commit()

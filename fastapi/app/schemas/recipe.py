@@ -10,16 +10,12 @@ class RecipeCreate(SQLModel):
     instructions: Optional[str] = None
 
 class RecipeRead(SQLModel):
-    id: UUID
-    name: str
-    description: Optional[str] = None
-    instructions: Optional[str] = None
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    name: str = Field(max_length=255)
+    # description: Optional[str] = None
+    # instructions: Optional[str] = None
 
 class RecipeUpdate(SQLModel):
     name: str | None = None
     description: str | None = None
     instructions: str | None = None
-
-class IngredientCreate(SQLModel):
-    name: str
-    quantity: Optional[str] = None
