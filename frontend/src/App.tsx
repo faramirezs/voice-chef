@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppLayout } from '@/components/layout/AppLayout';
 
 import { DbModelsCard } from '@/components/debug/DbModelsCard';
 
@@ -11,7 +10,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout />}>
           <Route 
             path="/" 
             element={
@@ -20,7 +18,6 @@ function App() {
               </div>
             } 
           />
-        </Route>
       </Routes>
     </BrowserRouter>
   );
