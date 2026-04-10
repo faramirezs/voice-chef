@@ -20,7 +20,6 @@ engine = create_engine(DATABASE_URL, echo=SQL_ECHO)
 # Database Session Management
 # -----------------------------------------------------------------------------
 
-
 # NOTE: MP. Using with statement also ensures the session is automatically
 # closed, making the `try...finally` block unnecessary and the code cleaner.
 def get_db():

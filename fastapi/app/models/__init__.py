@@ -6,3 +6,8 @@ to be imported elsewhere in the project (e.g., `from app.models import User`).
 
 It also helps tools like Alembic and IDEs correctly discover modules.
 """
+
+from .users import Users, Tenants
+from .recipe import Recipe
+from .ingredient import Ingredient
+from .recipe_ingredients import RecipeIngredient
