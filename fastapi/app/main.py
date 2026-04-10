@@ -11,7 +11,7 @@ from app.schemas.ingredient import IngredientWrite
 from app.models.users import Users, Tenants
 from app.models.recipe_ingredients import RecipeIngredient
 from app.mappers.recipe_mapper import to_recipe_detail
-
+from sqlalchemy.orm import selectinload
 
 app = FastAPI()
 
@@ -41,6 +41,87 @@ def retrieve_recipes(session: Session = Depends(get_db)):
     return recipes
 
 
+# # NOTE: MK - FOLLOWING END POINTS NOT TESTED YET  
+########################################
+@app.post("/recipes", response_model=RecipeSummaryResponse)
+def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_db)):
+    recipe = Recipe(**recipe_in.model_dump(exclude={"ingredients"}))
+
+    session.add(recipe)
+    session.flush()
+
+    # for ing in recipe_in.ingredients:
+    #     link = RecipeIngredient(
+    #         recipe_id=recipe.id,
+    #         ingredient_id=ing.ingredient_id,
+    #         quantity=ing.quantity,
+    #         unit=ing.unit,
+    #         preparation=ing.preparation,
+    #         sort_order=ing.sort_order,
+    #     )
+    #     session.add(link)
+
+    session.commit()
+    session.refresh(recipe)
+
+    return to_recipe_detail(recipe)
+
+
+@app.get("/recipes/{recipe_id}", response_model=RecipeSummaryResponse)
+def get_recipe(recipe_id: str, session: Session = Depends(get_db)):
+    statement = (
+        select(Recipe)
+        .where(Recipe.id == recipe_id)
+        .options(
+            selectinload(Recipe.recipe_ingredients)
+            .selectinload(RecipeIngredient.ingredient)
+        )
+    )
+
+    recipe = session.exec(statement).first()
+
+    if not recipe:
+        raise HTTPException(404, "Recipe not found")
+
+    return to_recipe_detail(recipe)
+
+# NOTE: MK - Update recipe fields with partial merge semantics
+@app.put("/recipes/{recipe_id}", response_model=RecipeSummaryResponse)
+def update_recipe(recipe_id: str, recipe_update: RecipeUpdate, session: Session = Depends(get_db)):
+    query = select(Recipe).where(Recipe.id == recipe_id)
+    recipe = session.exec(query).first()
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    for key, value in recipe_update.dict(exclude_unset=True).items():
+        setattr(recipe, key, value)
+
+    session.add(recipe)
+    session.commit()
+    session.refresh(recipe)
+
+    return recipe
+
+@app.delete("/recipes/{recipe_id}", response_model=RecipeSummaryResponse)
+def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
+    recipe = session.get(Recipe, recipe_id)
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    session.refresh(recipe)
+
+    result = to_recipe_detail(recipe)
+    # result = recipe.name
+
+    session.delete(recipe)
+    session.commit()
+
+    return result
+########################################################
+
+
 # # NOTE: MK - Retrieve one recipe by id
 # @app.get("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
 # def retrieve_recipe(recipe_id: str, session: Session = Depends(get_db)):
@@ -63,82 +144,18 @@ def retrieve_recipes(session: Session = Depends(get_db)):
 
 #     return new_recipe
 
+# ########
+# @app.get("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
+# def get_recipe(recipe_id: str, session: Session = Depends(get_db)):
+#     recipe = session.get(Recipe, recipe_id)
 
-# # NOTE: MK - FOLLOWING END POINTS NOT TESTED YET  
-########################################
-@app.post("/recipes", response_model=RecipeDetailResponse)
-def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_db)):
-    recipe = Recipe(**recipe_in.model_dump(exclude={"ingredients"}))
+#     if not recipe:
+#         raise HTTPException(404, "Recipe not found")
 
-    session.add(recipe)
-    session.flush()
-
-    for ing in recipe_in.ingredients:
-        link = RecipeIngredient(
-            recipe_id=recipe.id,
-            ingredient_id=ing.ingredient_id,
-            quantity=ing.quantity,
-            unit=ing.unit,
-            preparation=ing.preparation,
-            sort_order=ing.sort_order,
-        )
-        session.add(link)
-
-    session.commit()
-    session.refresh(recipe)
-
-    return to_recipe_detail(recipe)
-
-from sqlalchemy.orm import selectinload
-
-@app.get("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-def get_recipe(recipe_id: str, session: Session = Depends(get_db)):
-    statement = (
-        select(Recipe)
-        .where(Recipe.id == recipe_id)
-        .options(
-            selectinload(Recipe.recipe_ingredients)
-            .selectinload(RecipeIngredient.ingredient)
-        )
-    )
-
-    recipe = session.exec(statement).first()
-
-    if not recipe:
-        raise HTTPException(404, "Recipe not found")
-
-    return to_recipe_detail(recipe)
-########################################################
+#     return (recipe)
+# ##########
 
 
-########
-@app.get("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-def get_recipe(recipe_id: str, session: Session = Depends(get_db)):
-    recipe = session.get(Recipe, recipe_id)
-
-    if not recipe:
-        raise HTTPException(404, "Recipe not found")
-
-    return (recipe)
-##########
-
-# NOTE: MK - Update recipe fields with partial merge semantics
-@app.put("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-def update_recipe(recipe_id: str, recipe_update: RecipeUpdate, session: Session = Depends(get_db)):
-    query = select(Recipe).where(Recipe.id == recipe_id)
-    recipe = session.exec(query).first()
-
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
-
-    for key, value in recipe_update.dict(exclude_unset=True).items():
-        setattr(recipe, key, value)
-
-    session.add(recipe)
-    session.commit()
-    session.refresh(recipe)
-
-    return recipe
 
 # NOTE: MK - Delete recipe
 # @app.delete("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
@@ -155,28 +172,11 @@ def update_recipe(recipe_id: str, recipe_update: RecipeUpdate, session: Session 
 #     return recipe
 
 ######
-@app.delete("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
-    recipe = session.get(Recipe, recipe_id)
-
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
-
-    session.refresh(recipe)
-
-    result = to_recipe_detail(recipe)
-
-    session.delete(recipe)
-    session.commit()
-
-    return result
-######
-
-
 
 # # --------------------
 # # Ingredient endpoints
 # # --------------------
+
 
 # NOTE: MK - Retrieve Ingredients
 @app.get("/ingredients")

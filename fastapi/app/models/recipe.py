@@ -70,7 +70,7 @@ class Recipe(SQLModel, table=True):
     nutri_score_category: str | None = Field(max_length=10)
     unit_measure: str | None = Field(max_length=50)
     unit_serving: str | None = Field(max_length=50)
-    yield_mode: str = Field(default="count", max_length=20, nullable=False)
+    yield_mode: str = Field(default="count", max_length=20)
 
     # Numeric fields
     yield_amount: Decimal | None = Field(sa_column=Column(Numeric(10, 2)))

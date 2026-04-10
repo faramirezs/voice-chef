@@ -44,7 +44,7 @@ class RecipeWrite(SQLModel):
 
     portions_count_resolved: Optional[Decimal] = None
 
-    ingredients: List[RecipeIngredientWrite] = []
+    # ingredients: List[RecipeIngredientWrite] = []
 
 
 class RecipeIngredientResponse(SQLModel):
@@ -98,7 +98,7 @@ class RecipeUpdate(SQLModel):
     instructions: Optional[str] = None
 
     status: Optional[str] = None
-    yield_mode: Optional[str] = None
+    yield_mode: Optional[str] = "count"
 
     portion_size_grams: Optional[Decimal] = None
     total_raw_weight_grams: Optional[Decimal] = None
@@ -106,4 +106,4 @@ class RecipeUpdate(SQLModel):
 
     portions_count_resolved: Optional[Decimal] = None
 
-    ingredients: Optional[List[RecipeIngredientUpdate]] = None
+    # ingredients: Optional[List[RecipeIngredientUpdate]] = None

@@ -105,4 +105,4 @@ class Tenants(SQLModel, table=True):
     users: List['Users'] = Relationship(back_populates='tenant')
     recipes: List['Recipe'] = Relationship(back_populates="tenant")
     # the line below can be uncomment when there is Igredient table
-    # ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
+    ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
