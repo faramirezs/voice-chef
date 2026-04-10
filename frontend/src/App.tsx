@@ -1,23 +1,16 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
-import { DbModelsCard } from '@/components/debug/DbModelsCard';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { DebugPage } from '@/pages/DebugPage';
 
-/**
- * A simplified App component for this branch.
- * It renders only the DbModelsCard on the root page.
- */
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-          <Route 
-            path="/" 
-            element={
-              <div className="flex items-center justify-center min-h-screen bg-background">
-                <DbModelsCard />
-              </div>
-            } 
-          />
+        <Route element={<AppLayout />}>
+          {/* The root path will now show your DebugPage */}
+          <Route path="/" element={<DebugPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
