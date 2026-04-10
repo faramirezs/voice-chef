@@ -58,3 +58,10 @@ sudo systemctl status nginx
 # If you want to stop nginx on your host
 sudo systemctl stop nginx
 ```
+
+## How to activate the virtual environment for Python
+
+```bash
+# If your virtual environment is named ".venv"
+source .venv/bin/activate
+```
