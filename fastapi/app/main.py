@@ -12,6 +12,8 @@ from app.models.users import Users, Tenants
 from app.models.recipe_ingredients import RecipeIngredient
 from app.mappers.recipe_mapper import to_recipe_detail
 from sqlalchemy.orm import selectinload
+from app.core.pagination import pagination_params, PaginationParams, paginate
+from app.schemas.pagination import PaginatedResponse
 
 app = FastAPI()
 
@@ -34,14 +36,17 @@ def list_tables():
 # ----------------
 # NOTE: DL - this is just a test endpoint to verify that we can fetch recipes from the database. 
 # We will remove this later and implement proper endpoints for recipes.
-@app.get("/recipes")
-def retrieve_recipes(session: Session = Depends(get_db)):
+@app.get("/recipes", response_model=PaginatedResponse[Recipe])
+def retrieve_recipes(
+    session: Session = Depends(get_db),
+    pagination: PaginationParams = Depends(pagination_params)):
+
     query = select(Recipe)
-    recipes = session.exec(query).all()
+    recipes = paginate(query, session, pagination)
     return recipes
 
 
-# # NOTE: MK - FOLLOWING END POINTS NOT TESTED YET  
+# # NOTE: MK - FOLLOWING END POINTS NOT FULLY TESTED YET  
 ########################################
 @app.post("/recipes", response_model=RecipeSummaryResponse)
 def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_db)):
@@ -119,6 +124,31 @@ def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
     session.commit()
 
     return result
+
+
+##################################
+# NOTE: MK - Retrieve Ingredients
+@app.get("/ingredients", response_model=PaginatedResponse[Ingredient])
+def retrieve_ingredients(
+    session: Session = Depends(get_db),    
+    pagination: PaginationParams = Depends(pagination_params)):
+
+    query = select(Ingredient)
+    ingredients = paginate(query, session, pagination)
+    return ingredients
+
+
+@app.post("/ingredients")
+def create_ingredient(ingredient: IngredientWrite, session: Session = Depends(get_db)):
+    new_ingredient = Ingredient(**ingredient.dict())
+    
+    session.add(new_ingredient)
+    session.commit()
+    session.refresh(new_ingredient)
+
+    return new_ingredient
+
+
 ########################################################
 
 
@@ -177,26 +207,4 @@ def delete_recipe(recipe_id: str, session: Session = Depends(get_db)):
 # # Ingredient endpoints
 # # --------------------
 
-
-# NOTE: MK - Retrieve Ingredients
-@app.get("/ingredients")
-def retrieve_ingredients(
-    session: Session = Depends(get_db),    
-    offset: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100)):
-
-    query = select(Ingredient).offset(offset).limit(limit)
-    ingredients = session.exec(query).all()
-    return ingredients
-
-
-@app.post("/ingredients")
-def create_ingredient(ingredient: IngredientWrite, session: Session = Depends(get_db)):
-    new_ingredient = Ingredient(**ingredient.dict())
-    
-    session.add(new_ingredient)
-    session.commit()
-    session.refresh(new_ingredient)
-
-    return new_ingredient
 

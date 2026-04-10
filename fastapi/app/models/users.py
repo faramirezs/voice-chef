@@ -12,6 +12,7 @@ from datetime import datetime   # Python type: type hints and runtime values
 # a circular import during execution.
 if TYPE_CHECKING:
     from recipe import Recipe
+    from ingredient import Ingredient
 
 
 class Users(SQLModel, table=True):
