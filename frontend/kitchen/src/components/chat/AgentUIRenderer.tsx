@@ -1,3 +1,5 @@
+import { KCard } from "@/components/ui/KCard";
+
 interface AgentUIRendererProps {
   content: string;
 }
@@ -35,7 +37,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function RecipeCard({ recipe }: { recipe: RecipeData }) {
   return (
-    <div className="bg-surface-alt/90 border border-border/70 rounded-2xl p-4 space-y-2 shadow-[0_8px_22px_rgba(0,0,0,0.18)]">
+    <KCard className="p-4 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <h3 className="text-lg font-semibold">{recipe.name ?? "Recipe"}</h3>
         {recipe.status && <StatusBadge status={recipe.status} />}
@@ -64,7 +66,7 @@ function RecipeCard({ recipe }: { recipe: RecipeData }) {
         )}
         {recipe.use_by_date && <span>Use by: {recipe.use_by_date}</span>}
       </div>
-    </div>
+    </KCard>
   );
 }
 
@@ -88,9 +90,9 @@ export function AgentUIRenderer({ content }: AgentUIRendererProps) {
       return <ErrorCard message={content} />;
     }
     return (
-      <div className="bg-surface-alt/90 border border-border/70 rounded-2xl p-4 text-base whitespace-pre-wrap shadow-[0_8px_22px_rgba(0,0,0,0.18)]">
+      <KCard className="p-4 text-base whitespace-pre-wrap">
         {content}
-      </div>
+      </KCard>
     );
   }
 

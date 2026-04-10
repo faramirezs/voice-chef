@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { KButton } from "@/components/ui/KButton";
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
@@ -52,18 +53,20 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
   if (!SpeechRecognitionCtor) return null;
 
   return (
-    <button
+    <KButton
       type="button"
       onClick={toggle}
       disabled={disabled}
       aria-label={listening ? "Stop recording" : "Start voice input"}
-      className={`flex-shrink-0 h-14 w-14 rounded-2xl flex items-center justify-center text-2xl transition-colors ring-1 shadow-[0_8px_20px_rgba(0,0,0,0.2)]
+      variant="ghost"
+      size="icon"
+      className={`flex-shrink-0 text-2xl shadow-[0_8px_20px_rgba(0,0,0,0.2)]
         ${
           listening
             ? "bg-primary text-[#16270f] ring-primary/60 animate-pulse"
             : "bg-surface-alt text-text-muted ring-border/70 hover:text-text hover:bg-border/35"
         }
-        disabled:opacity-40 disabled:cursor-not-allowed`}
+        `}
     >
       {listening ? (
         <svg
@@ -94,6 +97,6 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
           <line x1="12" y1="19" x2="12" y2="22" />
         </svg>
       )}
-    </button>
+    </KButton>
   );
 }

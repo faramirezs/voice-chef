@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAgent } from "@/hooks/useAgent";
+import { KButton } from "@/components/ui/KButton";
+import { KInput } from "@/components/ui/KInput";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceInput } from "./VoiceInput";
 
@@ -44,13 +46,14 @@ export function ChatInterface() {
         <h1 className="text-xl font-semibold tracking-tight text-text">
           Voice chef
         </h1>
-        <button
+        <KButton
           type="button"
           onClick={reset}
-          className="text-sm text-text-muted hover:text-text transition-colors px-3 py-1.5 rounded-xl hover:bg-surface ring-1 ring-transparent hover:ring-border/70"
+          variant="ghost"
+          className="h-auto px-3 py-1.5 text-sm rounded-xl bg-transparent ring-transparent hover:bg-surface hover:ring-border/70"
         >
           New chat
-        </button>
+        </KButton>
       </header>
 
       {/* Messages */}
@@ -59,8 +62,8 @@ export function ChatInterface() {
           <div className="flex flex-col items-center justify-center h-full text-center text-text-muted space-y-3">
             <p className="text-2xl text-text">Ask me anything about recipes</p>
             <p className="text-base">
-              Try: "What are the steps for the chocolate cake?" or "Show me
-              published recipes"
+              Try: "Recalculate recipe X for Y portions" or "Show me
+              chicken recipes"
             </p>
           </div>
         )}
@@ -91,28 +94,24 @@ export function ChatInterface() {
           disabled={isStreaming}
         />
 
-        <input
+        <KInput
           ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask the kitchen assistant..."
           disabled={isStreaming}
-          className="flex-1 h-14 px-5 text-lg rounded-2xl bg-surface/90 border border-border
-            text-text placeholder:text-text-muted
-            focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/60
-            disabled:opacity-50"
+          className="flex-1"
         />
 
-        <button
+        <KButton
           type="submit"
           disabled={isStreaming || !input.trim()}
-          className="flex-shrink-0 h-14 px-6 rounded-2xl bg-primary text-[#16270f] text-lg font-semibold
-            hover:bg-primary-hover transition-colors shadow-[0_10px_26px_rgba(87,128,50,0.35)]
-            disabled:opacity-40 disabled:cursor-not-allowed"
+          size="default"
+          className="flex-shrink-0"
         >
           Send
-        </button>
+        </KButton>
       </form>
     </div>
   );
