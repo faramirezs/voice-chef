@@ -95,6 +95,9 @@ agent-build-nocache: $(ENV)
 agent-recreate: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate agent
 
+refresh-env-agent: $(ENV)
+	$(COMPOSE)  -f $(PROD_FILE) -f $(DEV_FILE) up -d --no-deps --force-recreate fastapi ag
+
 up: dev
 
 start:

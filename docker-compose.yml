@@ -1,13 +1,23 @@
 services:
-  frontend:
+  office-frontend:
     build:
-      context: ./frontend/
+      context: ./frontend/office/
     ports:
       - "8080:80"
     networks:
       - app-network
     depends_on:
       - fastapi
+
+  kitchen-frontend:
+    build:
+      context: ./frontend/kitchen/
+    ports:
+      - "8082:80"
+    networks:
+      - app-network
+    depends_on:
+      - agent
 
   db:
     image: postgres:17.8
