@@ -23,7 +23,7 @@ prod: $(ENV)
 	@echo "Building in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
 	@echo "VOICE-CHEF is running in prod_mode"
-	
+
 down:
 	@echo "Stopping and removing the containers..."
 	$(COMPOSE) down
@@ -42,12 +42,12 @@ fclean:
 
 # Targets/commands to show current state, logs and command
 status:
-	@$(COMPOSE) ps -a --format "table {{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"	
+	@$(COMPOSE) ps -a --format "table {{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@printf '\n'
-	
+
 	@docker volume ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
-	
+
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
 
@@ -74,6 +74,9 @@ define HELP_TEXT
 	" make logs:	Show logs" \
 	" make help:	Show available commands\n" \
 	" make build:	Build images from compose file" \
+	" make agent-build:\tBuild only agent service" \
+	" make agent-build-nocache:\tBuild only agent service without cache" \
+	" make agent-recreate:\tRecreate and run only agent service" \
 	" make up:	Calling the command dev" \
 	" make start:	Start the containers" \
 	" make stop:	Stop running containers"
@@ -82,6 +85,15 @@ endef
 # Aux targets/commands
 build: $(ENV)
 	$(COMPOSE) build
+
+agent-build: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build agent
+
+agent-build-nocache: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache agent
+
+agent-recreate: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate agent
 
 up: dev
 
@@ -92,3 +104,4 @@ stop:
 	$(COMPOSE) stop
 
 .PHONY: all dev prod down re clean fclean status logs help % build up start stop
+.PHONY: all dev prod down re clean fclean status logs help % build agent-build agent-build-nocache agent-recreate up start stop
