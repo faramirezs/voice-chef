@@ -1,4 +1,5 @@
 import os
+import sys
 import importlib.util
 from pathlib import Path
 from logging.config import fileConfig
@@ -9,53 +10,39 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
 url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 config.set_main_option("sqlalchemy.url", url)
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 def _load_models_module() -> None:
-    """Load split *_models.py modules first, then fallback to models.py."""
+    """Load models.py (which imports split *_models.py) to register all tables."""
     repo_root = Path(__file__).resolve().parents[2]
     app_dirs = [
         repo_root / "fastapi" / "app",
         Path("/code/app"),
     ]
-    candidates: list[Path] = []
 
     for app_dir in app_dirs:
         if not app_dir.exists():
             continue
-        split_models = sorted(app_dir.glob("*_models.py"))
-        if split_models:
-            candidates.extend(split_models)
+        models_path = app_dir / "models.py"
+        if not models_path.exists():
             continue
-        fallback = app_dir / "models.py"
-        if fallback.exists():
-            candidates.append(fallback)
-
-    for models_path in candidates:
-        if models_path.exists():
-            spec = importlib.util.spec_from_file_location(f"_alembic_models_{models_path.stem}", str(models_path))
-            if spec is None or spec.loader is None:
-                continue
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-    if candidates:
+        parent = str(app_dir.parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+        spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         return
 
-    raise ModuleNotFoundError("Could not locate split *_models.py or fallback models.py for Alembic metadata loading")
+    raise ModuleNotFoundError("Could not locate models.py for Alembic metadata loading")
 
 
 _load_models_module()

@@ -63,18 +63,58 @@ Three curated JSON files exist with no migration or script that loads them:
 | `db/scripts/reference_data/allergens.json` | 33 allergens (EU-14 + sub-allergens) | `allergens` table is always empty |
 | `db/scripts/reference_data/additives.json` | ~35 additives (German food labelling) | `additives` table is always empty |
 
-### 3. Original seed data is gone
+### 3. Neon backup recovered — but it's LEGACY schema, not current
 
-| Source | Status |
-|--------|--------|
-| `db/init/01_dump.sql` | Schema-only (0 INSERT/COPY statements) |
-| `db/backups/neon_recipes_010_pre_local_push_2026-03-17.sql` | Empty file (just pg_dump headers, 27 lines, no data) |
-| `db/scripts/seed_from_neon.py` | Deleted — only stale `.pyc` remains |
-| Neon cloud DB | Unknown — may still contain the original recipe/ingredient data |
+Backup: `db/backups/neon_recipes_010_2026-04-11.dump` (761 KB, pg_restore custom
+format, 148 TOC entries, 25 tables with data). The Neon cloud DB (`koki` project)
+no longer has the recipe database — only `koki-cards` remains. This backup is the
+**sole copy** of the original data.
 
-If the Neon database still exists, the original recipe/ingredient/price data can
-be recovered. Otherwise, the only seed data source is the market-estimate prices
-from migration 009.
+**The backup schema does NOT match the current model.** Direct restore is impossible.
+
+#### Tables in backup but NOT in current model (5 — legacy-only):
+- `files`, `nutrition_facts`, `recipe_nutrition`, `recipe_photos`, `ingredient_merge_audit`
+
+#### Tables in current model but NOT in backup (7 — new since migration):
+- `agents`, `agent_interactions`, `recipe_nutrition_cache`, `shopping_lists`,
+  `shopping_list_items`, `task_lists`, `task_items`
+
+#### Column renames / splits required for data import:
+| Table | Backup column | Current model column |
+|-------|---------------|---------------------|
+| `additives` | `name` | `name_de` (+ new `name_en`) |
+| `allergens` | `name` | `name_de` (+ new `name_en`, `parent_code`) |
+| `recipes` | `preparation_time` | `preparation_time_minutes` |
+| `recipes` | `cooking_time` | `cooking_time_minutes` |
+| `recipes` | `shelf_life` | `shelf_life_text` |
+| `recipes` | `storage_text` | `storage_temperature` |
+| `recipe_ingredients` | `quid` | `quid_percent` |
+| `audit_logs` | `user_id` | split → `tenant_id` + `actor_type` + `actor_id` |
+
+#### Legacy columns on `ingredients` (6 — not in current model):
+`nutrition_id`, `usage_count`, `recipe_count`, `ingredient_type`, `has_parent`,
+`initial_recipe_id`
+
+#### Legacy columns on `recipes` (47 — not in current model):
+`description_short`, `serving_recommendation`, `side_dishes`, `preparation_time`,
+`waiting_time`, `cooking_time`, `shelf_life`, `eigene_menge`, `packaging`,
+`packaging_material`, `net_weight`, `fill_weight`, `fill_quantity`,
+`drained_weight`, `total_weight`, `portion_by_weight`, `portion_weight`,
+`batch_number`, `production_date`, `use_by_date`, `expiry_date`, `storage_text`,
+`bio_label_eu`, `origin_fish`, `origin_location`, `devices`, `utensils`,
+`labor_effort`, `margin`, `sales_price_points`, `vat_rate`,
+`nutri_score_category`, `nutri_score_veg_fruits`, `layout_id`, `row_height`,
+`rezeptblatt_image_width`, `mise_en_place_display`, `notes_instructions`,
+`is_component`, `branch_ids`, `ingredient_list_custom`,
+`ingredient_list_product_pass`, `allergene_source`, `unit_measure`,
+`unit_serving`, `preference_allergens`, `preference_price`,
+`preference_nutri_value`
+
+#### Tables that can be restored AS-IS (13):
+`tenants`, `users`, `units`, `ingredient_additives`, `ingredient_allergens`,
+`ingredient_nutrition`, `ingredient_prices`, `ingredient_units`,
+`recipe_categories`, `recipe_tags`, `recipe_versions`, `categories` (needs NULL
+`tenant_id`), `tags` (needs NULL `tenant_id`)
 
 ---
 

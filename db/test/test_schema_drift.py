@@ -7,6 +7,7 @@ Three complementary drift detection strategies:
   3. SQLAlchemy inspect()              — surgical column/index/constraint audit
 """
 import re
+import sys
 import importlib.util
 from pathlib import Path
 from typing import Any
@@ -18,41 +19,62 @@ from sqlalchemy import inspect, text
 from sqlmodel import SQLModel
 
 def _load_models_module() -> None:
-    """Load split *_models.py modules first, then fallback to models.py."""
+    """Load models.py (which imports split *_models.py) to register all tables."""
     repo_root = Path(__file__).resolve().parents[2]
     app_dirs = [
         repo_root / "fastapi" / "app",
         Path("/code/app"),
     ]
-    candidates: list[Path] = []
 
     for app_dir in app_dirs:
         if not app_dir.exists():
             continue
-        split_models = sorted(app_dir.glob("*_models.py"))
-        if split_models:
-            candidates.extend(split_models)
+        models_path = app_dir / "models.py"
+        if not models_path.exists():
             continue
-        fallback = app_dir / "models.py"
-        if fallback.exists():
-            candidates.append(fallback)
-
-    for models_path in candidates:
-        if models_path.exists():
-            spec = importlib.util.spec_from_file_location("_test_drift_models", str(models_path))
-            if spec is None or spec.loader is None:
-                continue
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-    if candidates:
+        parent = str(app_dir.parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+        spec = importlib.util.spec_from_file_location("_test_drift_models", str(models_path))
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
         return
 
-    raise ModuleNotFoundError("Could not locate split *_models.py or fallback models.py for drift test metadata loading")
+    raise ModuleNotFoundError("Could not locate models.py for drift test metadata loading")
 
 
 _load_models_module()
 
-MANAGED_TABLES = {"users", "tenants", "recipes"}
+MANAGED_TABLES = {
+    "additives",
+    "agent_interactions",
+    "agents",
+    "allergens",
+    "audit_logs",
+    "categories",
+    "ingredient_additives",
+    "ingredient_allergens",
+    "ingredient_nutrition",
+    "ingredient_prices",
+    "ingredient_units",
+    "ingredients",
+    "recipe_categories",
+    "recipe_ingredients",
+    "recipe_nutrition_cache",
+    "recipe_tags",
+    "recipe_versions",
+    "recipes",
+    "shopping_list_items",
+    "shopping_lists",
+    "tags",
+    "task_items",
+    "task_lists",
+    "tenants",
+    "units",
+    "users",
+}
 _PG_CAST_RE = re.compile(r"::[a-z _]+", re.IGNORECASE)
 
 

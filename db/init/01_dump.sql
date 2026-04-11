@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Kcf9G2uk3PBfEcrPle2xvCUwr31BbpsNLiaNTwIhR8DfwZ3oeQIZaRu3heuuTf0
+\restrict ilgELRPMkp0oEF7yaoETlizCfTuV3SJKZyiKEE2WoL0iMi72GbRG36kR5MMjsGK
 
 -- Dumped from database version 17.8 (Debian 17.8-1.pgdg13+1)
 -- Dumped by pg_dump version 17.8 (Debian 17.8-1.pgdg13+1)
@@ -1495,5 +1495,5 @@ CREATE POLICY tenant_isolation ON public.task_lists USING ((tenant_id = (current
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Kcf9G2uk3PBfEcrPle2xvCUwr31BbpsNLiaNTwIhR8DfwZ3oeQIZaRu3heuuTf0
+\unrestrict ilgELRPMkp0oEF7yaoETlizCfTuV3SJKZyiKEE2WoL0iMi72GbRG36kR5MMjsGK
 

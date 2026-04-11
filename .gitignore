@@ -17,3 +17,4 @@
 **/*$py.class
 logs/*.log
 logs/drift_gate_local.log
+docs/migration-012-gap-analysis.md

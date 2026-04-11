@@ -17,7 +17,34 @@ from alembic.runtime.migration import MigrationContext
 from sqlalchemy import create_engine, text
 from sqlmodel import SQLModel
 
-MANAGED_TABLES = {"users", "tenants", "recipes"}
+MANAGED_TABLES = {
+    "additives",
+    "agent_interactions",
+    "agents",
+    "allergens",
+    "audit_logs",
+    "categories",
+    "ingredient_additives",
+    "ingredient_allergens",
+    "ingredient_nutrition",
+    "ingredient_prices",
+    "ingredient_units",
+    "ingredients",
+    "recipe_categories",
+    "recipe_ingredients",
+    "recipe_nutrition_cache",
+    "recipe_tags",
+    "recipe_versions",
+    "recipes",
+    "shopping_list_items",
+    "shopping_lists",
+    "tags",
+    "task_items",
+    "task_lists",
+    "tenants",
+    "units",
+    "users",
+}
 _LOADED_MODEL_FILES: list[str] = []
 
 
