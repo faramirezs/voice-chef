@@ -42,6 +42,7 @@ class Recipes(SQLModel, table=True):
 	shelf_life_text: Optional[str] = Field(default=None, sa_column=Column('shelf_life_text', Text))
 	storage_temperature: Optional[str] = Field(default=None, sa_column=Column('storage_temperature', String(50)))
 	notes: Optional[str] = Field(default=None, sa_column=Column('notes', Text))
+	photo_url: Optional[str] = Field(default=None, sa_column=Column('photo_url', Text))
 	created_by: Optional[uuid.UUID] = Field(default=None, sa_column=Column('created_by', Uuid))
 	yield_mode: str = Field(sa_column=Column('yield_mode', String(20), nullable=False, server_default=text("'count'::character varying")))
 	portion_size_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('portion_size_grams', Numeric))

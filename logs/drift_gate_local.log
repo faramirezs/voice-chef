@@ -1,31 +1,74 @@
-Schema drift local run started at 2026-04-08T19:36:02Z
+Schema drift local run started at 2026-04-11T08:49:12Z
 == GATE 1: alembic upgrade head ==
-INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-INFO  [alembic.runtime.migration] Will assume transactional DDL.
+Traceback (most recent call last):
+  File "/Users/alejandroramirez/Library/Python/3.11/bin/alembic", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/config.py", line 988, in main
+    CommandLine(prog=prog).main(argv=argv)
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/config.py", line 978, in main
+    self.run_cmd(cfg, options)
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/config.py", line 912, in run_cmd
+    fn(
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/command.py", line 483, in upgrade
+    script.run_env()
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/script/base.py", line 551, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/util/pyfiles.py", line 114, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/util/pyfiles.py", line 134, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/db/alembic/env.py", line 48, in <module>
+    _load_models_module()
+  File "/Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/db/alembic/env.py", line 42, in _load_models_module
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/models.py", line 8, in <module>
+    from sqlmodel import Field, Relationship, SQLModel
+ModuleNotFoundError: No module named 'sqlmodel'
 == GATE 2: drift_check.py ==
-ℹ️  Model metadata loaded from:
-   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/models.py
-   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/recipe_models.py
-   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/tenant_models.py
-   - /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/user_models.py
-ℹ️  Effective scope sources:
-   - table 'recipes' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/recipe_models.py
-   - table 'tenants' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/tenant_models.py
-   - table 'users' from /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/user_models.py
-✅  No schema drift — models are in sync with the database.
+./db/scripts/run_local_drift_gate.sh: line 24: python: command not found
 == GATE 3: pytest schema drift ==
-.................                                                        [100%]
-17 passed in 0.49s
+ERROR: usage: pytest [options] [file_or_dir] [file_or_dir] [...]
+pytest: error: unrecognized arguments: --test-alembic
+  inifile: None
+  rootdir: /Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef
+
 == GATE 4: pending autogenerate check ==
-INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-INFO  [alembic.runtime.migration] Will assume transactional DDL.
-INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.schemas
-INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.tables
-INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.types
-INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.constraints
-INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.defaults
-INFO  [alembic.runtime.plugins] setting up autogenerate plugin alembic.autogenerate.comments
-  Generating /Users/alejandroramirez/Nextcloud/Documents/Ko
-  kitchen/voice-chef/db/alembic/versions/pending_check_tmp_lo
-  cal_verify_no_pending_local_gate.py ...  done
-RESULT migration=0 drift_script=0 pytest_drift=0 pending_autogen=0
+Traceback (most recent call last):
+  File "/Users/alejandroramirez/Library/Python/3.11/bin/alembic", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/config.py", line 988, in main
+    CommandLine(prog=prog).main(argv=argv)
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/config.py", line 978, in main
+    self.run_cmd(cfg, options)
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/config.py", line 912, in run_cmd
+    fn(
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/command.py", line 309, in revision
+    script_directory.run_env()
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/script/base.py", line 551, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/util/pyfiles.py", line 114, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/alejandroramirez/Library/Python/3.11/lib/python/site-packages/alembic/util/pyfiles.py", line 134, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/db/alembic/env.py", line 48, in <module>
+    _load_models_module()
+  File "/Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/db/alembic/env.py", line 42, in _load_models_module
+    spec.loader.exec_module(module)
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/Users/alejandroramirez/Nextcloud/Documents/Ko kitchen/voice-chef/fastapi/app/models.py", line 8, in <module>
+    from sqlmodel import Field, Relationship, SQLModel
+ModuleNotFoundError: No module named 'sqlmodel'
+RESULT migration=1 drift_script=127 pytest_drift=4 pending_autogen=1

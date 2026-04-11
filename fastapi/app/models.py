@@ -368,17 +368,21 @@ class RecipeIngredients(SQLModel, table=True):
     __tablename__ = 'recipe_ingredients'
     __table_args__ = (
         CheckConstraint('quantity_grams IS NULL OR quantity_grams >= 0::numeric', name='recipe_ingredients_quantity_grams_non_negative'),
+        CheckConstraint('num_nonnulls(ingredient_id, sub_recipe_id) = 1', name='recipe_ingredients_exactly_one_item'),
         ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE', name='recipe_ingredients_ingredient_id_fkey'),
         ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_recipe_id_fkey'),
+        ForeignKeyConstraint(['sub_recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_sub_recipe_id_fkey'),
         PrimaryKeyConstraint('id', name='recipe_ingredients_pkey'),
         UniqueConstraint('recipe_id', 'ingredient_id', 'sort_order', name='uq_recipe_ingredient_order'),
         Index('idx_recipe_ingredients_ingredient', 'ingredient_id'),
-        Index('idx_recipe_ingredients_recipe', 'recipe_id')
+        Index('idx_recipe_ingredients_recipe', 'recipe_id'),
+        Index('idx_recipe_ingredients_sub_recipe', 'sub_recipe_id'),
     )
 
     id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
     recipe_id: uuid.UUID = Field(sa_column=Column('recipe_id', Uuid, nullable=False))
-    ingredient_id: uuid.UUID = Field(sa_column=Column('ingredient_id', Uuid, nullable=False))
+    ingredient_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('ingredient_id', Uuid, nullable=True))
+    sub_recipe_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('sub_recipe_id', Uuid, nullable=True))
     sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
     created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     quantity: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quantity', Numeric))
@@ -389,8 +393,9 @@ class RecipeIngredients(SQLModel, table=True):
     item_type: Optional[str] = Field(default=None, sa_column=Column('item_type', String(50)))
     quantity_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quantity_grams', Numeric))
 
-    ingredient: 'Ingredients' = Relationship(back_populates='recipe_ingredients')
-    recipe: 'Recipes' = Relationship(back_populates='recipe_ingredients')
+    ingredient: Optional['Ingredients'] = Relationship(back_populates='recipe_ingredients')
+    recipe: 'Recipes' = Relationship(back_populates='recipe_ingredients', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.recipe_id]'})
+    sub_recipe: Optional['Recipes'] = Relationship(sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.sub_recipe_id]'})
 
 
 class RecipeNutritionCache(SQLModel, table=True):

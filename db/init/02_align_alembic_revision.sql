@@ -11,13 +11,13 @@ BEGIN
     ) THEN
         -- Normalize any pre-existing marker to the current migration head.
         UPDATE public.alembic_version
-        SET version_num = '012'
-        WHERE version_num <> '012';
+        SET version_num = '013'
+        WHERE version_num <> '013';
 
         IF NOT EXISTS (
-            SELECT 1 FROM public.alembic_version WHERE version_num = '012'
+            SELECT 1 FROM public.alembic_version WHERE version_num = '013'
         ) THEN
-            INSERT INTO public.alembic_version(version_num) VALUES ('012');
+            INSERT INTO public.alembic_version(version_num) VALUES ('013');
         END IF;
     END IF;
 END $$;
