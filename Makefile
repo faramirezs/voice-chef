@@ -44,10 +44,8 @@ fclean:
 status:
 	@$(COMPOSE) ps -a --format "table {{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@printf '\n'
-
 	@docker volume ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
-
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
 
