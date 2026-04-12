@@ -10,6 +10,8 @@
 --          in current schema). Nutrition lives in ingredient_nutrition.
 -- =================================================================
 
+BEGIN;
+
 SET session_replication_role = 'replica'; -- disable FK checks during bulk load
 
 -- ------------------------------------------------------------------
@@ -42303,3 +42305,5 @@ JOIN ingredient_nutrition n ON n.ingredient_id = ri.ingredient_id
 WHERE ri.ingredient_id IS NOT NULL
 GROUP BY ri.recipe_id
 ON CONFLICT (recipe_id) DO NOTHING;
+
+COMMIT;

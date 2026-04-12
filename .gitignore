@@ -18,3 +18,5 @@
 logs/*.log
 logs/drift_gate_local.log
 docs/migration-012-gap-analysis.md
+docs/schema-drift-local-vs-ci-report.md
+logs/drift_gate_local.log

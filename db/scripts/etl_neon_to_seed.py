@@ -416,6 +416,8 @@ def main() -> None:
         f.write("--          in current schema). Nutrition lives in ingredient_nutrition.\n")
         f.write("-- =================================================================\n")
 
+        # Single transaction wraps all inserts — 1 fsync instead of N*14K
+        f.write("\nBEGIN;\n")
         f.write("\nSET session_replication_role = 'replica'; -- disable FK checks during bulk load\n")
 
         counts["tenants"]              = etl_tenants(cur, f)
@@ -432,11 +434,14 @@ def main() -> None:
         f.write("\nSET session_replication_role = 'origin'; -- re-enable FK checks\n")
 
         f.write("\n-- Summary\n")
+        # Note: COMMIT is written after the post-load fixes block below
         total = 0
         for tbl, n in counts.items():
             f.write(f"-- {tbl:<35} {n:>6} rows\n")
             total += n
         f.write(f"-- {'TOTAL':<35} {total:>6} rows\n")
+
+        f.write("\nCOMMIT;\n")
 
     conn.close()
 

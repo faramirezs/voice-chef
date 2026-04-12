@@ -5,6 +5,18 @@ set -u
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# Prefer the project venv; fall back to whatever is on PATH
+if [ -f "$ROOT_DIR/.venv/bin/activate" ]; then
+    source "$ROOT_DIR/.venv/bin/activate"
+fi
+
+ALEMBIC="${ROOT_DIR}/.venv/bin/alembic"
+PYTHON="${ROOT_DIR}/.venv/bin/python"
+PYTEST="${ROOT_DIR}/.venv/bin/pytest"
+
+# Provide DATABASE_URL for drift_check.py and pytest conftest if not already set
+export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db}"
+
 LOG_FILE="${DRIFT_LOG_FILE:-logs/drift_gate_local.log}"
 PENDING_REV_ID="${PENDING_REV_ID:-pending_check_tmp_local}"
 PENDING_MSG="${PENDING_MSG:-verify_no_pending_local_gate}"
@@ -17,19 +29,19 @@ set +e
 echo "Schema drift local run started at $(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$LOG_FILE"
 
 echo "== GATE 1: alembic upgrade head ==" >> "$LOG_FILE"
-alembic -c alembic.ini upgrade head >> "$LOG_FILE" 2>&1
+"$ALEMBIC" -c alembic.ini upgrade head >> "$LOG_FILE" 2>&1
 G1=$?
 
 echo "== GATE 2: drift_check.py ==" >> "$LOG_FILE"
-python db/scripts/drift_check.py >> "$LOG_FILE" 2>&1
+"$PYTHON" db/scripts/drift_check.py >> "$LOG_FILE" 2>&1
 G2=$?
 
 echo "== GATE 3: pytest schema drift ==" >> "$LOG_FILE"
-pytest db/test/test_schema_drift.py -q --maxfail=1 --disable-warnings --tb=short --test-alembic >> "$LOG_FILE" 2>&1
+"$PYTEST" db/test/test_schema_drift.py -q --maxfail=1 --disable-warnings --tb=short --test-alembic >> "$LOG_FILE" 2>&1
 G3=$?
 
 echo "== GATE 4: pending autogenerate check ==" >> "$LOG_FILE"
-alembic -c alembic.ini revision --autogenerate -m "$PENDING_MSG" --rev-id "$PENDING_REV_ID" >> "$LOG_FILE" 2>&1
+"$ALEMBIC" -c alembic.ini revision --autogenerate -m "$PENDING_MSG" --rev-id "$PENDING_REV_ID" >> "$LOG_FILE" 2>&1
 G4=$?
 
 if grep -q "has no type within the model" "$LOG_FILE"; then

@@ -7,7 +7,7 @@ from alembic.config import Config
 
 TEST_DB_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+psycopg2://app:secret@localhost:5432/test_db",
+    "postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db",
 )
 
 
