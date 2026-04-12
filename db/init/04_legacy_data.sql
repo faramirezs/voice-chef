@@ -42258,3 +42258,48 @@ SET session_replication_role = 'origin'; -- re-enable FK checks
 -- ingredient_additives                    60 rows
 -- ingredient_units                         7 rows
 -- TOTAL                                14054 rows
+
+-- ============================================================
+-- POST-LOAD FIXES (appended after ETL generation)
+-- ============================================================
+
+-- Fix 1: restore notes_instructions content into notes (5 recipes had HTML content there, notes was NULL)
+UPDATE recipes SET notes = '<p>Bechamelsauce ist in einem extra Rezept. Veganer Käse extra</p>' WHERE id = '5ceea47a-d952-5964-a379-97a83dfe83b7' AND (notes IS NULL OR notes = '');
+UPDATE recipes SET notes = '<p>Vakuumanleitung: </p><p><span style="color:#000000;"><strong>Volume per Bag 2.5 Liter</strong></span></p><p><span style="color:#000000;"><strong>Vacuum Time (sec): 50</strong></span></p><p><span style="color:#000000;"><strong>Seal Time (sec): 5</strong></span></p>' WHERE id = 'a22401e5-ac92-5cf8-88e8-a5449b806af2' AND (notes IS NULL OR notes = '');
+UPDATE recipes SET notes = '<p>Bechamelsauce ist in einem extra Rezept. Veganer Käse extra</p>' WHERE id = 'c3df8ccb-7250-5635-bde0-9bab2028445c' AND (notes IS NULL OR notes = '');
+UPDATE recipes SET notes = '<p>Für Lasagne bspw.</p>' WHERE id = 'caf50193-e174-5da9-9f20-cf27d2beadc7' AND (notes IS NULL OR notes = '');
+UPDATE recipes SET notes = '<p>Alle Zutaten zusammen in ein hohes Gefäß geben AUßER das Öl. Diesen im Anschluss nach und nach während des Mixens dazugeben.</p>' WHERE id = 'fc1b184d-9e30-5f88-b4a9-efb0db0d68eb' AND (notes IS NULL OR notes = '');
+
+-- Fix 2: restore storage_text into storage_temperature (1 recipe: Himbeerdressing)
+UPDATE recipes SET storage_temperature = 'Nach dem Öffnen bei 7 °C aufbewahren.' WHERE id = 'fc1b184d-9e30-5f88-b4a9-efb0db0d68eb';
+
+-- Fix 3: compute recipe_nutrition_cache from ingredient_nutrition x recipe_ingredients
+-- (ingredient_nutrition is per 100g; quantity in recipe_ingredients is assumed grams)
+INSERT INTO recipe_nutrition_cache (recipe_id, energy_kj, energy_kcal, fat, saturates, carbs, sugars, protein, fiber, salt, updated_at)
+SELECT
+    ri.recipe_id,
+    ROUND(SUM(COALESCE(n.energy_kj,  0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.energy_kcal,0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.fat,        0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.saturates,  0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.carbs,      0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.sugars,     0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.protein,    0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.fiber,      0) * ri.quantity / 100.0)::numeric, 3),
+    ROUND(SUM(COALESCE(n.salt,       0) * ri.quantity / 100.0)::numeric, 3),
+    now()
+FROM recipe_ingredients ri
+JOIN ingredient_nutrition n ON n.ingredient_id = ri.ingredient_id
+WHERE ri.ingredient_id IS NOT NULL
+GROUP BY ri.recipe_id
+ON CONFLICT (recipe_id) DO UPDATE SET
+    energy_kj   = EXCLUDED.energy_kj,
+    energy_kcal = EXCLUDED.energy_kcal,
+    fat         = EXCLUDED.fat,
+    saturates   = EXCLUDED.saturates,
+    carbs       = EXCLUDED.carbs,
+    sugars      = EXCLUDED.sugars,
+    protein     = EXCLUDED.protein,
+    fiber       = EXCLUDED.fiber,
+    salt        = EXCLUDED.salt,
+    updated_at  = now();

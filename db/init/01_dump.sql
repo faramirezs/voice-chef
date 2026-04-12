@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ilgELRPMkp0oEF7yaoETlizCfTuV3SJKZyiKEE2WoL0iMi72GbRG36kR5MMjsGK
+\restrict 6uPy8eKwyaMibaLE7KE9bo210BlREvvFbUWwqahrKEWTSvDo5PFg6f2gztFErv8
 
 -- Dumped from database version 17.8 (Debian 17.8-1.pgdg13+1)
 -- Dumped by pg_dump version 17.8 (Debian 17.8-1.pgdg13+1)
@@ -358,7 +358,7 @@ ALTER TABLE public.recipe_categories OWNER TO recipe_user;
 CREATE TABLE public.recipe_ingredients (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     recipe_id uuid NOT NULL,
-    ingredient_id uuid NOT NULL,
+    ingredient_id uuid,
     quantity numeric,
     unit character varying(50),
     preparation character varying(255),
@@ -368,6 +368,8 @@ CREATE TABLE public.recipe_ingredients (
     item_type character varying(50),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     quantity_grams numeric,
+    sub_recipe_id uuid,
+    CONSTRAINT recipe_ingredients_exactly_one_item CHECK ((num_nonnulls(ingredient_id, sub_recipe_id) = 1)),
     CONSTRAINT recipe_ingredients_quantity_grams_non_negative CHECK (((quantity_grams IS NULL) OR (quantity_grams >= (0)::numeric)))
 );
 
@@ -451,6 +453,7 @@ CREATE TABLE public.recipes (
     total_raw_weight_grams numeric,
     total_cooked_weight_grams numeric,
     portions_count_resolved numeric,
+    photo_url text,
     CONSTRAINT positive_portion_size_grams CHECK (((portion_size_grams IS NULL) OR (portion_size_grams > (0)::numeric))),
     CONSTRAINT positive_portions_count_resolved CHECK (((portions_count_resolved IS NULL) OR (portions_count_resolved > (0)::numeric))),
     CONSTRAINT positive_total_cooked_weight_grams CHECK (((total_cooked_weight_grams IS NULL) OR (total_cooked_weight_grams >= (0)::numeric))),
@@ -982,6 +985,13 @@ CREATE INDEX idx_recipe_ingredients_recipe ON public.recipe_ingredients USING bt
 
 
 --
+-- Name: idx_recipe_ingredients_sub_recipe; Type: INDEX; Schema: public; Owner: recipe_user
+--
+
+CREATE INDEX idx_recipe_ingredients_sub_recipe ON public.recipe_ingredients USING btree (sub_recipe_id);
+
+
+--
 -- Name: idx_recipe_tags_tag; Type: INDEX; Schema: public; Owner: recipe_user
 --
 
@@ -1258,6 +1268,14 @@ ALTER TABLE ONLY public.recipe_ingredients
 
 
 --
+-- Name: recipe_ingredients recipe_ingredients_sub_recipe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: recipe_user
+--
+
+ALTER TABLE ONLY public.recipe_ingredients
+    ADD CONSTRAINT recipe_ingredients_sub_recipe_id_fkey FOREIGN KEY (sub_recipe_id) REFERENCES public.recipes(id) ON DELETE CASCADE;
+
+
+--
 -- Name: recipe_nutrition_cache recipe_nutrition_cache_recipe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: recipe_user
 --
 
@@ -1495,5 +1513,5 @@ CREATE POLICY tenant_isolation ON public.task_lists USING ((tenant_id = (current
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ilgELRPMkp0oEF7yaoETlizCfTuV3SJKZyiKEE2WoL0iMi72GbRG36kR5MMjsGK
+\unrestrict 6uPy8eKwyaMibaLE7KE9bo210BlREvvFbUWwqahrKEWTSvDo5PFg6f2gztFErv8
 
