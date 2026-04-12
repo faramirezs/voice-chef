@@ -1,1 +1,0 @@
-# Functions to work with a User in DB (create, get, update, delete)
