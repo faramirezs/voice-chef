@@ -1,4 +1,4 @@
-from backend import Query
+from fastapi import Query
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlmodel import select, Session
