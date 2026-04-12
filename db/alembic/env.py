@@ -19,7 +19,12 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 def _load_models_module() -> None:
-    """Load models.py (which imports split *_models.py) to register all tables."""
+    """Load all SQLModel classes so every managed table is registered.
+
+    Priority:
+    1. ``fastapi/app/models.py`` — comprehensive flat schema file (dev / CI branch)
+    2. ``fastapi/app/models/__init__.py`` — package entry-point (main branch style)
+    """
     repo_root = Path(__file__).resolve().parents[2]
     app_dirs = [
         repo_root / "fastapi" / "app",
@@ -29,20 +34,33 @@ def _load_models_module() -> None:
     for app_dir in app_dirs:
         if not app_dir.exists():
             continue
-        models_path = app_dir / "models.py"
-        if not models_path.exists():
-            continue
         parent = str(app_dir.parent)
         if parent not in sys.path:
             sys.path.insert(0, parent)
-        spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
-        if spec is None or spec.loader is None:
-            continue
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return
 
-    raise ModuleNotFoundError("Could not locate models.py for Alembic metadata loading")
+        # 1. Prefer models.py (comprehensive schema for drift gate)
+        models_path = app_dir / "models.py"
+        if models_path.exists():
+            spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
+            if spec is not None and spec.loader is not None:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return
+
+        # 2. Fallback: load the models package (__init__.py)
+        pkg_init = app_dir / "models" / "__init__.py"
+        if pkg_init.exists():
+            spec = importlib.util.spec_from_file_location("_alembic_models", str(pkg_init),
+                submodule_search_locations=[str(app_dir / "models")])
+            if spec is not None and spec.loader is not None:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules["_alembic_models"] = module
+                spec.loader.exec_module(module)
+                return
+
+    raise ModuleNotFoundError(
+        "Could not locate models.py or models/__init__.py for Alembic metadata loading"
+    )
 
 
 _load_models_module()
