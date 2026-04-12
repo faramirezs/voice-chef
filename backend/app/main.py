@@ -1,4 +1,4 @@
-from fastapi import Query, FastAPI, Depends, HTTPException
+from backend import Query, FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import inspect
 from app.core.database import get_db, engine

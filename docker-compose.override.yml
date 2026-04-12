@@ -1,38 +1,19 @@
 services:
-  frontend:
-    build:
-      target: dev              # ← stops at dev stage
-    volumes:
-      - ./frontend:/app        # hot reload
-      - /app/node_modules
+  db:
     ports:
-      - "5173:5173"
-
-  # db:
-  #   image: postgres:17.8
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./db/init:/docker-entrypoint-initdb.d:ro  # auto-runs on first start
-  #   environment:
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #   ports:
-  #     - "5432:5432"
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
-
-  fastapi:
+      - "5432:5432"
+    
+  backend:
     ports:
       - "8000:80"
     volumes:
-      - ./fastapi/app:/code/app
-
-volumes:
-  postgres_data:
-
-networks:
-  app-network:
+      - ./backend/app:/code/app
+      
+  frontend:
+    build:
+      target: dev              # ← stops at dev stage
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app        # hot reload
+      - node_modules:/app/node_modules

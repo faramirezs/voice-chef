@@ -1,9 +1,9 @@
 import json
 from http import HTTPStatus
-from fastapi import FastAPI
-from fastapi.requests import Request
-from fastapi.responses import Response
-from fastapi.middleware.cors import CORSMiddleware
+from backend import FastAPI
+from backend.requests import Request
+from backend.responses import Response
+from backend.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from pydantic_ai.ui import SSE_CONTENT_TYPE
 from pydantic_ai.ui.ag_ui import AGUIAdapter

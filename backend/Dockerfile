@@ -2,11 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /code
 
-COPY fastapi/requirements.txt /code/requirements.txt
+COPY backend/requirements.txt /code/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-COPY fastapi/app /code/app
+COPY backend/app /code/app
 COPY alembic.ini /code/alembic.ini
 COPY db /code/db
 

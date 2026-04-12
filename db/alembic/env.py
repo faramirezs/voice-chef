@@ -36,7 +36,7 @@ if config.config_file_name is not None:
 target_metadata = None
 
 ###############################################################################
-import fastapi.app.models  # noqa
+import backend.app.models  # noqa
 from sqlmodel import SQLModel
 
 target_metadata = SQLModel.metadata
