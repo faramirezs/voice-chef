@@ -1,5 +1,6 @@
 annotated-types==0.7.0
-fastapi[standard]>=0.113.0,<0.114.0
+annotated-doc==0.0.4        # Make use of Python type annotations to generate JSON Schemas compatible with the OpenAI function calling API from your annotated functions.
+fastapi[standard]>=0.113.0,<0.114.0 # standard includes python-multipart, email-validator 
 greenlet==3.3.2
 psycopg[binary]>=3.1
 alembic>=1.13
@@ -16,3 +17,6 @@ typeguard==4.5.1
 
 # psycopg2-binary==2.9.11
 sqlacodegen-v2==0.1.4
+argon2-cffi==25.1.0         # secure password hashing library
+password-validator==1.0
+PyJWT==2.8.0                # for tokens

@@ -6,6 +6,7 @@ from uuid import UUID
 from typing import List, TYPE_CHECKING, Optional
 from sqlalchemy import DateTime # database column type: `timestamp with time zone`
 from datetime import datetime   # Python type: type hints and runtime values
+from pydantic import EmailStr
 
 
 # NOTE: MP. We provide Pylance with a hint, but in a way that avoids triggering 
@@ -13,13 +14,14 @@ from datetime import datetime   # Python type: type hints and runtime values
 if TYPE_CHECKING:
     from .tmp_recipe import Recipe
 
+# ─── ORM SQLMOdel model for users ─────────────────────────────────────────────────
 
 class Users(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint('email', name='users_email_key'),
         Index("ix_users_email", "email", unique=True),
     )
-    id: uuid.UUID = Field(
+    id: UUID = Field(
         # app-side UUID generation for MVP delivery
         default_factory=uuid.uuid4,
         # scheduling DB-enforced UUID defaults as post-MVP hardening
@@ -27,6 +29,7 @@ class Users(SQLModel, table=True):
         primary_key=True,
     )
     email: str = Field(max_length=255, nullable=False)
+    # Argon2 default hash is ~97 chars. 255 provides a safe buffer.
     password_hash: str = Field(max_length=255, nullable=False)
     created_at: datetime = Field(
         default=None, # Python should not generate a value
@@ -62,6 +65,35 @@ class Users(SQLModel, table=True):
     tenant: Optional["Tenants"] = Relationship(back_populates='users')
     recipes: List["Recipe"] = Relationship(back_populates="created_by_user")
 
+# ─── Pydantic models for users ─────────────────────────────────────────────────
+
+# Base for API schemas (no id, no hashed_password, no table=True)
+class UserBase(SQLModel):
+    email: EmailStr = Field(max_length=255)
+
+# request: a password is in plaintext
+class UserSignupLogin(UserBase):
+    password: str
+
+# SignUp Responce
+class UserSignupResponse(UserBase):
+    id: UUID
+
+# This model defines the user object inside the token response
+class UserLoginResponse(UserBase):
+    id: UUID
+    tenant_id: UUID
+    role: str
+    is_active: bool
+
+# This is the main response model for the /login endpoint
+class AuthTokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int # Or timedelta, Pydantic will handle it
+    user: UserLoginResponse
+
+# ─── Tenants ──────────────────────────────────────────────────────────────────
 
 class Tenants(SQLModel, table=True):
     __table_args__ = (
@@ -102,5 +134,17 @@ class Tenants(SQLModel, table=True):
     # Relationship attributes
     users: List['Users'] = Relationship(back_populates='tenant')
     recipes: List['Recipe'] = Relationship(back_populates="tenant")
-    # the line below can be uncomment when there is Igredient table
+    # the line below can be uncomment when there is Ingredient table
     # ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
+
+# ─── Pydantic models for tenants ─────────────────────────────────────────────────
+
+class TenantsBase(SQLModel):
+    name: str
+
+# class TenantsSignupLogin(TenantsBase):
+#     pass
+
+class TenantsResponse(TenantsBase):
+    id: UUID
+    created_at: datetime
