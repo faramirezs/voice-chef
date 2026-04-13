@@ -10,9 +10,28 @@ if [ -f "$ROOT_DIR/.venv/bin/activate" ]; then
     source "$ROOT_DIR/.venv/bin/activate"
 fi
 
-ALEMBIC="${ROOT_DIR}/.venv/bin/alembic"
-PYTHON="${ROOT_DIR}/.venv/bin/python"
-PYTEST="${ROOT_DIR}/.venv/bin/pytest"
+if [ -x "$ROOT_DIR/.venv/bin/alembic" ]; then
+    ALEMBIC="$ROOT_DIR/.venv/bin/alembic"
+else
+    ALEMBIC="$(command -v alembic || true)"
+fi
+
+if [ -x "$ROOT_DIR/.venv/bin/python" ]; then
+    PYTHON="$ROOT_DIR/.venv/bin/python"
+else
+    PYTHON="$(command -v python || true)"
+fi
+
+if [ -x "$ROOT_DIR/.venv/bin/pytest" ]; then
+    PYTEST="$ROOT_DIR/.venv/bin/pytest"
+else
+    PYTEST="$(command -v pytest || true)"
+fi
+
+if [ -z "$ALEMBIC" ] || [ -z "$PYTHON" ] || [ -z "$PYTEST" ]; then
+    echo "Missing required tools: alembic/python/pytest must be installed and discoverable on PATH." >&2
+    exit 127
+fi
 
 # Provide DATABASE_URL for drift_check.py and pytest conftest if not already set
 export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db}"
