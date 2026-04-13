@@ -4,6 +4,7 @@ Sends the audio to the STT service and saves both the .wav and the JSON result."
 
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,16 @@ if not shutil.which("ffmpeg"):
     print("  Linux:  apt install ffmpeg")
     sys.exit(1)
 
+_system = platform.system()
+if _system == "Darwin":
+    _FF_INPUT = ["-f", "avfoundation", "-i", ":default"]
+elif _system == "Linux":
+    _FF_INPUT = ["-f", "pulse", "-i", "default"]
+else:
+    print(f"Error: unsupported platform '{_system}' for audio recording.")
+    print("Supported: macOS (Darwin), Linux")
+    sys.exit(1)
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 SAMPLES_DIR = SCRIPT_DIR / "samples"
 RESULTS_DIR = SCRIPT_DIR / "results"
@@ -31,8 +42,7 @@ def record_audio(output_path: str) -> subprocess.Popen:
     return subprocess.Popen(
         [
             "ffmpeg", "-y",
-            "-f", "avfoundation",
-            "-i", ":default",
+            *_FF_INPUT,
             "-ac", "1",
             "-ar", "16000",
             "-sample_fmt", "s16",
