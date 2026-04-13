@@ -55,6 +55,13 @@ const NAV_ITEMS = [
 			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
 		)
 	},
+		{
+		title: "Timers",
+		url: "timers",
+		icon: (
+			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+		)
+	},
 	{
 		title: "Notes",
 		url: "/notes",

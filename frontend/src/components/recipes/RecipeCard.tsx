@@ -38,11 +38,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   );
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer pt-0 gap-2" onClick={() => navigate(`/recipes/${recipe.id}`)}>
+    <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-102 hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
       <ImagePlaceholder />
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base leading-snug">{recipe.name}</CardTitle>
+      <CardHeader className="pb-2 h-full">
+        <div className="flex h-full items-start justify-between gap-2">
+          <CardTitle className="flex-1 text-base leading-snug break-words">{recipe.name}</CardTitle>
           <span className={badgeClass}>{recipe.status}</span>
         </div>
       </CardHeader>

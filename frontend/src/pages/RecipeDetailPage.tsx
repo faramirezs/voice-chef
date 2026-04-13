@@ -204,7 +204,7 @@ export function RecipeDetailPage() {
   if (isError || !recipe) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => navigate('/')}>← Back to recipes</Button>
+        <Button variant="outline" onClick={() => navigate(-1)}>← Back to recipes</Button>
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-destructive">
           Recipe not found.
         </div>
@@ -222,7 +222,7 @@ export function RecipeDetailPage() {
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-4">
-        <Button size="sm" onClick={() => navigate('/')}>← Back</Button>
+        <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
         <div
           className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${recipeImage})` }}

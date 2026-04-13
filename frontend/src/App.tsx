@@ -11,6 +11,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { SettingsGeneralPage } from '@/pages/SettingsGeneral';
 import { IngredientsPage } from '@/pages/IngredientsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
+import { TimersPage } from './pages/TimersPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="menu-planner" element={<MenuPlannerPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="calculator" element={<CalculatorPage />} />
+          <Route path="timers" element={<TimersPage />} />
           <Route path="notes" element={<NotesPage />} />
 
           <Route path="ingredients" element={<IngredientsPage />} />

@@ -14,13 +14,13 @@ export function StartingPage() {
       <div className="grid flex-1 gap-4 md:grid-cols-3">
         <NavLink
           to="/recipes"
-          className="group relative z-0 flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-all duration-300 ease-out hover:z-10 hover:-mx-2 md:hover:-mx-3 hover:scale-y-[1.04]"
+          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
         >
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 ease-out group-hover:scale-110"
-            style={{ backgroundImage: `linear-gradient(rgb(0 0 0 / 45%), rgb(0 0 0 / 45%)), url(${recipeImage})` }}
+            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
+            style={{ backgroundImage: `url(${recipeImage})` }}
           />
-          <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/5" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-0" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">Recipes</h2>
           <p className="mt-2 text-lg text-white/90">View and manage your recipes.</p>
@@ -28,13 +28,13 @@ export function StartingPage() {
         </NavLink>
         <NavLink
           to="/menu-planner"
-          className="group relative z-0 flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-all duration-300 ease-out hover:z-10 hover:-mx-2 md:hover:-mx-3 hover:scale-y-[1.04]"
+          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
         >
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 ease-out group-hover:scale-110"
-            style={{ backgroundImage: `linear-gradient(rgb(0 0 0 / 45%), rgb(0 0 0 / 45%)), url(${personImage})` }}
+            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
+            style={{ backgroundImage: `url(${personImage})` }}
           />
-          <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/5" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-0" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">Menu planner</h2>
           <p className="mt-2 text-lg text-white/90">Plan your weekly menu.</p>
@@ -42,13 +42,13 @@ export function StartingPage() {
         </NavLink>
         <NavLink
           to="/ai-assistant"
-          className="group relative z-0 flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-all duration-300 ease-out hover:z-10 hover:-mx-2 md:hover:-mx-3 hover:scale-y-[1.04]"
+          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
         >
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-500 ease-out group-hover:scale-110"
-            style={{ backgroundImage: `linear-gradient(rgb(0 0 0 / 45%), rgb(0 0 0 / 45%)), url(${aiImage})` }}
+            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
+            style={{ backgroundImage: `url(${aiImage})` }}
           />
-          <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/5" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-100 transition-opacity duration-300 group-hover:opacity-0" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">AI Assistant</h2>
           <p className="mt-2 text-lg text-white/90">Get help with ideas and prep.</p>

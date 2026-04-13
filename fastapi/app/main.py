@@ -38,10 +38,21 @@ def list_tables():
 # We will remove this later and implement proper endpoints for recipes.
 @app.get("/recipes", response_model=PaginatedResponse[Recipe])
 def retrieve_recipes(
+    status: str | None = Query(default=None),
+    name: str | None = Query(default=None),
     session: Session = Depends(get_db),
-    pagination: PaginationParams = Depends(pagination_params)):
+    pagination: PaginationParams = Depends(pagination_params),
+):
 
-    query = select(Recipe).order_by(Recipe.created_at.desc(), Recipe.id.asc())
+    query = select(Recipe)
+
+    if status:
+        query = query.where(Recipe.status == status)
+
+    if name and name.strip():
+        query = query.where(Recipe.name.ilike(f"%{name.strip()}%"))
+
+    query = query.order_by(Recipe.created_at.desc(), Recipe.id.asc())
     recipes = paginate(query, session, pagination)
     return recipes
 
