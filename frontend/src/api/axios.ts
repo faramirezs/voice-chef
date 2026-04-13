@@ -1,26 +1,9 @@
-import axios from 'axios';
+import axios from "axios";
+// Imports Axios — a library for making HTTP requests (instead of using fetch directly).
 
-const apiClient = axios.create({
-  baseURL: '/api',
+export const api = axios.create({
+  baseURL: "/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
-
-export default apiClient;
-
-interface TablesResponse {
-  tables: string[];
-}
-
-// Function to retrieve a list of tables
-export const fetchDbTables = async (): Promise<TablesResponse> => {
-  try {
-    const response = await apiClient.get<TablesResponse>('/tables');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching DB tables:', error);
-    // Return an empty array if an error occurs
-    return { tables: [] };
-  }
-};

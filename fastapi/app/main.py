@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends
+from uuid import UUID
+from fastapi import FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import inspect
 from app.database import get_session, engine
@@ -26,6 +27,13 @@ def fetch_recipes(session: Session = Depends(get_session)):
     result = session.exec(query)
     recipes = result.all()
     return recipes
+
+@app.get("/recipes/{recipe_id}")
+def get_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
+    recipe = session.get(models.Recipe, recipe_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return recipe
 
 # List DB tables (GET)
 # NOTE: DL: You cannot fully replace inspect() with SQLModel's own APIs, but this is a simple 
