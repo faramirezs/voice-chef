@@ -1,0 +1,15 @@
+{
+  "text": "necesito una receta de salsa de tomate.",
+  "language": "es",
+  "language_probability": 0.93,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 4.8,
+  "segments": [
+    {
+      "start": 0.24,
+      "end": 4.24,
+      "text": "necesito una receta de salsa de tomate."
+    }
+  ]
+}

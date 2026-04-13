@@ -1,0 +1,15 @@
+{
+  "text": "sind noch Zwiebeln im Lager",
+  "language": "de",
+  "language_probability": 0.99,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 1.95,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.0,
+      "text": "sind noch Zwiebeln im Lager"
+    }
+  ]
+}

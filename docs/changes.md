@@ -31,7 +31,23 @@ This documents all modifications to files that existed before this branch, for g
 
 **Action needed:** Team members should add these to their local `.env` files after pulling.
 
-### 4. `Makefile`
+### 4. `.gitignore`
+
+**What changed:**
+- Added `stt/tests/samples/` — excludes recorded audio files from git
+
+### 5. `.gitattributes` (new file)
+
+**What changed:**
+- Created `.gitattributes` with `merge=ours` strategy for `stt/tests/results/*.json`
+- STT test result JSONs are committed and pushed but will never cause merge conflicts — on merge, the current branch's version is kept silently
+
+**Action needed:** Each team member must run this once to register the merge driver:
+```bash
+git config merge.ours.driver true
+```
+
+### 6. `Makefile`
 
 **What changed:**
 - Added three new targets: `stt-build`, `stt-build-nocache`, `stt-recreate` (mirrors existing agent-* pattern)
@@ -57,6 +73,8 @@ This documents all modifications to files that existed before this branch, for g
   "text": "the full transcribed text",
   "language": "en",
   "language_probability": 0.98,
+  "confidence": "high",
+  "retry_suggested": false,
   "duration": 3.45,
   "segments": [
     {

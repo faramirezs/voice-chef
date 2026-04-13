@@ -37,10 +37,22 @@ def transcribe(audio_path: str) -> dict:
         })
         full_text_parts.append(seg.text.strip())
 
+    text = " ".join(full_text_parts)
+    lang_prob = round(info.language_probability, 2)
+
+    if not text or lang_prob < 0.4:
+        confidence = "none"
+    elif lang_prob < 0.7:
+        confidence = "low"
+    else:
+        confidence = "high"
+
     return {
-        "text": " ".join(full_text_parts),
+        "text": text,
         "language": info.language,
-        "language_probability": round(info.language_probability, 2),
+        "language_probability": lang_prob,
+        "confidence": confidence,
+        "retry_suggested": confidence != "high",
         "duration": round(info.duration, 2),
         "segments": segment_list,
     }

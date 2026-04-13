@@ -1,0 +1,13 @@
+{
+  "text": "One, two, three, four.",
+  "language": "en",
+  "language_probability": 0.86,
+  "duration": 1.7,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.0,
+      "text": "One, two, three, four."
+    }
+  ]
+}

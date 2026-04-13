@@ -15,3 +15,6 @@
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
+
+# STT test recordings
+stt/tests/samples/

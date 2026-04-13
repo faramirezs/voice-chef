@@ -1,0 +1,15 @@
+{
+  "text": "Kannst du mir ein Rezept f\u00fcr Kartoffelsalad f\u00fcr vier Personen raus suchen bitte?",
+  "language": "de",
+  "language_probability": 0.99,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 4.64,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.4,
+      "text": "Kannst du mir ein Rezept f\u00fcr Kartoffelsalad f\u00fcr vier Personen raus suchen bitte?"
+    }
+  ]
+}

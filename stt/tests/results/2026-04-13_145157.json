@@ -1,0 +1,13 @@
+{
+  "text": "One, two, three, four and I think everyone should be able to put things in there.",
+  "language": "en",
+  "language_probability": 0.46,
+  "duration": 4.29,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.24,
+      "text": "One, two, three, four and I think everyone should be able to put things in there."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "text": "How well does this work if I have my mouth full?",
+  "language": "en",
+  "language_probability": 0.79,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 4.19,
+  "segments": [
+    {
+      "start": 0.88,
+      "end": 3.86,
+      "text": "How well does this work if I have my mouth full?"
+    }
+  ]
+}
