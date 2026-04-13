@@ -29,7 +29,7 @@ def fetch_recipes(session: Session = Depends(get_session)):
     return recipes
 
 @app.get("/recipes/{recipe_id}")
-def get_recipe(recipe_id: UUID, session: Session = Depends(get_db)):
+def get_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     recipe = session.get(models.Recipe, recipe_id)
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
