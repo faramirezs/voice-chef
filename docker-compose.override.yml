@@ -31,8 +31,13 @@ services:
     volumes:
       - ./fastapi/app:/code/app
 
+  stt:
+    volumes:
+      - ./stt/app:/app/app
+
 volumes:
   postgres_data:
+  whisper_models:
 
 networks:
   app-network:

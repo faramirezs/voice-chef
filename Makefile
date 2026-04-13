@@ -76,7 +76,10 @@ define HELP_TEXT
 	" make build:	Build images from compose file" \
 	" make agent-build:\tBuild only agent service" \
 	" make agent-build-nocache:\tBuild only agent service without cache" \
-	" make agent-recreate:\tRecreate and run only agent service" \
+	" make agent-recreate:\tRecreate and run only agent service\n" \
+	" make stt-build:\tBuild only stt service" \
+	" make stt-build-nocache:\tBuild only stt service without cache" \
+	" make stt-recreate:\tRecreate and run only stt service\n" \
 	" make up:	Calling the command dev" \
 	" make start:	Start the containers" \
 	" make stop:	Stop running containers"
@@ -95,6 +98,15 @@ agent-build-nocache: $(ENV)
 agent-recreate: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate agent
 
+stt-build: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build stt
+
+stt-build-nocache: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache stt
+
+stt-recreate: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate stt
+
 up: dev
 
 start:
@@ -104,4 +116,4 @@ stop:
 	$(COMPOSE) stop
 
 .PHONY: all dev prod down re clean fclean status logs help % build up start stop
-.PHONY: all dev prod down re clean fclean status logs help % build agent-build agent-build-nocache agent-recreate up start stop
+.PHONY: all dev prod down re clean fclean status logs help % build agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate up start stop

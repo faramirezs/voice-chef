@@ -59,7 +59,23 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       AGENT_MODEL: ${AGENT_MODEL}
 
+  stt:
+    build:
+      context: ./stt
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    ports:
+      - "8002:8002"
+    environment:
+      STT_MODEL: ${STT_MODEL:-base}
+      STT_LANGUAGE: ${STT_LANGUAGE:-}
+      STT_DEVICE: ${STT_DEVICE:-cpu}
+    volumes:
+      - whisper_models:/models
+
 volumes:
+  whisper_models:
   postgres_data:
 
 networks:
