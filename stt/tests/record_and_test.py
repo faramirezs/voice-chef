@@ -4,12 +4,21 @@ Sends the audio to the STT service and saves both the .wav and the JSON result."
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import urllib.request
 import urllib.error
+
+if not shutil.which("ffmpeg"):
+    print("Error: ffmpeg is required but not installed.")
+    print("Install it with:")
+    print("  macOS:  brew install ffmpeg")
+    print("  Linux:  apt install ffmpeg")
+    sys.exit(1)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SAMPLES_DIR = SCRIPT_DIR / "samples"
