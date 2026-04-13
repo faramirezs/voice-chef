@@ -120,6 +120,12 @@ def _class_table_and_source_maps() -> tuple[dict[str, str], dict[str, str]]:
         if isinstance(module_file, str):
             table_to_source[table.name] = str(Path(module_file).resolve())
 
+    if _LOADED_MODEL_FILES:
+        fallback_source = _LOADED_MODEL_FILES[-1]
+        for table in SQLModel.metadata.tables.values():
+            if table.name not in table_to_source:
+                table_to_source[table.name] = fallback_source
+
     return class_to_table, table_to_source
 
 
