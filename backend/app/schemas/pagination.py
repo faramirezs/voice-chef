@@ -1,8 +1,5 @@
 from pydantic import BaseModel
 from typing import List, Generic, TypeVar
-from sqlalchemy import func
-from sqlmodel import select, Session
-
 
 T = TypeVar("T")
 

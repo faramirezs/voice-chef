@@ -4,8 +4,8 @@ from sqlmodel import Session, select
 import jwt
 import os
 
-from app.database import get_session
-from app.auth_utils import oauth2_scheme
+from .database import get_session
+from app.utils.auth_utils import oauth2_scheme
 from app.models import Users
 
 # This file's responsibility is to define dependencies that can be reused 

@@ -1,6 +1,5 @@
-from app.models.recipe import Recipe
-from app.models.recipe_ingredients import RecipeIngredient
-from app.models.ingredient import Ingredient
+import app.models
+
 
 def to_recipe_ingredient_response(link):
     ingredient = link.ingredient

@@ -107,3 +107,6 @@ class RecipeUpdate(SQLModel):
     portions_count_resolved: Optional[Decimal] = None
 
     # ingredients: Optional[List[RecipeIngredientUpdate]] = None
+
+
+

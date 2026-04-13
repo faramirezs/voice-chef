@@ -14,7 +14,7 @@ export default defineConfig({
       '/api': {
         // Note: MP. This tells the Vite (in frontend container)
         // to forward the request to your backend URL.
-        target: 'http://fastapi:80',
+        target: 'http://backend:80',
         // Note: MP. The rewrite function path.replace(/^\/api/, '') 
         // removes /api from the beginning of the path.
         // Example: Vite proxy forwards the request to http://your_backend_URL/tables

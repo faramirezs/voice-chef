@@ -137,12 +137,7 @@ class Tenants(SQLModel, table=True):
     # Relationship attributes
     users: List['Users'] = Relationship(back_populates='tenant')
     recipes: List['Recipe'] = Relationship(back_populates="tenant")
-<<<<<<< HEAD:backend/app/models/users.py
-    # the line below can be uncomment when there is Igredient table
     ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
-=======
-    # the line below can be uncomment when there is Ingredient table
-    # ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
 
 # ─── Pydantic models for tenants ─────────────────────────────────────────────────
 
@@ -155,4 +150,3 @@ class TenantsBase(SQLModel):
 class TenantsResponse(TenantsBase):
     id: UUID
     created_at: datetime
->>>>>>> main:fastapi/app/models/users.py

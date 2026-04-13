@@ -8,7 +8,6 @@ from sqlalchemy import Column, DateTime, Integer, Numeric, text, UniqueConstrain
 
 if TYPE_CHECKING:
     from app.models.recipe import Recipe
-    from app.models.users import Users, Tenants 
     from app.models.ingredient import Ingredient
 
 

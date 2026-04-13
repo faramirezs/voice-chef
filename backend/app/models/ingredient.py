@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.users import Users, Tenants
     from app.models.recipe_ingredients import RecipeIngredient
 
+
 class Ingredient(SQLModel, table=True):
     __tablename__ = "ingredients"
     __table_args__ = (
