@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from .tmp_recipe import Recipe
+    from .tmp_recipe import Recipes
 
 # ─── Pydantic models for users ─────────────────────────────────────────────────
 
@@ -68,7 +68,7 @@ class Tenants(SQLModel, table=True):
     task_lists: list['TaskLists'] = Relationship(back_populates='tenant')
     users: list['Users'] = Relationship(back_populates='tenant')
     agent_interactions: list['AgentInteractions'] = Relationship(back_populates='tenant')
-    recipes: list['Recipe'] = Relationship(back_populates='tenant')
+    recipes: list['Recipes'] = Relationship(back_populates='tenant')
 
 # ─── ORM SQLModel model for users ─────────────────────────────────────────────────
 
@@ -90,4 +90,4 @@ class Users(SQLModel, table=True):
     updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     tenant: 'Tenants' = Relationship(back_populates='users')
-    recipes: list['Recipe'] = Relationship(back_populates='users')
+    recipes: list['Recipes'] = Relationship(back_populates='users')

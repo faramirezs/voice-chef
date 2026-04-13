@@ -62,7 +62,7 @@ class Recipes(SQLModel, table=True):
     users: Optional['Users'] = Relationship(back_populates='recipes')
     tenant: 'Tenants' = Relationship(back_populates='recipes')
     tag: list['Tags'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
-    recipe_ingredients: list['RecipeIngredients'] = Relationship(back_populates='recipe')
+    recipe_ingredients: list['RecipeIngredients'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.recipe_id]'})
     recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
 

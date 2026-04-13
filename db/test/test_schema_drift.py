@@ -19,7 +19,7 @@ from sqlalchemy import inspect, text
 from sqlmodel import SQLModel
 
 def _load_models_module() -> None:
-    """Load models.py (which imports split *_models.py) to register all tables."""
+    """Load models (file or package) to register all SQLModel tables."""
     repo_root = Path(__file__).resolve().parents[2]
     app_dirs = [
         repo_root / "fastapi" / "app",
@@ -29,20 +29,28 @@ def _load_models_module() -> None:
     for app_dir in app_dirs:
         if not app_dir.exists():
             continue
-        models_path = app_dir / "models.py"
-        if not models_path.exists():
-            continue
         parent = str(app_dir.parent)
         if parent not in sys.path:
             sys.path.insert(0, parent)
-        spec = importlib.util.spec_from_file_location("_test_drift_models", str(models_path))
-        if spec is None or spec.loader is None:
-            continue
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return
 
-    raise ModuleNotFoundError("Could not locate models.py for drift test metadata loading")
+        # Prefer models.py flat file when it exists.
+        models_path = app_dir / "models.py"
+        if models_path.exists():
+            spec = importlib.util.spec_from_file_location("_test_drift_models", str(models_path))
+            if spec is not None and spec.loader is not None:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return
+
+        # Fall back to models/ package (__init__.py).
+        pkg_init = app_dir / "models" / "__init__.py"
+        if pkg_init.exists():
+            import importlib as _il
+            if "app.models" not in sys.modules:
+                _il.import_module("app.models")
+            return
+
+    raise ModuleNotFoundError("Could not locate models.py or models/__init__.py for drift test metadata loading")
 
 
 _load_models_module()

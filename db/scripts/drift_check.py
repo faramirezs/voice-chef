@@ -147,9 +147,10 @@ def _load_models_module() -> None:
         # Package-first load to avoid redefining SQLModel tables via duplicate module names.
         if (app_dir / "__init__.py").exists():
             module_names: list[str] = []
-            if (app_dir / "models.py").exists():
+            if (app_dir / "models.py").exists() or (app_dir / "models").is_dir():
                 module_names.append("app.models")
-            module_names.extend(f"app.{p.stem}" for p in sorted(app_dir.glob("*_models.py")))
+            if not (app_dir / "models").is_dir():
+                module_names.extend(f"app.{p.stem}" for p in sorted(app_dir.glob("*_models.py")))
 
             seen: set[str] = set()
             for module_name in module_names:
