@@ -1,9 +1,8 @@
-
 from sqlmodel import SQLModel, Field, SQLModel, Relationship
 from typing import Optional, List
-from uuid import UUID, uuid4
+from uuid import UUID
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime
 
 class RecipeIngredientWrite(SQLModel):
     ingredient_id: UUID
@@ -49,16 +48,12 @@ class RecipeSummaryResponse(SQLModel):
     name: str
     description: Optional[str]
     instructions: Optional[str]
-
     status: str
     yield_mode: str
-
     portion_size_grams: Optional[Decimal]
     total_raw_weight_grams: Optional[Decimal]
     total_cooked_weight_grams: Optional[Decimal]
-
     portions_count_resolved: Optional[Decimal]
-
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 

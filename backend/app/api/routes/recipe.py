@@ -13,23 +13,20 @@ from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
-from app.schemas.recipe_utils import to_recipe_detail
+from app.utils.recipe_utils import to_recipe_detail
 from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
 from app.models.recipe_ingredients import RecipeIngredient
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
-
-# # NOTE: MK - FOLLOWING END POINTS NOT FULLY TESTED YET  
-########################################
 @router.post("", response_model=RecipeSummaryResponse)
-def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_session)):
-    recipe = Recipe(**recipe_in.model_dump(exclude={"ingredients"}))
+def create_recipe(recipe: RecipeWrite, session: Session = Depends(get_session)):
+    new_recipe = Recipe(**recipe.model_dump(exclude={"ingredients"}))
 
-    session.add(recipe)
+    session.add(new_recipe)
     session.flush()
 
-    # for ing in recipe_in.ingredients:
+    # for ing in recipe.ingredients:
     #     link = RecipeIngredient(
     #         recipe_id=recipe.id,
     #         ingredient_id=ing.ingredient_id,
@@ -41,9 +38,9 @@ def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_session
     #     session.add(link)
 
     session.commit()
-    session.refresh(recipe)
+    session.refresh(new_recipe)
 
-    return to_recipe_detail(recipe)
+    return to_recipe_detail(new_recipe)
 
 
 @router.get("", response_model=PaginatedResponse[Recipe])
@@ -102,61 +99,10 @@ def delete_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     session.refresh(recipe)
 
     result = to_recipe_detail(recipe)
-    # result = recipe.name
 
     session.delete(recipe)
     session.commit()
 
     return result
-
-
-# # NOTE: MK - Retrieve one recipe by id
-# @app.get("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-# def retrieve_recipe(recipe_id: str, session: Session = Depends(get_session)):
-#     query = select(Recipe).where(Recipe.id == recipe_id)
-#     recipe = session.exec(query).first()
-
-#     if not recipe:
-#         raise HTTPException(status_code=404, detail="Recipe not found")
-
-#     return recipe
-
-# # NOTE: MK - Create a recipe 
-# @app.post("/recipes", response_model=RecipeIngredientResponse)
-# def create_recipe(recipe: RecipeWrite, session: Session = Depends(get_session)):
-#     new_recipe = Recipe(**recipe.dict())
-    
-#     session.add(new_recipe)
-#     session.commit()
-#     session.refresh(new_recipe)
-
-#     return new_recipe
-
-# ########
-# @app.get("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-# def get_recipe(recipe_id: str, session: Session = Depends(get_session)):
-#     recipe = session.get(Recipe, recipe_id)
-
-#     if not recipe:
-#         raise HTTPException(404, "Recipe not found")
-
-#     return (recipe)
-# ##########
-
-
-
-# NOTE: MK - Delete recipe
-# @app.delete("/recipes/{recipe_id}", response_model=RecipeDetailResponse)
-# def delete_recipe(recipe_id: str, session: Session = Depends(get_session)):
-#     query = select(Recipe).where(Recipe.id == recipe_id)
-#     recipe = session.exec(query).first()
-
-#     if not recipe:
-#         raise HTTPException(status_code=404, detail="Recipe not found for tenant")
-
-#     session.delete(recipe)
-#     session.commit()
-
-#     return recipe
 
 

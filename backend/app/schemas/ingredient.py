@@ -1,5 +1,8 @@
+from sqlmodel import SQLModel, Field, SQLModel, Relationship
+from typing import Optional
 from uuid import UUID
-from sqlmodel import SQLModel, Field
+from decimal import Decimal
+from datetime import datetime
 
 
 class IngredientWrite(SQLModel):
@@ -11,3 +14,14 @@ class IngredientWrite(SQLModel):
     parent_id: UUID | None = None
 
 
+class IngredientSummaryResponse(SQLModel):
+    id: UUID
+    name: str
+    default_unit: Optional[str]
+    ingredient_type: Optional[str]
+    bls_key: Optional[str]
+    is_custom: bool
+    has_parent: bool
+    parent_id: Optional[UUID]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
