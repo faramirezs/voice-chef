@@ -3,7 +3,7 @@ from sqlmodel import SQLModel, Field, SQLModel, Relationship
 from typing import Optional, List
 from uuid import UUID, uuid4
 from decimal import Decimal
-from datetime import datetime
+from datetime import date
 
 # class RecipeWrite(SQLModel):
 #     name: str
@@ -76,8 +76,8 @@ class RecipeSummaryResponse(SQLModel):
 
     portions_count_resolved: Optional[Decimal]
 
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    created_at: Optional[date]
+    updated_at: Optional[date]
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):

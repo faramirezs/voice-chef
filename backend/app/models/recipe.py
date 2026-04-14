@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import List, Optional, TYPE_CHECKING
@@ -36,8 +36,8 @@ class Recipe(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(max_length=255)   
     status: str = Field(default="draft", max_length=50)
-    created_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
-    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
+    created_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
+    updated_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
 
     # Text fields
     description: str | None = Field(default=None, sa_column=Column(Text))
@@ -96,9 +96,9 @@ class Recipe(SQLModel, table=True):
     is_component: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
 
     # Dates
-    production_date: datetime | None = Field(sa_column=Column(DATE))
-    use_by_date: datetime | None = Field(sa_column=Column(DATE))
-    expiry_date: datetime | None = Field(sa_column=Column(DATE))
+    production_date: date | None = Field(sa_column=Column(DATE))
+    use_by_date: date | None = Field(sa_column=Column(DATE))
+    expiry_date: date | None = Field(sa_column=Column(DATE))
 
     # Foreign keys
     tenant_id: UUID | None = Field(default=None, foreign_key="tenants.id")

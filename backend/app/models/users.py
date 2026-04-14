@@ -5,7 +5,7 @@ import uuid
 from uuid import UUID
 from typing import List, TYPE_CHECKING, Optional
 from sqlalchemy import DateTime # database column type: `timestamp with time zone`
-from datetime import datetime   # Python type: type hints and runtime values
+from datetime import date   # Python type: type hints and runtime values
 from pydantic import EmailStr
 
 
@@ -33,13 +33,13 @@ class Users(SQLModel, table=True):
     email: str = Field(max_length=255, nullable=False)
     # Argon2 default hash is ~97 chars. 255 provides a safe buffer.
     password_hash: str = Field(max_length=255, nullable=False)
-    created_at: datetime = Field(
+    created_at: date = Field(
         default=None, # Python should not generate a value
         sa_column=Column(
             DateTime(timezone=True), nullable=False, server_default=text("now()")
         ),
     )
-    updated_at: datetime = Field(
+    updated_at: date = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
@@ -111,13 +111,13 @@ class Tenants(SQLModel, table=True):
         # sa_column_kwargs={"server_default": text("gen_random_uuid()")}
         primary_key=True,
     )
-    created_at: datetime = Field(
+    created_at: date = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True), nullable=False, server_default=text("now()")
         ),
     )
-    updated_at: datetime = Field(
+    updated_at: date = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
@@ -149,4 +149,4 @@ class TenantsBase(SQLModel):
 
 class TenantsResponse(TenantsBase):
     id: UUID
-    created_at: datetime
+    created_at: date

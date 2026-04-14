@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import List, Optional, TYPE_CHECKING
@@ -22,8 +22,8 @@ class Ingredient(SQLModel, table=True):
     # Primary key, Core fields, Timestamps
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(max_length=255)
-    created_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
-    updated_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
+    created_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
+    updated_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
 
     # Varying character fields
     default_unit: str | None = Field(max_length=50)

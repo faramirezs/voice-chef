@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import Optional, TYPE_CHECKING
@@ -24,8 +24,8 @@ class RecipeIngredient(SQLModel, table=True):
 
     # Primary key, Timestamps
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    created_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True),nullable=False,server_default=text("now()"),))
-    updated_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
+    created_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")))
+    updated_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
 
     # Core fields
     quantity: Decimal | None = Field(sa_column=Column(Numeric(10, 4)))

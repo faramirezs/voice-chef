@@ -63,7 +63,7 @@ The most common reason is for **`server_default`** and **`onupdate`** behavior, 
 
 ```python
 # Correct: `sa_column` is required here for `server_default` and `onupdate`
-updated_at: datetime = Field(
+updated_at: date = Field(
     default=None,
     sa_column=Column(
         DateTime(timezone=True),
