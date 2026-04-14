@@ -20,7 +20,7 @@ export function StartingPage() {
             className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
             style={{ backgroundImage: `url(${recipeImage})` }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-0" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">Recipes</h2>
           <p className="mt-2 text-lg text-white/90">View and manage your recipes.</p>
@@ -34,7 +34,7 @@ export function StartingPage() {
             className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
             style={{ backgroundImage: `url(${personImage})` }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-0" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">Menu planner</h2>
           <p className="mt-2 text-lg text-white/90">Plan your weekly menu.</p>
@@ -48,7 +48,7 @@ export function StartingPage() {
             className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
             style={{ backgroundImage: `url(${aiImage})` }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-100 transition-opacity duration-300 group-hover:opacity-0" />
+          <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-100 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">AI Assistant</h2>
           <p className="mt-2 text-lg text-white/90">Get help with ideas and prep.</p>

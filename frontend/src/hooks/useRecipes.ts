@@ -19,7 +19,9 @@ export function useRecipes(filters?: {
     queryKey: [RECIPES_KEY, filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data } = await api.get<Recipe[]>('/recipes', { params: filters });
+      const { data } = await api.get<PaginatedResponse<Recipe>>('/recipes', {
+        params: filters,
+      });
       return data;
     },
   });

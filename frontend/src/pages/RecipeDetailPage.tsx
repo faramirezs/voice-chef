@@ -72,20 +72,37 @@ function InlineEditableText({
   const updateRecipe = useUpdateRecipe();
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isEditing) {
       setDraft(value ?? '');
+      setValidationError(null);
     }
   }, [isEditing, value]);
 
   const handleSave = () => {
     const nextValue = draft.trim();
 
+    if (field === 'name' && !nextValue) {
+      setValidationError('Recipe name is required.');
+      return;
+    }
+
+    setValidationError(null);
+
+    const payload =
+      field === 'name'
+        ? ({ id: recipeId, name: nextValue } as Partial<Recipe> & { id: string })
+        : ({ id: recipeId, [field]: nextValue || null } as Partial<Recipe> & { id: string });
+
     updateRecipe.mutate(
-      { id: recipeId, [field]: nextValue || null } as Partial<Recipe> & { id: string },
+      payload,
       {
-        onSuccess: () => setIsEditing(false),
+        onSuccess: () => {
+          setValidationError(null);
+          setIsEditing(false);
+        },
       },
     );
   };
@@ -98,15 +115,28 @@ function InlineEditableText({
           {multiline ? (
             <Textarea
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
               autoFocus
             />
           ) : (
             <Input
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
               autoFocus
             />
+          )}
+          {validationError && (
+            <p className="text-xs text-destructive">{validationError}</p>
           )}
           <div className="flex gap-2">
             <Button size="sm" type="button" onClick={handleSave} disabled={updateRecipe.isPending}>
@@ -118,6 +148,7 @@ function InlineEditableText({
               type="button"
               onClick={() => {
                 setDraft(value ?? '');
+                setValidationError(null);
                 setIsEditing(false);
               }}
             >

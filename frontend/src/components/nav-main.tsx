@@ -3,6 +3,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import type * as React from "react"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -43,21 +44,21 @@ const NAV_ITEMS = [
 	},
 	{
 		title: "Tasks",
-		url: "tasks",
+		url: "/tasks",
 		icon: (
 			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
 		)
 	},
 	{
 		title: "Calculator",
-		url: "calculator",
+		url: "/calculator",
 		icon: (
 			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
 		)
 	},
 		{
 		title: "Timers",
-		url: "timers",
+		url: "/timers",
 		icon: (
 			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
 		)

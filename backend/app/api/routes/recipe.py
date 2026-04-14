@@ -80,7 +80,15 @@ def update_recipe(recipe_id: UUID, recipe_update: RecipeUpdate, session: Session
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    for key, value in recipe_update.model_dump(exclude_unset=True).items():
+    updates = recipe_update.model_dump(exclude_unset=True)
+
+    if "name" in updates:
+        name_value = updates["name"]
+        if name_value is None or not str(name_value).strip():
+            raise HTTPException(status_code=422, detail="Recipe name cannot be empty")
+        updates["name"] = str(name_value).strip()
+
+    for key, value in updates.items():
         setattr(recipe, key, value)
 
     session.add(recipe)

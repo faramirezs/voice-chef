@@ -38,7 +38,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   );
 
   return (
-    <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-102 hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
+    <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-[1.02] hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
       <ImagePlaceholder />
       <CardHeader className="pb-2 h-full">
         <div className="flex h-full items-start justify-between gap-2">

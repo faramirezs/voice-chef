@@ -11,7 +11,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { SettingsGeneralPage } from '@/pages/SettingsGeneral';
 import { IngredientsPage } from '@/pages/IngredientsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
-import { TimersPage } from './pages/TimersPage';
+import { TimersPage } from '@/pages/TimersPage';
 
 function App() {
   return (
