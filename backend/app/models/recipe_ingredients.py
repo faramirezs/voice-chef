@@ -28,13 +28,13 @@ class RecipeIngredient(SQLModel, table=True):
     updated_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
 
     # Core fields
-    quantity: Decimal | None = Field(sa_column=Column(Numeric(10, 4)))
-    quantity_grams: Decimal | None = Field(sa_column=Column(Numeric))
-    quid: Decimal | None = Field(sa_column=Column(Numeric(10, 4)))
+    quantity: Decimal | None = Field(default=None, sa_column=Column(Numeric(10, 4)))
+    quantity_grams: Decimal | None = Field(default=None, sa_column=Column(Numeric))
+    quid: Decimal | None = Field(default=None, sa_column=Column(Numeric(10, 4)))
     sort_order: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default=text("0")))
-    unit: str | None = Field(max_length=50)
-    preparation: str | None = Field(max_length=255)
-    item_type: str | None = Field(max_length=50)
+    unit: str | None = Field(default=None, max_length=50)
+    preparation: str | None = Field(default=None, max_length=255)
+    item_type: str | None = Field(default=None, max_length=50)
 
     # Foreign keys
     recipe_id: UUID = Field(foreign_key="recipes.id", ondelete="CASCADE", nullable=False)
