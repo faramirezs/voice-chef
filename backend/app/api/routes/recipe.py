@@ -1,0 +1,108 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+from sqlalchemy import inspect
+from sqlalchemy.orm import selectinload
+from app.core.database import get_session, engine
+from uuid import UUID
+
+from app.core.pagination import pagination_params, PaginationParams, paginate
+from app.schemas.pagination import PaginatedResponse
+
+from app.core.database import get_session
+from app.models.recipe import Recipe
+from app.models.ingredient import Ingredient
+from app.schemas.ingredient import IngredientWrite
+from app.schemas.pagination import PaginatedResponse
+from app.utils.recipe_utils import to_recipe_detail
+from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
+from app.models.recipe_ingredients import RecipeIngredient
+
+router = APIRouter(prefix="/recipes", tags=["Recipes"])
+
+@router.post("", response_model=RecipeSummaryResponse)
+def create_recipe(recipe: RecipeWrite, session: Session = Depends(get_session)):
+    new_recipe = Recipe(**recipe.model_dump(exclude={"ingredients"}))
+
+    session.add(new_recipe)
+    session.flush()
+
+    # for ing in recipe.ingredients:
+    #     link = RecipeIngredient(
+    #         recipe_id=recipe.id,
+    #         ingredient_id=ing.ingredient_id,
+    #         quantity=ing.quantity,
+    #         unit=ing.unit,
+    #         preparation=ing.preparation,
+    #         sort_order=ing.sort_order,
+    #     )
+    #     session.add(link)
+
+    session.commit()
+    session.refresh(new_recipe)
+
+    return to_recipe_detail(new_recipe)
+
+
+@router.get("", response_model=PaginatedResponse[Recipe])
+def retrieve_recipes(
+    session: Session = Depends(get_session),
+    pagination: PaginationParams = Depends(pagination_params)):
+
+    query = select(Recipe)
+    recipes = paginate(query, session, pagination)
+    return recipes
+
+
+@router.get("/{recipe_id}", response_model=RecipeSummaryResponse)
+def retrieve_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
+    statement = (
+        select(Recipe)
+        .where(Recipe.id == recipe_id)
+        .options(
+            selectinload(Recipe.recipe_ingredients)
+            .selectinload(RecipeIngredient.ingredient)
+        )
+    )
+
+    recipe = session.exec(statement).first()
+
+    if not recipe:
+        raise HTTPException(404, "Recipe not found")
+
+    return to_recipe_detail(recipe)
+
+# NOTE: MK - Update recipe fields with partial merge semantics
+@router.put("/{recipe_id}", response_model=RecipeSummaryResponse)
+def update_recipe(recipe_id: UUID, recipe_update: RecipeUpdate, session: Session = Depends(get_session)):
+    query = select(Recipe).where(Recipe.id == recipe_id)
+    recipe = session.exec(query).first()
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    for key, value in recipe_update.model_dump(exclude_unset=True).items():
+        setattr(recipe, key, value)
+
+    session.add(recipe)
+    session.commit()
+    session.refresh(recipe)
+
+    return recipe
+
+@router.delete("/{recipe_id}", response_model=RecipeSummaryResponse)
+def delete_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
+    recipe = session.get(Recipe, recipe_id)
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    session.refresh(recipe)
+
+    result = to_recipe_detail(recipe)
+
+    session.delete(recipe)
+    session.commit()
+
+    return result
+
+

@@ -2,14 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/axios';
 import type { Recipe } from '@/types/recipe';
 
-const RECIPES_KEY = 'recipes';
+const RECIPES_KEY = 'recipe';
 
 export function useRecipes(filters?: { status?: string; skip?: number; limit?: number }) {
   return useQuery({
     queryKey: [RECIPES_KEY, filters],
     queryFn: async () => {
       const { data } = await api.get<Recipe[]>('/recipes', { params: filters });
-      return data;
+      return data.items;
     },
   });
 }
