@@ -1,9 +1,5 @@
 HTML = structure (<div class="redDiv">, <p>, <h1>, <button>)
 
-.myClass
-.yourClass
-#this-block
-
 CSS = style (.redDiv, color = red; .myClass {font-size: 100px})
 
 JavaScript = dynamic behavior / actions
@@ -25,7 +21,5 @@ TanStack Query = caching
 Tailwind = TailwindCSS
 
 ShadCN UI
-
-
 
 TypeScript = JS with types;
