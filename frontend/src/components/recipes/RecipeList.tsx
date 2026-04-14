@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 12;
 
 function RecipeSkeleton() {
   return (

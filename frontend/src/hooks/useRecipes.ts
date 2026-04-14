@@ -20,7 +20,7 @@ export function useRecipes(filters?: {
     placeholderData: keepPreviousData,
     queryFn: async () => {
       const { data } = await api.get<Recipe[]>('/recipes', { params: filters });
-      return data.items;
+      return data;
     },
   });
 }
