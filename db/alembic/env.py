@@ -35,27 +35,28 @@ if config.config_file_name is not None:
 
 target_metadata = None
 
+# COMMENT the FOLLOWING SECTION IN only for manual testing with alembic revision --autogenerate -m "check"
 ###############################################################################
-import backend.app.models  # noqa
-from sqlmodel import SQLModel
+# import backend.app.models  # noqa
+# from sqlmodel import SQLModel
 
-target_metadata = SQLModel.metadata
+# target_metadata = SQLModel.metadata
 
-####--- ADD THIS BLOCK FOR FILTERING ---
-def include_object(object, name, type_, reflected, compare_to):
-    """
-    A hook to filter which database objects are included in the 'autogenerate' process.
-    """
-    # We only want to compare the tables we have refactored.
-    # tables_to_check = ["users", "tenants", "recipes", "ingredients", "nutritionfacts"]
-    tables_to_check = {"recipes", "users", "tenants", "ingredients", "recipe_ingredients"}  # <-- Adjust this list to include only the tables you want to check
-    if type_ == "table" and name not in tables_to_check:
-        return False
+# ####--- ADD THIS BLOCK FOR FILTERING ---
+# def include_object(object, name, type_, reflected, compare_to):
+#     """
+#     A hook to filter which database objects are included in the 'autogenerate' process.
+#     """
+#     # We only want to compare the tables we have refactored.
+#     # tables_to_check = ["users", "tenants", "recipes", "ingredients", "nutritionfacts"]
+#     tables_to_check = {"recipes", "users", "tenants", "ingredients", "recipe_ingredients"}  # <-- Adjust this list to include only the tables you want to check
+#     if type_ == "table" and name not in tables_to_check:
+#         return False
     
-    # For all other objects (columns, indexes, etc.), let them be compared.
-    # Alembic will automatically ignore them if their parent table is ignored.
-    return True
-# # --- END OF BLOCK ---
+#     # For all other objects (columns, indexes, etc.), let them be compared.
+#     # Alembic will automatically ignore them if their parent table is ignored.
+#     return True
+# # # --- END OF BLOCK ---
 ##############################################################################
 
 
@@ -84,8 +85,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_object=include_object,  # <-- Tell Alembic to use our filter here too
-        # Comment in only manual testing with alembic revision --autogenerate -m "check"
+        # include_object=include_object,  # <-- Tell Alembic to use our filter here too
+        # Comment in only for manual testing with alembic revision --autogenerate -m "check"
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -109,8 +110,8 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection, 
             target_metadata=target_metadata,
-            include_object=include_object,  # <-- Tell Alembic to use our filter here too
-            # Comment in only manual testing with alembic revision --autogenerate -m "check"
+            # include_object=include_object,  # <-- Tell Alembic to use our filter here too
+            # Comment in only for manual testing with alembic revision --autogenerate -m "check"
         )
 
         with context.begin_transaction():
