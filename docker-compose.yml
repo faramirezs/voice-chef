@@ -68,6 +68,7 @@ services:
       FASTAPI_INTERNAL_URL: http://fastapi:80
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       AGENT_MODEL: ${AGENT_MODEL}
+      AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
 
 volumes:
   postgres_data:

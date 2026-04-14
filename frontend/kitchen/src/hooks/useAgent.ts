@@ -15,6 +15,7 @@ export interface ToolActivity {
 }
 
 export function useAgent() {
+  const debugStream = import.meta.env.VITE_AGENT_DEBUG_STREAM === "1";
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
@@ -37,14 +38,40 @@ export function useAgent() {
       setIsStreaming(true);
       setToolActivity(null);
 
+      if (debugStream) {
+        console.log("[agent-debug] run:start", {
+          at: new Date().toISOString(),
+          textLength: text.length,
+        });
+      }
+
       const subscriber: AgentSubscriber = {
-        onTextMessageContentEvent() {
+        onTextMessageContentEvent(input) {
+          if (debugStream) {
+            console.log("[agent-debug] event:TEXT_MESSAGE_CONTENT", {
+              at: new Date().toISOString(),
+              deltaLength: String(input?.event?.delta ?? "").length,
+            });
+          }
           syncMessages();
         },
-        onTextMessageEndEvent() {
+        onTextMessageEndEvent(input) {
+          if (debugStream) {
+            console.log("[agent-debug] event:TEXT_MESSAGE_END", {
+              at: new Date().toISOString(),
+              messageId: input?.event?.messageId,
+            });
+          }
           syncMessages();
         },
         onEvent({ event }) {
+          if (debugStream) {
+            console.log("[agent-debug] event", {
+              at: new Date().toISOString(),
+              type: event.type,
+            });
+          }
+
           if (event.type === EventType.TOOL_CALL_START) {
             const e = event as { toolCallName?: string; toolCallId?: string };
             setToolActivity({
@@ -72,6 +99,12 @@ export function useAgent() {
           { runId: uuid() },
           subscriber,
         );
+        if (debugStream) {
+          console.log("[agent-debug] run:finished", {
+            at: new Date().toISOString(),
+            result,
+          });
+        }
         void result;
       } catch (err) {
         console.error("Agent run failed:", err);
@@ -82,6 +115,12 @@ export function useAgent() {
             "Sorry, something went wrong reaching the kitchen assistant. Please try again.",
         };
         chefAgent.addMessage(errorMsg);
+      } finally {
+        if (debugStream) {
+          console.log("[agent-debug] run:end", {
+            at: new Date().toISOString(),
+          });
+        }
       }
 
       syncMessages();
