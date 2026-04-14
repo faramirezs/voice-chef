@@ -39,8 +39,8 @@ class Ingredient(SQLModel, table=True):
     has_parent: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))
 
     # Foreign keys
-    tenant_id: UUID | None = Field(foreign_key="tenants.id") 
-    parent_id: UUID | None = Field(foreign_key="ingredients.id")
+    tenant_id: UUID | None = Field(default=None, foreign_key="tenants.id") 
+    parent_id: UUID | None = Field(default=None, foreign_key="ingredients.id")
 
     # Optional foreign keys (for future relationships)    
     nutrition_id: UUID | None = None

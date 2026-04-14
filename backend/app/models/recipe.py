@@ -101,8 +101,8 @@ class Recipe(SQLModel, table=True):
     expiry_date: datetime | None = Field(sa_column=Column(DATE))
 
     # Foreign keys
-    tenant_id: UUID | None = Field(foreign_key="tenants.id")
-    created_by: UUID | None = Field(foreign_key="users.id")
+    tenant_id: UUID | None = Field(default=None, foreign_key="tenants.id")
+    created_by: UUID | None = Field(default=None, foreign_key="users.id")
 
     # Relationship attributes
     recipe_ingredients: list["RecipeIngredient"] = Relationship(back_populates="recipe")
