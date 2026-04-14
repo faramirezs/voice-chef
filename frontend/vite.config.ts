@@ -19,7 +19,7 @@ export default defineConfig({
         // removes /api from the beginning of the path.
         // Example: Vite proxy forwards the request to http://your_backend_URL/tables
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
