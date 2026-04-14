@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime, date
 from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import List, Optional, TYPE_CHECKING
@@ -62,14 +62,14 @@ class Recipe(SQLModel, table=True):
     shelf_life: str | None = Field(default=None, sa_column=Column(Text))
 
     # Varying character fields
-    yield_unit: str | None = Field(max_length=50)
-    recipe_number: str | None = Field(max_length=100)
-    batch_number: str | None = Field(max_length=100)
-    storage_temperature: str | None = Field(max_length=50)
-    labor_effort: str | None = Field(max_length=50)
-    nutri_score_category: str | None = Field(max_length=10)
-    unit_measure: str | None = Field(max_length=50)
-    unit_serving: str | None = Field(max_length=50)
+    yield_unit: str | None = Field(default=None, max_length=50)
+    recipe_number: str | None = Field(default=None, max_length=100)
+    batch_number: str | None = Field(default=None, max_length=100)
+    storage_temperature: str | None = Field(default=None, max_length=50)
+    labor_effort: str | None = Field(default=None, max_length=50)
+    nutri_score_category: str | None = Field(default=None, max_length=10)
+    unit_measure: str | None = Field(default=None, max_length=50)
+    unit_serving: str | None = Field(default=None, max_length=50)
     yield_mode: str = Field(default="count", max_length=20)
 
     # Numeric fields
@@ -105,7 +105,7 @@ class Recipe(SQLModel, table=True):
     created_by: UUID | None = Field(default=None, foreign_key="users.id")
 
     # Relationship attributes
-    recipe_ingredients: list["RecipeIngredient"] = Relationship(back_populates="recipe")
+    recipe_ingredients: list["RecipeIngredient"] = Relationship(back_populates="recipe", sa_relationship_kwargs={"passive_deletes": True})
     # recipe_photos: list["RecipePhoto"] = Relationship(back_populates="recipe")
     created_by_user: Optional["Users"] = Relationship(back_populates="recipes")
     tenant: Optional["Tenants"] = Relationship(back_populates="recipes")

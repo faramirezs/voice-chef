@@ -19,7 +19,7 @@ from app.models.recipe_ingredients import RecipeIngredient
 router = APIRouter(prefix="/ingredient", tags=["Ingredients"])
 
 
-@router.get("/read", response_model=PaginatedResponse[Ingredient])
+@router.get("", response_model=PaginatedResponse[Ingredient])
 def retrieve_ingredients(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params)):
@@ -29,10 +29,10 @@ def retrieve_ingredients(
     return ingredients
 
 
-@router.post("/create")
+@router.post("")
 def create_ingredient(ingredient: IngredientWrite, session: Session = Depends(get_session)):
-    new_ingredient = Ingredient(**ingredient.dict())
-    
+    new_ingredient = Ingredient(**ingredient.model_dump())
+        
     session.add(new_ingredient)
     session.commit()
     session.refresh(new_ingredient)

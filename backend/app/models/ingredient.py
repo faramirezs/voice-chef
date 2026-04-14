@@ -26,13 +26,13 @@ class Ingredient(SQLModel, table=True):
     updated_at: date | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()"), onupdate=text("now()")))
 
     # Varying character fields
-    default_unit: str | None = Field(max_length=50)
-    ingredient_type: str | None = Field(max_length=50)
-    bls_key: str | None = Field(max_length=100)
+    default_unit: str | None = Field(default=None, max_length=50)
+    ingredient_type: str | None = Field(default=None, max_length=50)
+    bls_key: str | None = Field(default=None, max_length=100)
 
     # Integers
-    usage_count: int | None = Field(default=0, sa_column=Column(Integer, server_default=text("0")))
-    recipe_count: int | None = Field(default=0, sa_column=Column(Integer, server_default=text("0")))
+    usage_count: int | None = Field(default=None, sa_column=Column(Integer, server_default=text("0")))
+    recipe_count: int | None = Field(default=None, sa_column=Column(Integer, server_default=text("0")))
 
     # Booleans
     is_custom: bool = Field(default=False, sa_column=Column(Boolean, server_default=text("false")))

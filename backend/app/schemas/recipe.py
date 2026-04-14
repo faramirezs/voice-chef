@@ -3,24 +3,7 @@ from sqlmodel import SQLModel, Field, SQLModel, Relationship
 from typing import Optional, List
 from uuid import UUID, uuid4
 from decimal import Decimal
-from datetime import date
-
-# class RecipeWrite(SQLModel):
-#     name: str
-#     description: Optional[str] = None
-#     instructions: Optional[str] = None
-
-# class RecipeRead(SQLModel):
-#     id: UUID = Field(default_factory=uuid4, primary_key=True)
-#     name: str = Field(max_length=255)
-#     # description: Optional[str] = None
-#     # instructions: Optional[str] = None
-
-# class RecipeUpdate(SQLModel):
-#     name: str | None = None
-#     description: str | None = None
-#     instructions: str | None = None
-
+from datetime import datetime, date
 
 class RecipeIngredientWrite(SQLModel):
     ingredient_id: UUID
@@ -76,8 +59,8 @@ class RecipeSummaryResponse(SQLModel):
 
     portions_count_resolved: Optional[Decimal]
 
-    created_at: Optional[date]
-    updated_at: Optional[date]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):

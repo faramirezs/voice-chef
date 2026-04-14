@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session, engine
+from uuid import UUID
 
 from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse
@@ -16,12 +17,12 @@ from app.schemas.recipe_utils import to_recipe_detail
 from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
 from app.models.recipe_ingredients import RecipeIngredient
 
-router = APIRouter(prefix="/recipe", tags=["Recipes"])
+router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
 
 # # NOTE: MK - FOLLOWING END POINTS NOT FULLY TESTED YET  
 ########################################
-@router.post("/create", response_model=RecipeSummaryResponse)
+@router.post("", response_model=RecipeSummaryResponse)
 def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_session)):
     recipe = Recipe(**recipe_in.model_dump(exclude={"ingredients"}))
 
@@ -45,7 +46,7 @@ def create_recipe(recipe_in: RecipeWrite, session: Session = Depends(get_session
     return to_recipe_detail(recipe)
 
 
-@router.get("/read_all", response_model=PaginatedResponse[Recipe])
+@router.get("", response_model=PaginatedResponse[Recipe])
 def retrieve_recipes(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params)):
@@ -55,8 +56,8 @@ def retrieve_recipes(
     return recipes
 
 
-@router.get("/read/{recipe_id}", response_model=RecipeSummaryResponse)
-def get_recipe(recipe_id: str, session: Session = Depends(get_session)):
+@router.get("/{recipe_id}", response_model=RecipeSummaryResponse)
+def retrieve_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     statement = (
         select(Recipe)
         .where(Recipe.id == recipe_id)
@@ -74,15 +75,15 @@ def get_recipe(recipe_id: str, session: Session = Depends(get_session)):
     return to_recipe_detail(recipe)
 
 # NOTE: MK - Update recipe fields with partial merge semantics
-@router.put("/update/{recipe_id}", response_model=RecipeSummaryResponse)
-def update_recipe(recipe_id: str, recipe_update: RecipeUpdate, session: Session = Depends(get_session)):
+@router.put("/{recipe_id}", response_model=RecipeSummaryResponse)
+def update_recipe(recipe_id: UUID, recipe_update: RecipeUpdate, session: Session = Depends(get_session)):
     query = select(Recipe).where(Recipe.id == recipe_id)
     recipe = session.exec(query).first()
 
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    for key, value in recipe_update.dict(exclude_unset=True).items():
+    for key, value in recipe_update.model_dump(exclude_unset=True).items():
         setattr(recipe, key, value)
 
     session.add(recipe)
@@ -91,8 +92,8 @@ def update_recipe(recipe_id: str, recipe_update: RecipeUpdate, session: Session 
 
     return recipe
 
-@router.delete("/delete/{recipe_id}", response_model=RecipeSummaryResponse)
-def delete_recipe(recipe_id: str, session: Session = Depends(get_session)):
+@router.delete("/{recipe_id}", response_model=RecipeSummaryResponse)
+def delete_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     recipe = session.get(Recipe, recipe_id)
 
     if not recipe:
