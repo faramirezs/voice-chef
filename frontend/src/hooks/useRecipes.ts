@@ -7,7 +7,7 @@ import {
 import { api } from '@/api/axios';
 import type { PaginatedResponse, Recipe } from '@/types/recipe';
 
-const RECIPES_KEY = 'recipes';
+const RECIPES_KEY = 'recipe';
 
 export function useRecipes(filters?: {
   status?: string;
@@ -19,8 +19,8 @@ export function useRecipes(filters?: {
     queryKey: [RECIPES_KEY, filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Recipe>>('/recipes', { params: filters });
-      return data;
+      const { data } = await api.get<Recipe[]>('/recipes', { params: filters });
+      return data.items;
     },
   });
 }

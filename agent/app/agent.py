@@ -4,7 +4,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openrouter import OpenRouterModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://fastapi:80")
+FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
 
 # Read model/provider settings from environment variables.
 AGENT_MODEL = os.getenv("AGENT_MODEL")

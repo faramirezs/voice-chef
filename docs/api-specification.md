@@ -119,14 +119,33 @@ Common error statuses:
 
 `AuthLoginRequest`
 
-```json
+> The login endpoint expects `x-www-form-urlencoded` (not JSON) because it uses FastAPI's `OAuth2PasswordRequestForm`. The field is called `username` but we send the email.
+
+*Note: `application/x-www-form-urlencoded` encodes form data as key-value pairs, separated by `&`, with `=` separating keys and values (e.g., `name=John+Doe&age=25`). Non-alphanumeric characters are percent-encoded (e.g., spaces become `+` or `%20`).*
+
+**Request Body:**
+
+The body must be sent as `x-www-form-urlencoded` data (like a standard HTML form submission), not as JSON.
+
+- `username`: The user's email address. (string, **required**)
+- `password`: The user's password. (string, **required**)
+
+**Example of raw request body:**
+
+```
+username=user%40example.com&password=strongpassword123
+```
+
+<!-- ```json
 {
   "email": "chef-admin@kitchen.local",
   "password": "StrongPassword123!"
 }
-```
+``` -->
 
 `AuthTokenResponse`
+
+Note: `expires_in` is measured in seconds
 
 ```json
 {
@@ -367,8 +386,8 @@ MVP intents:
 
 | Method | Path | Auth | Request Schema | Success Response | Success Status | Error Statuses |
 |---|---|---|---|---|---|---|
-| POST | `/auth/signup` | Public | `AuthSignupRequest` | `AuthTokenResponse` | `201` | `400, 409, 422, 503, 500` |
-| POST | `/auth/login` | Public | `AuthLoginRequest` | `AuthTokenResponse` | `200` | `400, 401, 403, 422, 500` |
+| POST | `/auth/signup` | Public | `UserSignupLogin` | `UserSignupResponse` (later: Auto-Login on Signup: `AuthTokenResponse`) | `201` | `400, 409, 422, 503, 500` |
+| POST | `/auth/login` | Public | `UserSignupLogin` | `AuthTokenResponse` | `200` | `400, 401, 403, 422, 500` |
 | GET | `/recipes` | Bearer | Query: `limit`, `offset`, `status`, `search` | `{ items: RecipeSummaryResponse[], meta }` | `200` | `401, 422, 500` |
 | POST | `/recipes` | Bearer | `RecipeWrite` | `RecipeDetailResponse` | `201` | `400, 401, 404, 409, 422, 500` |
 | GET | `/recipes/{id}` | Bearer | Path: `id` UUID | `RecipeDetailResponse` | `200` | `401, 404, 422, 500` |
@@ -392,7 +411,7 @@ Purpose:
 - Return access token for immediate authenticated session
 
 Request:
-- Body: `AuthSignupRequest`
+- Body: `UserSignupLogin`
 
 Success:
 - `201 Created`
@@ -419,8 +438,10 @@ Success:
 
 Errors:
 - `401` invalid credentials
-- `403` account disabled
+- `403` Forbidden - account disabled
 - `422` payload type/shape invalid
+
+NOTE: `Status Code 403`: Unlike 401 (which says "I don't know who you are"), 403 says "I know exactly who you are, but you are not allowed to be here."
 
 ### 3) GET `/recipes`
 
