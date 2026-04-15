@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@import "@fontsource-variable/figtree";
+
+@theme {
+  --font-sans: "Figtree Variable", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
+  --color-surface: #101a1a;
+  --color-surface-alt: #173232;
+  --color-primary: #95cc62;
+  --color-primary-hover: #a9dc7a;
+  --color-text: #f2f7ea;
+  --color-text-muted: #b4c3a6;
+  --color-user-bubble: #2d5d3d;
+  --color-assistant-bubble: #234444;
+  --color-border: #355f4d;
+  --color-success: #4ade80;
+  --color-warning: #facc15;
+  --color-error: #f87171;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 12% -18%, rgba(149, 204, 98, 0.22), transparent 58%),
+    radial-gradient(900px 600px at 100% 0%, rgba(48, 125, 89, 0.2), transparent 52%),
+    linear-gradient(155deg, #0e1717 0%, #102323 45%, #1e3c2f 100%);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}

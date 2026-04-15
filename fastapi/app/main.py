@@ -14,18 +14,18 @@ app = FastAPI()
 def hello():
     return {"message": "Hello voice-chef"}
 
-# NOTE: DL - this is just a test endpoint to verify that we can fetch recipes from the database. 
+# NOTE: DL - this is just a test endpoint to verify that we can fetch recipes from the database.
 # We will remove this later and implement proper endpoints for recipes.
 @app.get("/recipes")
 def fetch_recipes(session: Session = Depends(get_db)):
-    query = select(models.Recipe)
+    query = select(models.Recipe).limit(3)
     result = session.exec(query)
     recipes = result.all()
     return recipes
 
 # List DB tables (GET)
-# NOTE: DL: You cannot fully replace inspect() with SQLModel's own APIs, but this is a simple 
-# endpoint to verify that we can connect to the database and fetch table names. 
+# NOTE: DL: You cannot fully replace inspect() with SQLModel's own APIs, but this is a simple
+# endpoint to verify that we can connect to the database and fetch table names.
 @app.get("/tables")
 def list_tables():
     inspector = inspect(engine)

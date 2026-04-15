@@ -80,6 +80,7 @@ define HELP_TEXT
 	" make stt-build:\tBuild only stt service" \
 	" make stt-build-nocache:\tBuild only stt service without cache" \
 	" make stt-recreate:\tRecreate and run only stt service\n" \
+	" make refresh-env-agent:\tRecreate fastapi and agent with fresh env\n" \
 	" make up:	Calling the command dev" \
 	" make start:	Start the containers" \
 	" make stop:	Stop running containers"
@@ -107,6 +108,9 @@ stt-build-nocache: $(ENV)
 stt-recreate: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate stt
 
+refresh-env-agent: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --no-deps --force-recreate fastapi agent
+
 up: dev
 
 start:
@@ -116,4 +120,4 @@ stop:
 	$(COMPOSE) stop
 
 .PHONY: all dev prod down re clean fclean status logs help % build up start stop
-.PHONY: all dev prod down re clean fclean status logs help % build agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate up start stop
+.PHONY: all dev prod down re clean fclean status logs help % build agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate refresh-env-agent up start stop

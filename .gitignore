@@ -18,3 +18,24 @@
 
 # STT test recordings
 stt/tests/samples/
+
+# Node/frontend dependencies and build outputs
+**/node_modules/
+**/dist/
+**/build/
+**/.vite/
+**/.cache/
+
+# Frontend local env variants
+**/.env.local
+**/.env.development.local
+**/.env.test.local
+**/.env.production.local
+
+# Common frontend logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/drift_gate_local.log
+docs/migration-012-gap-analysis.md

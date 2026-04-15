@@ -1,12 +1,28 @@
 services:
-  frontend:
+  office-frontend:
     build:
-      target: dev              # ← stops at dev stage
+      target: dev
     volumes:
-      - ./frontend:/app        # hot reload
+      - ./frontend/office:/app
       - /app/node_modules
     ports:
       - "5173:5173"
+
+  kitchen-frontend:
+    build:
+      target: dev
+    volumes:
+      - ./frontend/kitchen:/app
+      - /app/node_modules
+    ports:
+      - "5174:5174"
+    environment:
+      VITE_AGENT_URL: http://localhost:8001
+      VITE_AGENT_DEBUG_STREAM: "1"
+
+  agent:
+    environment:
+      AGENT_DEBUG_STREAM: "1"
 
   # db:
   #   image: postgres:17.8
