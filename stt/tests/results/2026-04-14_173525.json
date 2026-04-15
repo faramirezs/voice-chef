@@ -1,0 +1,15 @@
+{
+  "text": "Maljumek \u00e7olba satarifi verir misin?",
+  "language": "tr",
+  "language_probability": 0.67,
+  "confidence": "low",
+  "retry_suggested": true,
+  "duration": 9.45,
+  "segments": [
+    {
+      "start": 1.1,
+      "end": 8.78,
+      "text": "Maljumek \u00e7olba satarifi verir misin?"
+    }
+  ]
+}

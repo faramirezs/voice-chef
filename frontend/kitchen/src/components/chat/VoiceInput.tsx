@@ -1,74 +1,138 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { KButton } from "@/components/ui/KButton";
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
+  onConfidenceWarning?: (text: string) => void;
   disabled?: boolean;
 }
 
-const SpeechRecognitionCtor =
-  typeof window !== "undefined"
-    ? (window.SpeechRecognition ?? window.webkitSpeechRecognition)
-    : undefined;
+const STT_URL = import.meta.env.VITE_STT_URL ?? "http://localhost:8002";
 
-export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
-  const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+export function VoiceInput({
+  onTranscript,
+  onConfidenceWarning,
+  disabled,
+}: VoiceInputProps) {
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
-  useEffect(() => {
-    return () => {
-      recognitionRef.current?.stop();
-    };
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm;codecs=opus",
+      });
+
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        if (blob.size < 100) return;
+
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("file", blob, "recording.webm");
+
+          const resp = await fetch(`${STT_URL}/transcribe`, {
+            method: "POST",
+            body: form,
+          });
+
+          if (!resp.ok) {
+            console.error("STT error:", resp.status);
+            return;
+          }
+
+          const result = await resp.json();
+          const text = result.text?.trim();
+
+          if (result.retry_suggested) {
+            onConfidenceWarning?.(
+              text || "I'm not sure I understood correctly. Please try again.",
+            );
+          }
+
+          if (text) onTranscript(text);
+        } catch (err) {
+          console.error("STT request failed:", err);
+        } finally {
+          setTranscribing(false);
+        }
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setRecording(true);
+    } catch (err) {
+      console.error("Microphone access denied:", err);
+    }
+  }, [onTranscript, onConfidenceWarning]);
+
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
   }, []);
 
   const toggle = useCallback(() => {
-    if (!SpeechRecognitionCtor) return;
-
-    if (listening) {
-      recognitionRef.current?.stop();
-      setListening(false);
-      return;
+    if (recording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
+  }, [recording, startRecording, stopRecording]);
 
-    const recognition = new SpeechRecognitionCtor();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
-      const transcript = Array.from(e.results)
-        .map((r: SpeechRecognitionResult) => r[0]?.transcript)
-        .join("");
-      if (transcript) onTranscript(transcript);
-    };
-
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
-  }, [listening, onTranscript]);
-
-  if (!SpeechRecognitionCtor) return null;
+  const busy = recording || transcribing;
 
   return (
     <KButton
       type="button"
       onClick={toggle}
-      disabled={disabled}
-      aria-label={listening ? "Stop recording" : "Start voice input"}
+      disabled={disabled || transcribing}
+      aria-label={
+        transcribing
+          ? "Transcribing..."
+          : recording
+            ? "Stop recording"
+            : "Start voice input"
+      }
       variant="ghost"
       size="icon"
       className={`flex-shrink-0 text-2xl shadow-[0_8px_20px_rgba(0,0,0,0.2)]
         ${
-          listening
-            ? "bg-primary text-[#16270f] ring-primary/60 animate-pulse"
-            : "bg-surface-alt text-text-muted ring-border/70 hover:text-text hover:bg-border/35"
+          recording
+            ? "bg-error text-white ring-error/60 animate-pulse"
+            : transcribing
+              ? "bg-warning/20 text-warning ring-warning/40 animate-pulse"
+              : "bg-surface-alt text-text-muted ring-border/70 hover:text-text hover:bg-border/35"
         }
         `}
     >
-      {listening ? (
+      {transcribing ? (
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="animate-spin"
+        >
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+      ) : recording ? (
         <svg
           width="28"
           height="28"

@@ -128,12 +128,20 @@ The STT container sits on the same `app-network` and has no dependency on other 
 
 **Goal:** Connect STT output to the agent service.
 
-- [ ] Define the flow: STT text output -> agent input
-  - Option A: STT container calls agent API directly with transcribed text
-  - Option B: Frontend/client receives text from STT, then sends to agent
-  - Option C: Message broker between STT and agent
-- [ ] Implement chosen integration path
-- [ ] End-to-end test: speak -> transcribe -> agent response
+**Decision:** Option B — client orchestrates (STT → Client → Agent). Both services stay independent. A message broker (Option C) was considered but rejected as overkill — the agent uses AG-UI (request/response), not pub/sub. Option A (STT calls agent) was ruled out to avoid coupling.
+
+**Two integration paths:**
+
+1. **Kitchen frontend** (browser) — mic button records via MediaRecorder API, POSTs audio to STT, fills text input with transcription, user confirms and sends to agent via AG-UI protocol
+2. **Standalone CLI** (`stt/tests/voice_chat.py`) — terminal-based voice chat for headless/Raspi deployment
+
+- [x] Replace Web Speech API in VoiceInput.tsx with local STT container
+  - Uses MediaRecorder API (browser-native, no cloud dependency)
+  - POSTs audio blob to STT service
+  - Shows confidence warning when `retry_suggested` is true
+  - Added `VITE_STT_URL` env var for STT endpoint
+- [x] Create standalone voice_chat.py CLI (record → transcribe → confirm → agent → stream response)
+- [ ] End-to-end test with agent running: speak → transcribe → agent response
 
 ### Phase 4: Audio Capture Client
 
@@ -188,8 +196,8 @@ websockets>=13.0
 - [x] Decision: Wake word handled externally
 - [x] Decision: Two deployment topologies from one codebase
 - [x] Design document created
-- [ ] Phase 1: STT Container (MVP)
+- [x] Phase 1: STT Container (MVP)
 - [ ] Phase 2: WebSocket Streaming
-- [ ] Phase 3: Agent Integration
+- [x] Phase 3: Agent Integration (frontend + standalone CLI)
 - [ ] Phase 4: Audio Capture Client
 - [ ] Phase 5: Wake Word (Optional)

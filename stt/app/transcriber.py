@@ -1,7 +1,7 @@
 import os
 from faster_whisper import WhisperModel
 
-STT_MODEL = os.getenv("STT_MODEL", "base")
+STT_MODEL = os.getenv("STT_MODEL", "small")
 STT_DEVICE = os.getenv("STT_DEVICE", "cpu")
 STT_LANGUAGE = os.getenv("STT_LANGUAGE", "")
 

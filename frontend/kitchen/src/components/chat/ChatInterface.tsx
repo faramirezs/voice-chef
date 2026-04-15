@@ -19,6 +19,7 @@ export function ChatInterface() {
   const { messages, isStreaming, toolActivity, sendMessage, reset } =
     useAgent();
   const [input, setInput] = useState("");
+  const [confidenceWarning, setConfidenceWarning] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,12 +32,18 @@ export function ChatInterface() {
     const text = input.trim();
     if (!text || isStreaming) return;
     setInput("");
+    setConfidenceWarning("");
     sendMessage(text);
   };
 
   const handleVoiceTranscript = (text: string) => {
     setInput(text);
+    setConfidenceWarning("");
     inputRef.current?.focus();
+  };
+
+  const handleConfidenceWarning = (warning: string) => {
+    setConfidenceWarning(warning);
   };
 
   return (
@@ -91,18 +98,26 @@ export function ChatInterface() {
       >
         <VoiceInput
           onTranscript={handleVoiceTranscript}
+          onConfidenceWarning={handleConfidenceWarning}
           disabled={isStreaming}
         />
 
-        <KInput
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask the kitchen assistant..."
-          disabled={isStreaming}
-          className="flex-1"
-        />
+        <div className="flex-1 flex flex-col gap-1">
+          {confidenceWarning && (
+            <p className="text-warning text-sm px-2">
+              Low confidence — review before sending
+            </p>
+          )}
+          <KInput
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask the kitchen assistant..."
+            disabled={isStreaming}
+            className="flex-1"
+          />
+        </div>
 
         <KButton
           type="submit"

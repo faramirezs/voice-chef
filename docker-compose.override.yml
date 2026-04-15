@@ -18,6 +18,7 @@ services:
       - "5174:5174"
     environment:
       VITE_AGENT_URL: http://localhost:8001
+      VITE_STT_URL: http://localhost:8002
       VITE_AGENT_DEBUG_STREAM: "1"
 
   agent:

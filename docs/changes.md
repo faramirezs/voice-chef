@@ -99,7 +99,8 @@ git config merge.ours.driver true
 
 | Service | Port | Status |
 |---------|------|--------|
-| frontend | 8080 (prod) / 5173 (dev) | existing |
+| office-frontend | 8080 (prod) / 5173 (dev) | existing (renamed from frontend) |
+| kitchen-frontend | 8082 (prod) / 5174 (dev) | new (from branch 36) |
 | db | 5432 | existing |
 | fastapi | 80 (internal) / 8000 (dev) | existing |
 | agent | 8001 | existing |
@@ -110,3 +111,50 @@ git config merge.ours.driver true
 | Volume | Purpose |
 |--------|---------|
 | `whisper_models` | Persists faster-whisper model downloads (~150MB for `base`) |
+
+## Phase 3: Kitchen Frontend STT Integration
+
+### Modified Files (from branch 36)
+
+### 7. `frontend/kitchen/src/components/chat/VoiceInput.tsx`
+
+**What changed:**
+- Replaced Web Speech API (cloud-dependent, Chrome-only) with MediaRecorder API + local STT container
+- Records audio as WebM/Opus via browser's MediaRecorder
+- POSTs audio blob to STT service at `VITE_STT_URL`
+- Handles confidence warnings from STT response (`retry_suggested` field)
+- Three visual states: idle (mic icon), recording (red pulse), transcribing (spinner)
+
+**Discussion points:**
+- Voice input now goes through our local STT container — no audio leaves the network
+- Works in all modern browsers (MediaRecorder is widely supported, unlike Web Speech API)
+- Multilingual by default (faster-whisper auto-detects language)
+
+### 8. `frontend/kitchen/src/components/chat/ChatInterface.tsx`
+
+**What changed:**
+- Added `confidenceWarning` state
+- Added `onConfidenceWarning` callback wired to VoiceInput
+- Shows "Low confidence — review before sending" warning above the text input when STT is unsure
+- Warning clears on new transcript or message send
+
+### 9. `frontend/kitchen/src/vite-env.d.ts`
+
+**What changed:**
+- Added `VITE_STT_URL` type declaration
+
+### 10. `docker-compose.override.yml`
+
+**What changed:**
+- Added `VITE_STT_URL: http://localhost:8002` to kitchen-frontend environment
+
+### 11. `frontend/kitchen/src/speech.d.ts`
+
+**What changed:**
+- Removed — Web Speech API type definitions no longer needed
+
+### New Environment Variables (frontend)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_STT_URL` | `http://localhost:8002` | STT service URL for kitchen frontend |
