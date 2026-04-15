@@ -1,8 +1,15 @@
 import { useCallback, useRef, useState } from "react";
 import { KButton } from "@/components/ui/KButton";
 
+export interface SttResult {
+  text: string;
+  language: string;
+  confidence: string;
+  retry_suggested: boolean;
+}
+
 interface VoiceInputProps {
-  onTranscript: (text: string) => void;
+  onTranscript: (text: string, sttResult?: SttResult) => void;
   onConfidenceWarning?: (text: string) => void;
   disabled?: boolean;
 }
@@ -62,7 +69,7 @@ export function VoiceInput({
             );
           }
 
-          if (text) onTranscript(text);
+          if (text) onTranscript(text, result as SttResult);
         } catch (err) {
           console.error("STT request failed:", err);
         } finally {

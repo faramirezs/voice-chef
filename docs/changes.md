@@ -80,16 +80,38 @@ git config merge.ours.driver true
     {
       "start": 0.0,
       "end": 1.52,
-      "text": "the full"
+      "text": "the full",
+      "avg_logprob": -0.234,
+      "no_speech_prob": 0.012,
+      "compression_ratio": 0.89
     },
     {
       "start": 1.52,
       "end": 3.45,
-      "text": "transcribed text"
+      "text": "transcribed text",
+      "avg_logprob": -0.187,
+      "no_speech_prob": 0.008,
+      "compression_ratio": 0.92
     }
   ]
 }
 ```
+
+**Confidence tiers:** `high`, `medium`, `low`, `none`
+
+| Tier | Meaning | `retry_suggested` |
+|------|---------|-------------------|
+| `high` | Transcription reliable | `false` |
+| `medium` | Probably correct, some uncertainty | `false` |
+| `low` | Likely contains errors | `true` |
+| `none` | No usable speech detected | `true` |
+
+**Confidence scoring signals:**
+- `no_speech_prob > 0.6` → "none" (silence/noise)
+- `compression_ratio > 2.4` → downgrade (hallucination detection)
+- `avg_logprob < -1.0` (mean) → downgrade (low token confidence)
+- `language_probability < 0.5` → downgrade
+- `< 0.5 words/sec for > 3s audio` → downgrade (likely noise)
 
 **Error responses:**
 - `415` — unsupported audio content type

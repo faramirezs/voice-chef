@@ -3,7 +3,7 @@ import { useAgent } from "@/hooks/useAgent";
 import { KButton } from "@/components/ui/KButton";
 import { KInput } from "@/components/ui/KInput";
 import { MessageBubble } from "./MessageBubble";
-import { VoiceInput } from "./VoiceInput";
+import { VoiceInput, type SttResult } from "./VoiceInput";
 
 function StreamingDots() {
   return (
@@ -20,6 +20,7 @@ export function ChatInterface() {
     useAgent();
   const [input, setInput] = useState("");
   const [confidenceWarning, setConfidenceWarning] = useState("");
+  const sttResultRef = useRef<SttResult | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,13 +32,23 @@ export function ChatInterface() {
     e.preventDefault();
     const text = input.trim();
     if (!text || isStreaming) return;
+
+    // Augment voice input with STT metadata for the agent
+    const stt = sttResultRef.current;
+    let agentText = text;
+    if (stt && stt.confidence !== "high") {
+      agentText = `[voice, confidence: ${stt.confidence}, language: ${stt.language}]\n${text}`;
+    }
+
     setInput("");
     setConfidenceWarning("");
-    sendMessage(text);
+    sttResultRef.current = null;
+    sendMessage(agentText);
   };
 
-  const handleVoiceTranscript = (text: string) => {
+  const handleVoiceTranscript = (text: string, sttResult?: SttResult) => {
     setInput(text);
+    sttResultRef.current = sttResult ?? null;
     setConfidenceWarning("");
     inputRef.current?.focus();
   };
@@ -112,7 +123,11 @@ export function ChatInterface() {
             ref={inputRef}
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              sttResultRef.current = null;
+              setConfidenceWarning("");
+            }}
             placeholder="Ask the kitchen assistant..."
             disabled={isStreaming}
             className="flex-1"

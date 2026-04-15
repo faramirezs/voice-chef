@@ -78,13 +78,14 @@ Two supported configurations from one codebase:
 
 The STT service joins the existing stack as a fifth container:
 
-| Service     | Port | Role                              |
-|-------------|------|-----------------------------------|
-| frontend    | 8080 | React/Vite UI                     |
-| db          | 5432 | Postgres 17.8                     |
-| fastapi     | 80   | Python API layer                  |
-| agent       | 8001 | Pydantic AI culinary assistant    |
-| **stt**     | **8002** | **faster-whisper transcription** |
+| Service            | Port | Role                              |
+|--------------------|------|-----------------------------------|
+| office-frontend    | 8080 | React/Vite UI (office)            |
+| kitchen-frontend   | 8082 | React/Vite UI (kitchen, voice)    |
+| db                 | 5432 | Postgres 17.8                     |
+| fastapi            | 80   | Python API layer                  |
+| agent              | 8001 | Pydantic AI culinary assistant    |
+| **stt**            | **8002** | **faster-whisper transcription** |
 
 The STT container sits on the same `app-network` and has no dependency on other services — it's a standalone transcription endpoint.
 
@@ -163,6 +164,56 @@ The STT container sits on the same `app-network` and has no dependency on other 
 - [ ] Train/configure custom wake word model
 - [ ] Integrate with audio capture pipeline: wake word triggers STT streaming
 
+## Confidence Scoring
+
+Four-tier confidence system using multiple signals from faster-whisper:
+
+| Tier | Meaning | `retry_suggested` | Client action |
+|------|---------|-------------------|---------------|
+| `high` | Transcription reliable | `false` | Send to agent |
+| `medium` | Probably correct, some uncertainty | `false` | Show to user, let them review |
+| `low` | Likely contains errors | `true` | Warn user, suggest re-record |
+| `none` | No usable speech detected | `true` | Ask to retry |
+
+### Scoring signals
+
+Starting at "high", each failing check downgrades the tier:
+
+| Signal | Threshold | Effect |
+|--------|-----------|--------|
+| `no_speech_prob` | > 0.6 (any segment) | Immediately "none" |
+| `compression_ratio` | > 2.4 (any segment) | Downgrade one tier (hallucination) |
+| `avg_logprob` | < -1.0 (mean across segments) | Downgrade one tier |
+| `language_probability` | < 0.5 | Downgrade one tier |
+| Words per second | < 0.5 for > 3s audio | Downgrade one tier |
+
+Multiple checks can compound (e.g., bad logprob + low language confidence = two downgrades).
+
+### Per-segment scores in API response
+
+Each segment now includes `avg_logprob`, `no_speech_prob`, and `compression_ratio` for client-side inspection or future per-word confidence display.
+
+## Agent Voice-Awareness
+
+When confidence is below "high", STT metadata is prepended to the user message sent to the agent:
+
+```
+[voice, confidence: medium, language: uk]
+Show me the borsh recipe
+```
+
+The agent's system prompt instructs it to:
+- Apply fuzzy matching on recipe names, ingredient names, and kitchen terms
+- Be more lenient with interpretation when confidence is low/medium
+- Ask for confirmation when intent is ambiguous
+- Treat "high" confidence input as reliable text
+
+This allows the agent to leverage its domain knowledge (recipe database, kitchen vocabulary) to correct transcription errors that the STT model can't catch on its own.
+
+### Future improvements (not yet implemented)
+- **Level 2:** Per-segment confidence so the agent knows which words are uncertain
+- **Level 3:** Beam search alternatives — pass top N transcription hypotheses to the agent
+
 ## Environment Variables
 
 | Variable       | Default  | Description                                      |
@@ -170,6 +221,7 @@ The STT container sits on the same `app-network` and has no dependency on other 
 | `STT_MODEL`    | `base`   | faster-whisper model size: tiny, base, small, medium, large-v3 |
 | `STT_LANGUAGE` | (auto)   | Force language code (e.g., `en`, `es`, `de`). Auto-detects if unset |
 | `STT_DEVICE`   | `cpu`    | Compute device: `cpu` or `cuda`                  |
+| `VITE_STT_URL` | `http://localhost:8002` | STT service URL for kitchen frontend |
 
 ## Dependencies
 

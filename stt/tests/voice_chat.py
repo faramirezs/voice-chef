@@ -198,6 +198,7 @@ def main():
 
             if choice == "e":
                 text = input("Type your message: ").strip()
+                confidence = "high"  # typed input is reliable
                 if not text:
                     print("Empty message, skipping.\n")
                     continue
@@ -207,11 +208,22 @@ def main():
                 continue
 
             # --- Send to agent ---
+            # Augment voice input with STT metadata so the agent can
+            # apply fuzzy matching when confidence is low
+            if confidence != "high":
+                lang = result.get("language", "?")
+                agent_text = (
+                    f"[voice, confidence: {confidence}, language: {lang}]\n"
+                    f"{text}"
+                )
+            else:
+                agent_text = text
+
             msg_counter += 1
             messages.append({
                 "id": f"msg-{msg_counter}",
                 "role": "user",
-                "content": text,
+                "content": agent_text,
             })
 
             print("\nChef: ", end="", flush=True)
