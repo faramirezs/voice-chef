@@ -45,7 +45,7 @@ This means:
 
 Backend uses `password-validator` package for password validation.
 
-The rule for a strong password is defined in `faspapi/app/auth_utils.py`: it must be from 8 to 22 characters long, contains uppercase, lowercase, digits, symbols, and doesn't contain spaces.
+The rule for a strong password is defined in `backend/app/utils/auth_utils.py`: it must be from 8 to 22 characters long, contains uppercase, lowercase, digits, symbols, and doesn't contain spaces.
 
 
 ### Login

@@ -22,12 +22,12 @@ def _load_models_module() -> None:
     """Load all SQLModel classes so every managed table is registered.
 
     Priority:
-    1. ``fastapi/app/models.py`` — comprehensive flat schema file (dev / CI branch)
-    2. ``fastapi/app/models/__init__.py`` — package entry-point (main branch style)
+    1. ``backend/app/models.py`` — comprehensive flat schema file (dev / CI branch)
+    2. ``backend/app/models/__init__.py`` — package entry-point (main branch style)
     """
     repo_root = Path(__file__).resolve().parents[2]
     app_dirs = [
-        repo_root / "fastapi" / "app",
+        repo_root / "backend" / "app",
         Path("/code/app"),
     ]
 
