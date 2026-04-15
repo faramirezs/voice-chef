@@ -10,12 +10,12 @@ from app.schemas.pagination import PaginatedResponse
 
 from app.core.database import get_session
 from app.models.recipe import Recipe
-from app.models.ingredient import Ingredient
+from app.models.tmp_draft import Ingredients
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail
 from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
-from app.models.recipe_ingredients import RecipeIngredient
+from app.models.tmp_draft import RecipeIngredients
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
@@ -27,7 +27,7 @@ def create_recipe(recipe: RecipeWrite, session: Session = Depends(get_session)):
     session.flush()
 
     # for ing in recipe.ingredients:
-    #     link = RecipeIngredient(
+    #     link = RecipeIngredients(
     #         recipe_id=recipe.id,
     #         ingredient_id=ing.ingredient_id,
     #         quantity=ing.quantity,
@@ -60,7 +60,7 @@ def retrieve_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
         .where(Recipe.id == recipe_id)
         .options(
             selectinload(Recipe.recipe_ingredients)
-            .selectinload(RecipeIngredient.ingredient)
+            .selectinload(RecipeIngredients.ingredient)
         )
     )
 

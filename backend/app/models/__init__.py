@@ -7,7 +7,6 @@ from .tmp_draft import (
     Units,
     Agents,
     Categories,
-    Ingredients,
     ShoppingLists,
     Tags,
     TaskLists,

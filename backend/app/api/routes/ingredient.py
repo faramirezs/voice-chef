@@ -6,27 +6,26 @@ from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse
 
 from app.core.database import get_session
-from app.models.recipe import Recipe
-from app.models.ingredient import Ingredient
+from app.models.tmp_draft import Ingredients
 from app.schemas.ingredient import IngredientWrite, IngredientSummaryResponse
 from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/ingredient", tags=["Ingredients"])
 
 
-@router.get("", response_model=PaginatedResponse[Ingredient])
+@router.get("", response_model=PaginatedResponse[Ingredients])
 def retrieve_ingredient(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params)):
 
-    query = select(Ingredient)
+    query = select(Ingredients)
     ingredients = paginate(query, session, pagination)
     return ingredients
 
 
 @router.post("", response_model=IngredientSummaryResponse)
 def create_ingredient(ingredient: IngredientWrite, session: Session = Depends(get_session)):
-    new_ingredient = Ingredient(**ingredient.model_dump())
+    new_ingredient = Ingredients(**ingredient.model_dump())
 
     session.add(new_ingredient)
     session.flush()

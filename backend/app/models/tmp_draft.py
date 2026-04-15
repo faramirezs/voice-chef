@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 from .users import Tenants, Users
-from .tmp_recipe import Recipes
+from .recipe import Recipes
 Recipe = Recipes
 
 
