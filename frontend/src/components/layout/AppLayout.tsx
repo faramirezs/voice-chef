@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { AppSidebar } from './AppSidebar';
+import { AppSidebar } from '@/components/app-sidebar';
 
 export function AppLayout() {
   return (

@@ -1,8 +1,13 @@
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRecipe } from '@/hooks/useRecipes';
+import { useRecipe, useUpdateRecipe } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import type { Recipe } from '@/types/recipe';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -45,6 +50,137 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">{children}</div>;
 }
 
+type EditableRecipeField = 'name' | 'description' | 'instructions';
+
+function InlineEditableText({
+  recipeId,
+  field,
+  value,
+  label,
+  multiline = false,
+  className,
+  displayClassName,
+}: {
+  recipeId: string;
+  field: EditableRecipeField;
+  value: string | null | undefined;
+  label: string;
+  multiline?: boolean;
+  className?: string;
+  displayClassName?: string;
+}) {
+  const updateRecipe = useUpdateRecipe();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? '');
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setDraft(value ?? '');
+      setValidationError(null);
+    }
+  }, [isEditing, value]);
+
+  const handleSave = () => {
+    const nextValue = draft.trim();
+
+    if (field === 'name' && !nextValue) {
+      setValidationError('Recipe name is required.');
+      return;
+    }
+
+    setValidationError(null);
+
+    const payload =
+      field === 'name'
+        ? ({ id: recipeId, name: nextValue } as Partial<Recipe> & { id: string })
+        : ({ id: recipeId, [field]: nextValue || null } as Partial<Recipe> & { id: string });
+
+    updateRecipe.mutate(
+      payload,
+      {
+        onSuccess: () => {
+          setValidationError(null);
+          setIsEditing(false);
+        },
+      },
+    );
+  };
+
+  return (
+    <div className={cn('space-y-1', className)}>
+      {label && <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>}
+      {isEditing ? (
+        <div className="space-y-2">
+          {multiline ? (
+            <Textarea
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <Input
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (validationError) {
+                  setValidationError(null);
+                }
+              }}
+              autoFocus
+            />
+          )}
+          {validationError && (
+            <p className="text-xs text-destructive">{validationError}</p>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" type="button" onClick={handleSave} disabled={updateRecipe.isPending}>
+              Save
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setDraft(value ?? '');
+                setValidationError(null);
+                setIsEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : value ? (
+        <button
+          type="button"
+          onClick={() => setIsEditing(true)}
+          className="block w-full text-left rounded-lg border border-transparent px-2 py-1 -mx-2 -my-1 hover:border-border hover:bg-muted/40 transition-colors"
+        >
+          {multiline ? (
+            <p className={cn('text-sm leading-relaxed whitespace-pre-line', displayClassName)}>{value}</p>
+          ) : (
+            <p className={cn('text-sm font-medium', displayClassName)}>{value}</p>
+          )}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsEditing(true)}
+          className="w-full text-left rounded-lg border border-dashed border-border/70 px-2 py-1 text-sm text-muted-foreground/50 italic hover:bg-muted/30 transition-colors"
+        >
+          Click to add
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TextBlock({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div className="space-y-1">
@@ -72,6 +208,18 @@ export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: recipe, isLoading, isError } = useRecipe(id!);
+  const moveToActive = useUpdateRecipe();
+
+  const handleMoveToActive = () => {
+    if (!recipe) {
+      return;
+    }
+
+    moveToActive.mutate({
+      id: recipe.id,
+      status: recipe.status === 'active' ? 'draft' : 'active',
+    });
+  };
 
   if (isLoading) {
     return (
@@ -87,7 +235,7 @@ export function RecipeDetailPage() {
   if (isError || !recipe) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => navigate('/')}>← Back to recipes</Button>
+        <Button variant="outline" onClick={() => navigate(-1)}>← Back to recipes</Button>
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-destructive">
           Recipe not found.
         </div>
@@ -105,10 +253,43 @@ export function RecipeDetailPage() {
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-4">
-        <Button size="sm" onClick={() => navigate('/')}>← Back</Button>
+        <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
+        <div
+          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${recipeImage})` }}
+          aria-hidden="true"
+        />
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold">{recipe.name}</h1>
+          <InlineEditableText
+            recipeId={recipe.id}
+            field="name"
+            value={recipe.name}
+            label=""
+            className="w-full sm:w-auto"
+            displayClassName="text-2xl font-semibold"
+          />
           <span className={badgeClass}>{recipe.status}</span>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            size="lg"
+            type="button"
+            className="min-w-40"
+            onClick={handleMoveToActive}
+            disabled={moveToActive.isPending}
+            aria-busy={moveToActive.isPending}
+          >
+            Change status
+          </Button>
+          <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
+            Edit recipe
+          </Button>
+          <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
+            Duplicate recipe
+          </Button>
+          <Button size="lg" variant="destructive" onClick={() => alert('Delete recipe functionality coming soon!')}>
+            Delete recipe
+          </Button>
         </div>
         {recipe.description_short && (
           <p className="text-muted-foreground">{recipe.description_short}</p>
@@ -129,13 +310,25 @@ export function RecipeDetailPage() {
 
               {/* ── Long-form text ─────────────────────────────────── */}
       <Section title="Description">
-        <TextBlock label="" value={recipe.description} />
-      </Section>
-      <Section title="Instructions">
-        <TextBlock label="" value={recipe.instructions} />
+        <InlineEditableText
+          recipeId={recipe.id}
+          field="description"
+          value={recipe.description}
+          label=""
+          multiline
+        />
       </Section>
       <Section title="Notes">
         <TextBlock label="" value={recipe.notes} />
+      </Section>
+      <Section title="Instructions">
+        <InlineEditableText
+          recipeId={recipe.id}
+          field="instructions"
+          value={recipe.instructions}
+          label=""
+          multiline
+        />
       </Section>
       <Section title="Notes on Instructions">
         <TextBlock label="" value={recipe.notes_instructions} />

@@ -1,7 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRecipes } from '@/hooks/useRecipes';
 import { RecipeCard } from './RecipeCard';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const PAGE_SIZE = 12;
 
 function RecipeSkeleton() {
   return (
@@ -16,26 +21,65 @@ function RecipeSkeleton() {
 }
 
 export function RecipeList() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const { data: recipes, isLoading, isError, error } = useRecipes(
-    statusFilter ? { status: statusFilter } : undefined,
-  );
+  const offset = page * PAGE_SIZE;
+  const normalizedNameFilter = nameFilter.trim();
+
+  const { data: recipePage, isLoading, isError, error } = useRecipes({
+    ...(statusFilter ? { status: statusFilter } : {}),
+    ...(normalizedNameFilter ? { name: normalizedNameFilter } : {}),
+    offset,
+    limit: PAGE_SIZE,
+  });
+  const visibleRecipes = recipePage?.items ?? [];
+  const isInitialLoading = isLoading && !recipePage;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Input
+          placeholder="Filter by name..."
+          className="max-w-sm"
+          value={nameFilter}
+          onChange={(e) => {
+            setNameFilter(e.target.value);
+            setPage(0);
+          }}
+        />
+        <Input
           placeholder="Filter by status (e.g. draft, active)…"
           className="max-w-sm"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(0);
+          }}
         />
-        {!isLoading && recipes && (
+        {!isInitialLoading && recipePage && (
           <span className="text-sm text-muted-foreground">
-            {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
+            {recipePage.meta.total} recipe{recipePage.meta.total !== 1 ? 's' : ''}
           </span>
         )}
+        <div className="flex gap-2 ml-auto">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setViewMode((mode) => (mode === 'grid' ? 'list' : 'grid'))}
+          >
+            {viewMode === 'grid' ? 'List view' : 'Grid view'}
+          </Button>
+          <Button variant="outline" type="button">
+            Import
+          </Button>
+          <Button variant="outline" type="button">
+            Export
+          </Button>
+        </div>
       </div>
 
       {isError && (
@@ -45,7 +89,7 @@ export function RecipeList() {
         </div>
       )}
 
-      {isLoading && (
+      {isInitialLoading && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <RecipeSkeleton key={i} />
@@ -53,18 +97,68 @@ export function RecipeList() {
         </div>
       )}
 
-      {!isLoading && !isError && recipes?.length === 0 && (
+      {!isInitialLoading && !isError && visibleRecipes.length === 0 && (
         <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
           No recipes found.
         </div>
       )}
 
-      {!isLoading && recipes && recipes.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          {recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
-          ))}
-        </div>
+      {!isInitialLoading && visibleRecipes.length > 0 && (
+        <>
+          {viewMode === 'grid' ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+              {visibleRecipes.map((recipe) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleRecipes.map((recipe) => (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                  onClick={() => navigate(`/recipes/${recipe.id}`)}
+                >
+                  <span className="font-medium">{recipe.name}</span>
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize',
+                      recipe.status === 'draft'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : recipe.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-600',
+                    )}
+                  >
+                    {recipe.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Showing {offset + 1}-{offset + visibleRecipes.length} of {recipePage?.meta.total ?? 0}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={() => setPage((currentPage) => currentPage + 1)}
+                disabled={offset + PAGE_SIZE >= (recipePage?.meta.total ?? 0)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
