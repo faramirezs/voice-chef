@@ -8,6 +8,7 @@ Three complementary drift detection strategies:
 """
 import re
 import sys
+import importlib
 import importlib.util
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,14 @@ from sqlmodel import SQLModel
 def _load_models_module() -> None:
     """Load models (file or package) to register all SQLModel tables."""
     repo_root = Path(__file__).resolve().parents[2]
+
+    for package_root in (repo_root / "backend", Path("/code")):
+        root_str = str(package_root)
+        if package_root.exists() and root_str not in sys.path:
+            sys.path.insert(0, root_str)
+
     app_dirs = [
+        repo_root / "backend" / "app",
         repo_root / "fastapi" / "app",
         Path("/code/app"),
     ]
@@ -32,6 +40,11 @@ def _load_models_module() -> None:
         parent = str(app_dir.parent)
         if parent not in sys.path:
             sys.path.insert(0, parent)
+
+        # Prefer package import when available to avoid duplicate metadata registration.
+        if (app_dir / "__init__.py").exists() and ((app_dir / "models.py").exists() or (app_dir / "models").is_dir()):
+            importlib.import_module("app.models")
+            return
 
         # Prefer models.py flat file when it exists.
         models_path = app_dir / "models.py"
@@ -45,9 +58,8 @@ def _load_models_module() -> None:
         # Fall back to models/ package (__init__.py).
         pkg_init = app_dir / "models" / "__init__.py"
         if pkg_init.exists():
-            import importlib as _il
             if "app.models" not in sys.modules:
-                _il.import_module("app.models")
+                importlib.import_module("app.models")
             return
 
     raise ModuleNotFoundError("Could not locate models.py or models/__init__.py for drift test metadata loading")

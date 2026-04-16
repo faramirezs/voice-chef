@@ -6,14 +6,15 @@ import uuid
 from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, String, Text, Uuid, text
 from sqlmodel import Field, Relationship, SQLModel
 
-# NOTE: mpeshko. This file was created by mpeshko, and it'll be removed
-# later, because mekundur works on recipes and he has his version
 
 if TYPE_CHECKING:
-    from .users import Users, Tenants
+    from app.models.users import Users, Tenants
+    from app.models.recipe_ingredients import RecipeIngredient
+    from app.models.tmp_draft import Categories, Tags, RecipeVersions
 
 
-class Recipes(SQLModel, table=True):
+class Recipe(SQLModel, table=True):
+    __tablename__ = 'recipes'
     __table_args__ = (
         CheckConstraint("status IN ('draft', 'active', 'archived')", name='valid_status'),
         CheckConstraint('portion_size_grams IS NULL OR portion_size_grams > 0::numeric', name='positive_portion_size_grams'),
@@ -59,11 +60,9 @@ class Recipes(SQLModel, table=True):
     updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     category: list['Categories'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_categories'})
-    users: Optional['Users'] = Relationship(back_populates='recipes')
+    created_by_user: Optional['Users'] = Relationship(back_populates='recipes')
     tenant: 'Tenants' = Relationship(back_populates='recipes')
     tag: list['Tags'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
-    recipe_ingredients: list['RecipeIngredients'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.recipe_id]'})
+    recipe_ingredients: list['RecipeIngredient'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredient.recipe_id]', 'passive_deletes': True})
     recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
-
-Recipe = Recipes

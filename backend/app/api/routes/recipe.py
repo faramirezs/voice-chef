@@ -10,18 +10,28 @@ from app.schemas.pagination import PaginatedResponse
 
 from app.core.database import get_session
 from app.models.recipe import Recipe
-from app.models.tmp_draft import Ingredients
+from app.models.tmp_draft import Ingredient
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail
 from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
-from app.models.tmp_draft import RecipeIngredients
+from app.models.recipe_ingredients import RecipeIngredient
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
+# TEMP DEV DEFAULT: remove once tenant is resolved from auth context.
+DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
+
 @router.post("", response_model=RecipeSummaryResponse)
-def create_recipe(recipe: RecipeWrite, session: Session = Depends(get_session)):
-    new_recipe = Recipe(**recipe.model_dump(exclude={"ingredients"}))
+def create_recipe(
+    recipe: RecipeWrite,
+    tenant_id: UUID = DEFAULT_TENANT_ID,
+    session: Session = Depends(get_session),
+):
+    # Temporary dev-safe mode: fallback tenant_id until auth-based tenant resolution is implemented.
+    payload = recipe.model_dump(exclude={"ingredients"})
+    payload["tenant_id"] = tenant_id
+    new_recipe = Recipe(**payload)
 
     session.add(new_recipe)
     session.flush()
@@ -60,7 +70,7 @@ def retrieve_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
         .where(Recipe.id == recipe_id)
         .options(
             selectinload(Recipe.recipe_ingredients)
-            .selectinload(RecipeIngredients.ingredient)
+            .selectinload(RecipeIngredient.ingredient)
         )
     )
 

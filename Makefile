@@ -120,4 +120,7 @@ drift-gate-local:
 	./db/scripts/run_local_drift_gate.sh
 	@echo "Done: local schema drift gate passed"
 
+db-connect:
+	docker exec -it voice-chef-db-1 psql -h localhost -p 5432 -U recipe_user -d recipe_db
+
 .PHONY: all dev prod down re clean fclean status logs help % build up start stop agent-build agent-build-nocache agent-recreate dump-blast-check dump-regen drift-gate-local

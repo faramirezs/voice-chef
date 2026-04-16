@@ -135,13 +135,13 @@ def _load_models_module() -> None:
     repo_root = Path(__file__).resolve().parents[2]
 
     # Ensure 'app.*' imports inside split model wrappers resolve when called from repo root.
-    for package_root in (repo_root / "fastapi", Path("/code")):
+    for package_root in (repo_root / "backend", Path("/code")):
         root_str = str(package_root)
         if package_root.exists() and root_str not in sys.path:
             sys.path.insert(0, root_str)
 
     app_dirs = [
-        repo_root / "fastapi" / "app",
+        repo_root / "backend" / "app",
         Path("/code/app"),
     ]
     loaded = False

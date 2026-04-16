@@ -1,5 +1,7 @@
 from .users import Tenants, Users
-from .recipe import Recipes, Recipe
+from .recipe import Recipe
+from .ingredient import Ingredient, NutritionFacts
+from .recipe_ingredients import RecipeIngredient
 from .tmp_draft import (
     Additives,
     Allergens,
@@ -13,13 +15,12 @@ from .tmp_draft import (
     AgentInteractions,
     t_ingredient_additives,
     t_ingredient_allergens,
-    IngredientNutrition,
-    IngredientPrices,
+    #IngredientPrices,
     IngredientUnits,
     ShoppingListItems,
     TaskItems,
     t_recipe_categories,
-    RecipeIngredients,
+    #RecipeIngredients,
     RecipeNutritionCache,
     t_recipe_tags,
     RecipeVersions,

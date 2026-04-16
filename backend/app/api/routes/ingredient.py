@@ -6,7 +6,7 @@ from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse
 
 from app.core.database import get_session
-from app.models.tmp_draft import Ingredients
+from app.models.ingredient import Ingredients
 from app.schemas.ingredient import IngredientWrite, IngredientSummaryResponse
 from app.schemas.pagination import PaginatedResponse
 

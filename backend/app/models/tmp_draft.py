@@ -1,5 +1,5 @@
 # All secondary/supporting SQLModel classes for the Voice Chef schema.
-# Tenants, Users, Recipes live in their own files; everything else lives here.
+# Tenants, Users, Recipes, Ingredients, RecipeIngredients live in their own files; everything else lives here.
 
 from typing import Optional
 import datetime
@@ -15,8 +15,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 from .users import Tenants, Users
-from .recipe import Recipes
-Recipe = Recipes
+from .recipe import Recipe
+from .ingredient import Ingredient, NutritionFacts
+from .recipe_ingredients import RecipeIngredient
+Recipes = Recipe
+Ingredients = Ingredient
 
 
 class Additives(SQLModel, table=True):
@@ -30,7 +33,7 @@ class Additives(SQLModel, table=True):
     name_de: str = Field(sa_column=Column('name_de', String(255), nullable=False))
     name_en: Optional[str] = Field(default=None, sa_column=Column('name_en', String(255)))
 
-    ingredient: list['Ingredients'] = Relationship(back_populates='additive', sa_relationship_kwargs={'secondary': 'ingredient_additives'})
+    ingredient: list['Ingredient'] = Relationship(back_populates='additive', sa_relationship_kwargs={'secondary': 'ingredient_additives'})
 
 
 class Allergens(SQLModel, table=True):
@@ -45,7 +48,7 @@ class Allergens(SQLModel, table=True):
     name_en: Optional[str] = Field(default=None, sa_column=Column('name_en', String(255)))
     parent_code: Optional[int] = Field(default=None, sa_column=Column('parent_code', Integer))
 
-    ingredient: list['Ingredients'] = Relationship(back_populates='allergen', sa_relationship_kwargs={'secondary': 'ingredient_allergens'})
+    ingredient: list['Ingredient'] = Relationship(back_populates='allergen', sa_relationship_kwargs={'secondary': 'ingredient_allergens'})
 
 
 class AuditLogs(SQLModel, table=True):
@@ -113,40 +116,40 @@ class Categories(SQLModel, table=True):
     tenant_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('tenant_id', Uuid))
 
     tenant: Optional['Tenants'] = Relationship(back_populates='categories')
-    recipe: list['Recipes'] = Relationship(back_populates='category', sa_relationship_kwargs={'secondary': 'recipe_categories'})
+    recipe: list['Recipe'] = Relationship(back_populates='category', sa_relationship_kwargs={'secondary': 'recipe_categories'})
 
 
-class Ingredients(SQLModel, table=True):
-    __table_args__ = (
-        ForeignKeyConstraint(['parent_id'], ['ingredients.id'], name='ingredients_parent_id_fkey'),
-        ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='ingredients_tenant_id_fkey'),
-        PrimaryKeyConstraint('id', name='ingredients_pkey'),
-        Index('idx_ingredients_name', 'name'),
-        Index('idx_ingredients_parent', 'parent_id'),
-        Index('idx_ingredients_tenant', 'tenant_id')
-    )
+# class Ingredients(SQLModel, table=True):
+#     __table_args__ = (
+#         ForeignKeyConstraint(['parent_id'], ['ingredients.id'], name='ingredients_parent_id_fkey'),
+#         ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='ingredients_tenant_id_fkey'),
+#         PrimaryKeyConstraint('id', name='ingredients_pkey'),
+#         Index('idx_ingredients_name', 'name'),
+#         Index('idx_ingredients_parent', 'parent_id'),
+#         Index('idx_ingredients_tenant', 'tenant_id')
+#     )
 
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    name: str = Field(sa_column=Column('name', String(255), nullable=False))
-    source: str = Field(sa_column=Column('source', String(50), nullable=False, server_default=text("'standard'::character varying")))
-    is_custom: bool = Field(sa_column=Column('is_custom', Boolean, nullable=False, server_default=text('false')))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-    tenant_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('tenant_id', Uuid))
-    name_english: Optional[str] = Field(default=None, sa_column=Column('name_english', String(255)))
-    bls_key: Optional[str] = Field(default=None, sa_column=Column('bls_key', String(50)))
-    default_unit: Optional[str] = Field(default=None, sa_column=Column('default_unit', String(50)))
-    parent_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('parent_id', Uuid))
+#     id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
+#     name: str = Field(sa_column=Column('name', String(255), nullable=False))
+#     source: str = Field(sa_column=Column('source', String(50), nullable=False, server_default=text("'standard'::character varying")))
+#     is_custom: bool = Field(sa_column=Column('is_custom', Boolean, nullable=False, server_default=text('false')))
+#     created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
+#     updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
+#     tenant_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('tenant_id', Uuid))
+#     name_english: Optional[str] = Field(default=None, sa_column=Column('name_english', String(255)))
+#     bls_key: Optional[str] = Field(default=None, sa_column=Column('bls_key', String(50)))
+#     default_unit: Optional[str] = Field(default=None, sa_column=Column('default_unit', String(50)))
+#     parent_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('parent_id', Uuid))
 
-    additive: list['Additives'] = Relationship(back_populates='ingredient', sa_relationship_kwargs={'secondary': 'ingredient_additives'})
-    allergen: list['Allergens'] = Relationship(back_populates='ingredient', sa_relationship_kwargs={'secondary': 'ingredient_allergens'})
-    parent: Optional['Ingredients'] = Relationship(back_populates='parent_reverse', sa_relationship_kwargs={'remote_side': '[Ingredients.id]'})
-    parent_reverse: list['Ingredients'] = Relationship(back_populates='parent', sa_relationship_kwargs={'remote_side': '[Ingredients.parent_id]'})
-    tenant: Optional['Tenants'] = Relationship(back_populates='ingredients')
-    ingredient_nutrition: 'IngredientNutrition' = Relationship(back_populates='ingredient', sa_relationship_kwargs={'uselist': False})
-    ingredient_prices: list['IngredientPrices'] = Relationship(back_populates='ingredient')
-    ingredient_units: list['IngredientUnits'] = Relationship(back_populates='ingredient')
-    recipe_ingredients: list['RecipeIngredients'] = Relationship(back_populates='ingredient')
+#     additive: list['Additives'] = Relationship(back_populates='ingredient', sa_relationship_kwargs={'secondary': 'ingredient_additives'})
+#     allergen: list['Allergens'] = Relationship(back_populates='ingredient', sa_relationship_kwargs={'secondary': 'ingredient_allergens'})
+#     parent: Optional['Ingredients'] = Relationship(back_populates='parent_reverse', sa_relationship_kwargs={'remote_side': '[Ingredients.id]'})
+#     parent_reverse: list['Ingredients'] = Relationship(back_populates='parent', sa_relationship_kwargs={'remote_side': '[Ingredients.parent_id]'})
+#     tenant: Optional['Tenants'] = Relationship(back_populates='ingredients')
+#     ingredient_nutrition: 'IngredientNutrition' = Relationship(back_populates='ingredient', sa_relationship_kwargs={'uselist': False})
+#     ingredient_prices: list['IngredientPrices'] = Relationship(back_populates='ingredient')
+#     ingredient_units: list['IngredientUnits'] = Relationship(back_populates='ingredient')
+#     recipe_ingredients: list['RecipeIngredients'] = Relationship(back_populates='ingredient')
 
 
 class ShoppingLists(SQLModel, table=True):
@@ -177,7 +180,7 @@ class Tags(SQLModel, table=True):
     tenant_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('tenant_id', Uuid))
 
     tenant: Optional['Tenants'] = Relationship(back_populates='tags')
-    recipe: list['Recipes'] = Relationship(back_populates='tag', sa_relationship_kwargs={'secondary': 'recipe_tags'})
+    recipe: list['Recipe'] = Relationship(back_populates='tag', sa_relationship_kwargs={'secondary': 'recipe_tags'})
 
 
 class TaskLists(SQLModel, table=True):
@@ -246,31 +249,31 @@ t_ingredient_allergens = Table(
 )
 
 
-class IngredientNutrition(SQLModel, table=True):
-    __tablename__ = 'ingredient_nutrition'
-    __table_args__ = (
-        ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE', name='ingredient_nutrition_ingredient_id_fkey'),
-        PrimaryKeyConstraint('id', name='ingredient_nutrition_pkey'),
-        UniqueConstraint('ingredient_id', name='ingredient_nutrition_ingredient_id_key')
-    )
+# class IngredientNutrition(SQLModel, table=True):
+#     __tablename__ = 'ingredient_nutrition'
+#     __table_args__ = (
+#         ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE', name='ingredient_nutrition_ingredient_id_fkey'),
+#         PrimaryKeyConstraint('id', name='ingredient_nutrition_pkey'),
+#         UniqueConstraint('ingredient_id', name='ingredient_nutrition_ingredient_id_key')
+#     )
 
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    ingredient_id: uuid.UUID = Field(sa_column=Column('ingredient_id', Uuid, nullable=False))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-    energy_kj: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('energy_kj', Numeric))
-    energy_kcal: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('energy_kcal', Numeric))
-    fat: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('fat', Numeric))
-    saturates: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('saturates', Numeric))
-    carbs: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('carbs', Numeric))
-    sugars: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('sugars', Numeric))
-    protein: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('protein', Numeric))
-    fiber: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('fiber', Numeric))
-    salt: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('salt', Numeric))
-    alcohol: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('alcohol', Numeric))
-    water: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('water', Numeric))
+#     id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
+#     ingredient_id: uuid.UUID = Field(sa_column=Column('ingredient_id', Uuid, nullable=False))
+#     created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
+#     updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
+#     energy_kj: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('energy_kj', Numeric))
+#     energy_kcal: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('energy_kcal', Numeric))
+#     fat: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('fat', Numeric))
+#     saturates: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('saturates', Numeric))
+#     carbs: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('carbs', Numeric))
+#     sugars: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('sugars', Numeric))
+#     protein: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('protein', Numeric))
+#     fiber: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('fiber', Numeric))
+#     salt: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('salt', Numeric))
+#     alcohol: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('alcohol', Numeric))
+#     water: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('water', Numeric))
 
-    ingredient: 'Ingredients' = Relationship(back_populates='ingredient_nutrition')
+#     ingredient: 'Ingredients' = Relationship(back_populates='ingredient_nutrition')
 
 
 class IngredientPrices(SQLModel, table=True):
@@ -298,7 +301,7 @@ class IngredientPrices(SQLModel, table=True):
     article_number: Optional[str] = Field(default=None, sa_column=Column('article_number', String(100)))
     price_per_gram: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('price_per_gram', Numeric(14, 8)))
 
-    ingredient: 'Ingredients' = Relationship(back_populates='ingredient_prices')
+    ingredient: 'Ingredient' = Relationship(back_populates='ingredient_prices')
 
 
 class IngredientUnits(SQLModel, table=True):
@@ -317,7 +320,7 @@ class IngredientUnits(SQLModel, table=True):
     grams_per_unit: decimal.Decimal = Field(sa_column=Column('grams_per_unit', Numeric, nullable=False))
     label: Optional[str] = Field(default=None, sa_column=Column('label', String(100)))
 
-    ingredient: 'Ingredients' = Relationship(back_populates='ingredient_units')
+    ingredient: 'Ingredient' = Relationship(back_populates='ingredient_units')
 
 
 class ShoppingListItems(SQLModel, table=True):
@@ -372,38 +375,38 @@ t_recipe_categories = Table(
 )
 
 
-class RecipeIngredients(SQLModel, table=True):
-    __tablename__ = 'recipe_ingredients'
-    __table_args__ = (
-        CheckConstraint('quantity_grams IS NULL OR quantity_grams >= 0::numeric', name='recipe_ingredients_quantity_grams_non_negative'),
-        CheckConstraint('num_nonnulls(ingredient_id, sub_recipe_id) = 1', name='recipe_ingredients_exactly_one_item'),
-        ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE', name='recipe_ingredients_ingredient_id_fkey'),
-        ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_recipe_id_fkey'),
-        ForeignKeyConstraint(['sub_recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_sub_recipe_id_fkey'),
-        PrimaryKeyConstraint('id', name='recipe_ingredients_pkey'),
-        UniqueConstraint('recipe_id', 'ingredient_id', 'sort_order', name='uq_recipe_ingredient_order'),
-        Index('idx_recipe_ingredients_ingredient', 'ingredient_id'),
-        Index('idx_recipe_ingredients_recipe', 'recipe_id'),
-        Index('idx_recipe_ingredients_sub_recipe', 'sub_recipe_id'),
-    )
+# class RecipeIngredients(SQLModel, table=True):
+#     __tablename__ = 'recipe_ingredients'
+#     __table_args__ = (
+#         CheckConstraint('quantity_grams IS NULL OR quantity_grams >= 0::numeric', name='recipe_ingredients_quantity_grams_non_negative'),
+#         CheckConstraint('num_nonnulls(ingredient_id, sub_recipe_id) = 1', name='recipe_ingredients_exactly_one_item'),
+#         ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE', name='recipe_ingredients_ingredient_id_fkey'),
+#         ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_recipe_id_fkey'),
+#         ForeignKeyConstraint(['sub_recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_sub_recipe_id_fkey'),
+#         PrimaryKeyConstraint('id', name='recipe_ingredients_pkey'),
+#         UniqueConstraint('recipe_id', 'ingredient_id', 'sort_order', name='uq_recipe_ingredient_order'),
+#         Index('idx_recipe_ingredients_ingredient', 'ingredient_id'),
+#         Index('idx_recipe_ingredients_recipe', 'recipe_id'),
+#         Index('idx_recipe_ingredients_sub_recipe', 'sub_recipe_id'),
+#     )
 
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    recipe_id: uuid.UUID = Field(sa_column=Column('recipe_id', Uuid, nullable=False))
-    ingredient_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('ingredient_id', Uuid, nullable=True))
-    sub_recipe_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('sub_recipe_id', Uuid, nullable=True))
-    sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    quantity: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quantity', Numeric))
-    unit: Optional[str] = Field(default=None, sa_column=Column('unit', String(50)))
-    preparation: Optional[str] = Field(default=None, sa_column=Column('preparation', String(255)))
-    quid_percent: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quid_percent', Numeric))
-    is_organic: Optional[bool] = Field(default=None, sa_column=Column('is_organic', Boolean, server_default=text('false')))
-    item_type: Optional[str] = Field(default=None, sa_column=Column('item_type', String(50)))
-    quantity_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quantity_grams', Numeric))
+#     id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
+#     recipe_id: uuid.UUID = Field(sa_column=Column('recipe_id', Uuid, nullable=False))
+#     ingredient_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('ingredient_id', Uuid, nullable=True))
+#     sub_recipe_id: Optional[uuid.UUID] = Field(default=None, sa_column=Column('sub_recipe_id', Uuid, nullable=True))
+#     sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
+#     created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
+#     quantity: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quantity', Numeric))
+#     unit: Optional[str] = Field(default=None, sa_column=Column('unit', String(50)))
+#     preparation: Optional[str] = Field(default=None, sa_column=Column('preparation', String(255)))
+#     quid_percent: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quid_percent', Numeric))
+#     is_organic: Optional[bool] = Field(default=None, sa_column=Column('is_organic', Boolean, server_default=text('false')))
+#     item_type: Optional[str] = Field(default=None, sa_column=Column('item_type', String(50)))
+#     quantity_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('quantity_grams', Numeric))
 
-    ingredient: Optional['Ingredients'] = Relationship(back_populates='recipe_ingredients')
-    recipe: 'Recipes' = Relationship(back_populates='recipe_ingredients', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.recipe_id]'})
-    sub_recipe: Optional['Recipes'] = Relationship(sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.sub_recipe_id]'})
+#     ingredient: Optional['Ingredients'] = Relationship(back_populates='recipe_ingredients')
+#     recipe: 'Recipes' = Relationship(back_populates='recipe_ingredients', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.recipe_id]'})
+#     sub_recipe: Optional['Recipes'] = Relationship(sa_relationship_kwargs={'foreign_keys': '[RecipeIngredients.sub_recipe_id]'})
 
 
 class RecipeNutritionCache(SQLModel, table=True):
@@ -451,4 +454,4 @@ class RecipeVersions(SQLModel, table=True):
     data: dict = Field(sa_column=Column('data', JSONB, nullable=False))
     created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
 
-    recipe: 'Recipes' = Relationship(back_populates='recipe_versions')
+    recipe: 'Recipe' = Relationship(back_populates='recipe_versions')
