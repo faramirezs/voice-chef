@@ -50,6 +50,15 @@ export interface Recipe {
   expiry_date: string | null;
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  meta: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}
+
 export interface Ingredient {
   id: string;
   name: string;

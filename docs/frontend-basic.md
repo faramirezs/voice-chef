@@ -1,0 +1,25 @@
+HTML = structure (<div class="redDiv">, <p>, <h1>, <button>)
+
+CSS = style (.redDiv, color = red; .myClass {font-size: 100px})
+
+JavaScript = dynamic behavior / actions
+
+----------
+
+React = ReactJS => 
+1) components <RecipeCard>
+2) props (properties) <RecipeCard color=red>
+3) state 
+Actual page structure compared to VirtualDOM
+->> only differences get rendered
+
+-----
+Vite = build tool
+Axios = HTTP requests
+TanStack Query = caching
+
+Tailwind = TailwindCSS
+
+ShadCN UI
+
+TypeScript = JS with types;
