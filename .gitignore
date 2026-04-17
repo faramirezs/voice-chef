@@ -23,3 +23,9 @@ logs/*.log
 docs/migration-012-gap-analysis.md
 docs/schema-drift-local-vs-ci-report.md
 backend/app/models/bk/
+
+# JavaScript dependencies
+**/node_modules/
+
+# macOS Finder metadata
+**/.DS_Store
