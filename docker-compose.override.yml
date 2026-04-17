@@ -1,4 +1,14 @@
 services:
+  db:
+    ports:
+      - "5432:5432"
+
+  backend:
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/app:/code/app
+
   office-frontend:
     build:
       target: dev
@@ -45,10 +55,8 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./fastapi/app:/code/app
+      - ./frontend:/app        # hot reload
+      - node_modules:/app/node_modules
 
 volumes:
-  postgres_data:
-
-networks:
-  app-network:
+  node_modules:
