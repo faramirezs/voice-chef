@@ -1,4 +1,4 @@
--- Align legacy dump revision to the current Alembic migration chain.
+-- Align dump-initialized revision marker to current Alembic head.
 -- This runs only on first database initialization (empty data volume).
 
 DO $$
@@ -9,12 +9,15 @@ BEGIN
         WHERE table_schema = 'public'
           AND table_name = 'alembic_version'
     ) THEN
+        -- Normalize any pre-existing marker to the current migration head.
         UPDATE public.alembic_version
-        SET version_num = '002'
-        WHERE version_num = '003_allergens_additives';
+        SET version_num = '013'
+        WHERE version_num <> '013';
 
-        IF NOT EXISTS (SELECT 1 FROM public.alembic_version) THEN
-            INSERT INTO public.alembic_version(version_num) VALUES ('002');
+        IF NOT EXISTS (
+            SELECT 1 FROM public.alembic_version WHERE version_num = '013'
+        ) THEN
+            INSERT INTO public.alembic_version(version_num) VALUES ('013');
         END IF;
     END IF;
 END $$;

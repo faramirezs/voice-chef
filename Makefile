@@ -44,10 +44,8 @@ fclean:
 status:
 	@$(COMPOSE) ps -a --format "table {{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@printf '\n'
-
 	@docker volume ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
-
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
 
@@ -72,6 +70,9 @@ define HELP_TEXT
 	" make fclean:	Remove containers + images + volumes\n" \
 	" make status:	Full Docker state" \
 	" make logs:	Show logs" \
+	" make drift-gate-local:	Run local 4-gate schema drift check (strict pending-autogen gate)" \
+	" make dump-blast-check:	Reset DB volume and test dump-init -> alembic head upgrade" \
+	" make dump-regen:	Regenerate db/init/01_dump.sql from migration head" \
 	" make help:	Show available commands\n" \
 	" make build:	Build images from compose file" \
 	" make agent-build:\tBuild only agent service" \
@@ -106,5 +107,23 @@ start:
 stop:
 	$(COMPOSE) stop
 
-.PHONY: all dev prod down re clean fclean status logs help % build up start stop
-.PHONY: all dev prod down re clean fclean status logs help % build agent-build agent-build-nocache agent-recreate up start stop
+dump-blast-check:
+	chmod +x db/scripts/dump_upgrade_blast_check.sh
+	./db/scripts/dump_upgrade_blast_check.sh
+
+dump-regen:
+	@echo "Regenerating db/init/01_dump.sql from migration head (isolated temp DB)..."
+	chmod +x db/scripts/regenerate_dump_from_head.sh
+	./db/scripts/regenerate_dump_from_head.sh
+	@echo "Done: db/init/01_dump.sql regenerated from migration head"
+
+drift-gate-local:
+	@echo "Running local 4-gate schema drift check..."
+	chmod +x db/scripts/run_local_drift_gate.sh
+	./db/scripts/run_local_drift_gate.sh
+	@echo "Done: local schema drift gate passed"
+
+db-connect:
+	docker exec -it voice-chef-db-1 psql -h localhost -p 5432 -U recipe_user -d recipe_db
+
+.PHONY: all dev prod down re clean fclean status logs help % build up start stop agent-build agent-build-nocache agent-recreate dump-blast-check dump-regen drift-gate-local
