@@ -72,10 +72,30 @@ export function ChatInterface() {
           <MessageBubble key={msg.id} message={msg} />
         ))}
 
-        {isStreaming && toolActivity && !toolActivity.result && (
-          <div className="flex items-center gap-2 text-text-muted text-base px-2">
-            <span className="inline-block animate-spin text-lg">&#128269;</span>
-            <span>Looking up {toolActivity.toolName}...</span>
+        {toolActivity.length > 0 && (
+          <div className="space-y-1 px-2">
+            {toolActivity.map((activity) => (
+              <div
+                key={activity.toolCallId || `${activity.toolName}-${activity.status}`}
+                className="flex items-center gap-2 text-text-muted text-sm"
+              >
+                {activity.status === "running" && (
+                  <span className="inline-block animate-spin text-base">&#128269;</span>
+                )}
+                {activity.status === "done" && (
+                  <span className="inline-block text-base">&#10003;</span>
+                )}
+                {activity.status === "failed" && (
+                  <span className="inline-block text-base">&#9888;</span>
+                )}
+
+                <span>
+                  {activity.status === "running" && `Looking up ${activity.toolName}...`}
+                  {activity.status === "done" && `Used tool: ${activity.toolName}`}
+                  {activity.status === "failed" && `Tool failed: ${activity.toolName}`}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 

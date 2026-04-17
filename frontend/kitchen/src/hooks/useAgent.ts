@@ -11,6 +11,7 @@ import { chefAgent } from "@/lib/agent";
 export interface ToolActivity {
   toolCallId: string;
   toolName: string;
+  status: "running" | "done" | "failed";
   result?: string;
 }
 
@@ -18,7 +19,7 @@ export function useAgent() {
   const debugStream = import.meta.env.VITE_AGENT_DEBUG_STREAM === "1";
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
+  const [toolActivity, setToolActivity] = useState<ToolActivity[]>([]);
   const threadIdRef = useRef(uuid());
 
   const syncMessages = useCallback(() => {
@@ -36,7 +37,7 @@ export function useAgent() {
       chefAgent.addMessage(userMsg);
       setMessages([...chefAgent.messages]);
       setIsStreaming(true);
-      setToolActivity(null);
+      setToolActivity([]);
 
       if (debugStream) {
         console.log("[agent-debug] run:start", {
@@ -74,20 +75,22 @@ export function useAgent() {
 
           if (event.type === EventType.TOOL_CALL_START) {
             const e = event as { toolCallName?: string; toolCallId?: string };
-            setToolActivity({
-              toolCallId: e.toolCallId ?? "",
-              toolName: e.toolCallName ?? "tool",
+            const toolCallId = e.toolCallId ?? "";
+            const toolName = e.toolCallName ?? "tool";
+            setToolActivity((prev) => {
+              if (prev.some((p) => p.toolCallId === toolCallId)) return prev;
+              return [...prev, { toolCallId, toolName, status: "running" }];
             });
           }
           if (event.type === EventType.TOOL_CALL_RESULT) {
             const e = event as { toolCallId?: string; content?: string };
             setToolActivity((prev) => {
-              if (!prev || prev.toolCallId !== e.toolCallId) return prev;
-              return {
-                toolCallId: prev.toolCallId,
-                toolName: prev.toolName,
-                result: e.content ?? "",
-              };
+              const toolCallId = e.toolCallId ?? "";
+              return prev.map((item) =>
+                item.toolCallId === toolCallId
+                  ? { ...item, status: "done", result: e.content ?? "" }
+                  : item,
+              );
             });
             syncMessages();
           }
@@ -115,6 +118,11 @@ export function useAgent() {
             "Sorry, something went wrong reaching the kitchen assistant. Please try again.",
         };
         chefAgent.addMessage(errorMsg);
+        setToolActivity((prev) =>
+          prev.map((item) =>
+            item.status === "running" ? { ...item, status: "failed" } : item,
+          ),
+        );
       } finally {
         if (debugStream) {
           console.log("[agent-debug] run:end", {
@@ -132,7 +140,7 @@ export function useAgent() {
   const reset = useCallback(() => {
     chefAgent.setMessages([]);
     setMessages([]);
-    setToolActivity(null);
+    setToolActivity([]);
     threadIdRef.current = uuid();
   }, []);
 

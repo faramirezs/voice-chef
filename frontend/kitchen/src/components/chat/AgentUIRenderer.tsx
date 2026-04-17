@@ -1,18 +1,26 @@
 import { KCard } from "@/components/ui/KCard";
 
 interface AgentUIRendererProps {
-  content: string;
+  content: unknown;
 }
 
 interface RecipeData {
+  id?: string;
   name?: string;
   status?: string;
   description?: string;
   instructions?: string;
   serving_recommendation?: string;
-  total_raw_weight_grams?: number;
+  yield_mode?: string;
+  total_raw_weight_grams?: number | string | null;
+  total_cooked_weight_grams?: number | string | null;
+  portion_size_grams?: number | string | null;
+  portions_count_resolved?: number | string | null;
   yield_amount?: number;
   yield_unit?: string;
+  use_by_date?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface PaginationMeta {
@@ -49,6 +57,48 @@ function tryParseJson(raw: string): unknown {
     return JSON.parse(raw);
   } catch {
     return null;
+  }
+}
+
+function extractFencedJson(raw: string): string | null {
+  const match = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  return match ? match[1] : null;
+}
+
+function normalizePayload(content: unknown): unknown {
+  if (typeof content === "string") {
+    const parsed = tryParseJson(content);
+    if (parsed !== null) {
+      return parsed;
+    }
+
+    const fencedJson = extractFencedJson(content);
+    if (fencedJson) {
+      const parsedFenced = tryParseJson(fencedJson);
+      if (parsedFenced !== null) {
+        return parsedFenced;
+      }
+    }
+  }
+
+  if (Array.isArray(content) || isObject(content)) {
+    return content;
+  }
+
+  return null;
+}
+
+function toDisplayText(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (content == null) {
+    return "";
+  }
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
   }
 }
 
@@ -172,6 +222,46 @@ function RecipeCard({ recipe }: { recipe: RecipeData }) {
   );
 }
 
+function asDisplayValue(value: unknown, fallback = "not specified"): string {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  return String(value);
+}
+
+function DetailRow({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className="grid grid-cols-[150px_1fr] gap-2 text-sm">
+      <span className="text-text-muted">{label}</span>
+      <span className="text-text">{asDisplayValue(value)}</span>
+    </div>
+  );
+}
+
+function RecipeDetailCard({ recipe }: { recipe: RecipeData }) {
+  return (
+    <KCard className="p-4 space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="text-lg font-semibold">{recipe.name ?? "Recipe detail"}</h3>
+        {recipe.status && <StatusBadge status={recipe.status} />}
+      </div>
+
+      <div className="space-y-2">
+        <DetailRow label="ID" value={recipe.id} />
+        <DetailRow label="Yield mode" value={recipe.yield_mode} />
+        <DetailRow label="Portions" value={recipe.portions_count_resolved} />
+        <DetailRow label="Portion size (g)" value={recipe.portion_size_grams} />
+        <DetailRow label="Total raw weight (g)" value={recipe.total_raw_weight_grams} />
+        <DetailRow label="Total cooked weight (g)" value={recipe.total_cooked_weight_grams} />
+        <DetailRow label="Description" value={recipe.description} />
+        <DetailRow label="Instructions" value={recipe.instructions} />
+        <DetailRow label="Created" value={recipe.created_at} />
+        <DetailRow label="Updated" value={recipe.updated_at} />
+      </div>
+    </KCard>
+  );
+}
+
 function ErrorCard({ message }: { message: string }) {
   return (
     <div className="bg-error/10 border border-error/30 rounded-2xl p-4 text-error">
@@ -196,15 +286,16 @@ function RecipesListCard({ payload }: { payload: RecipesListEnvelope }) {
 }
 
 export function AgentUIRenderer({ content }: AgentUIRendererProps) {
-  const parsed = tryParseJson(content);
+  const parsed = normalizePayload(content);
   const typed = parseTypedEnvelope(parsed);
+  const textContent = toDisplayText(content);
 
   if (typed) {
     switch (typed.type) {
       case "recipes.list":
         return <RecipesListCard payload={typed} />;
       case "recipe.detail":
-        return <RecipeCard recipe={typed.item} />;
+        return <RecipeDetailCard recipe={typed.item} />;
       case "error":
         return <ErrorCard message={typed.message} />;
       default:
@@ -225,15 +316,15 @@ export function AgentUIRenderer({ content }: AgentUIRendererProps) {
   }
 
   if (
-    content.toLowerCase().includes("error") ||
-    content.toLowerCase().includes("not found")
+    textContent.toLowerCase().includes("error") ||
+    textContent.toLowerCase().includes("not found")
   ) {
-    return <ErrorCard message={content} />;
+    return <ErrorCard message={textContent} />;
   }
 
   return (
     <KCard className="p-4 text-base whitespace-pre-wrap">
-      {content}
+      {textContent}
     </KCard>
   );
 }
