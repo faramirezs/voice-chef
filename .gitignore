@@ -11,7 +11,15 @@
 **/venv/
 **/ENV/
 
-# Python cash
+# Python cache
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
+
+# Runtime logs
+logs/*.log
+
+# Local analysis docs (scratch/diagnostic — not for version control)
+docs/migration-012-gap-analysis.md
+docs/schema-drift-local-vs-ci-report.md
+backend/app/models/bk/
