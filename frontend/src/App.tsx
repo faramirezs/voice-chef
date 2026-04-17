@@ -7,17 +7,21 @@ import { NotesPage } from '@/pages/NotesPage';
 import { TasksPage } from '@/pages/TasksPage';
 import { CalculatorPage } from '@/pages/CalculatorPage';
 import { StartingPage } from '@/pages/StartingPage';
-import { LoginPage } from '@/pages/LoginPage';
 import { SettingsGeneralPage } from '@/pages/SettingsGeneral';
 import { IngredientsPage } from '@/pages/IngredientsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { TimersPage } from '@/pages/TimersPage';
+
+import { LoginPage } from '@/pages/LoginPage';
+import { SignupPage } from '@/pages/SignupPage';
+
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
           <Route path="login" element={<LoginPage />} />
+          <Route path= "signup" element={<SignupPage />} />
 
         <Route element={<AppLayout />}>
         
