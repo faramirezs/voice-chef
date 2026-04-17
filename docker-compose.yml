@@ -7,7 +7,7 @@ services:
     networks:
       - app-network
     depends_on:
-      - fastapi
+      - backend
 
   kitchen-frontend:
     build:
