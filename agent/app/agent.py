@@ -1,5 +1,6 @@
 import os
 import httpx
+from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai.models.openrouter import OpenRouterModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -53,30 +54,98 @@ agent = Agent(
 # it just takes arguments and returns a value.
 
 @agent.tool_plain
-async def get_recipes_list(query: str) -> list[dict]:
-    """Get a list of recipes in the db, optional filter by name."""
-    resp = await _http_client.get(f"{FASTAPI_URL}/recipes", timeout=10)
-    resp.raise_for_status()
-    recipes = resp.json()
+async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) -> dict[str, Any]:
+    """Get recipes with pagination, optional filter by name.
+
+    Args:
+        query: Optional substring filter for recipe name.
+        limit: Page size. Clamped to [1, 100].
+        offset: Starting row index. Clamped to >= 0.
+    """
+    # Keep tool inputs aligned with backend contract.
+    limit = max(1, min(limit, 100))
+    offset = max(0, offset)
+
+    try:
+        resp = await _http_client.get(
+            f"{FASTAPI_URL}/api/recipes",
+            params={"limit": limit, "offset": offset},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "get_recipes_list",
+            "message": str(exc),
+        }
+
+    # Backend returns a paginated envelope: {items: [...], meta: {...}}.
+    if isinstance(payload, dict):
+        items = payload.get("items", [])
+        meta = payload.get("meta", {})
+    elif isinstance(payload, list):
+        # Backward-safe fallback in case backend returns a raw list.
+        items = payload
+        meta = {"limit": limit, "offset": offset, "total": len(payload)}
+    else:
+        items = []
+        meta = {"limit": limit, "offset": offset, "total": 0}
+
+    if not isinstance(items, list):
+        items = []
+    if not isinstance(meta, dict):
+        meta = {"limit": limit, "offset": offset, "total": len(items)}
 
     if not query:
-        return recipes
+        return {
+            "type": "recipes.list",
+            "version": "1",
+            "items": items,
+            "meta": meta,
+        }
 
     query_lower = query.lower()
     filtered = [
-        r for r in recipes
+        r for r in items
         if isinstance(r, dict)
         and query_lower in str(r.get("name", "")).lower()
     ]
 
-    # With a test-limited endpoint, return available results if local filtering
-    # finds nothing to avoid false "no recipes" responses.
-    return filtered or recipes
+    result_items = filtered or items
+    result_meta = {
+        "limit": len(result_items),
+        "offset": 0,
+        "total": len(result_items),
+    }
+
+    return {
+        "type": "recipes.list",
+        "version": "1",
+        "items": result_items,
+        "meta": result_meta,
+        "query": query,
+    }
 
 @agent.tool_plain
-async def get_recipe_detail(recipe_id: str) -> dict:
+async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
     """Get full details of a recipe by its UUID."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10)
+    try:
+        resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
         resp.raise_for_status()
-        return resp.json()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "get_recipe_detail",
+            "message": str(exc),
+        }
+
+    return {
+        "type": "recipe.detail",
+        "version": "1",
+        "item": payload,
+    }

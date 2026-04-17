@@ -10,17 +10,119 @@ interface RecipeData {
   description?: string;
   instructions?: string;
   serving_recommendation?: string;
+  total_raw_weight_grams?: number;
   yield_amount?: number;
   yield_unit?: string;
-  use_by_date?: string;
 }
 
-function tryParseRecipe(raw: string): RecipeData | RecipeData[] | null {
+interface PaginationMeta {
+  limit: number;
+  offset: number;
+  total: number;
+}
+
+interface RecipesListEnvelope {
+  type: "recipes.list";
+  version: "1";
+  items: RecipeData[];
+  meta: PaginationMeta;
+  query?: string;
+}
+
+interface RecipeDetailEnvelope {
+  type: "recipe.detail";
+  version: "1";
+  item: RecipeData;
+}
+
+interface ErrorEnvelope {
+  type: "error";
+  version: "1";
+  source?: string;
+  message: string;
+}
+
+type TypedEnvelope = RecipesListEnvelope | RecipeDetailEnvelope | ErrorEnvelope;
+
+function tryParseJson(raw: string): unknown {
   try {
     return JSON.parse(raw);
   } catch {
     return null;
   }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isRecipeData(value: unknown): value is RecipeData {
+  return isObject(value);
+}
+
+function isPaginationMeta(value: unknown): value is PaginationMeta {
+  return (
+    isObject(value) &&
+    typeof value.limit === "number" &&
+    typeof value.offset === "number" &&
+    typeof value.total === "number"
+  );
+}
+
+function parseTypedEnvelope(raw: unknown): TypedEnvelope | null {
+  if (!isObject(raw) || typeof raw.type !== "string" || raw.version !== "1") {
+    return null;
+  }
+
+  if (raw.type === "recipes.list") {
+    const items = raw.items;
+    const meta = raw.meta;
+    if (!Array.isArray(items) || !items.every(isRecipeData) || !isPaginationMeta(meta)) {
+      return null;
+    }
+    return {
+      type: "recipes.list",
+      version: "1",
+      items,
+      meta,
+      query: typeof raw.query === "string" ? raw.query : undefined,
+    };
+  }
+
+  if (raw.type === "recipe.detail") {
+    if (!isRecipeData(raw.item)) {
+      return null;
+    }
+    return {
+      type: "recipe.detail",
+      version: "1",
+      item: raw.item,
+    };
+  }
+
+  if (raw.type === "error") {
+    if (typeof raw.message !== "string") {
+      return null;
+    }
+    return {
+      type: "error",
+      version: "1",
+      source: typeof raw.source === "string" ? raw.source : undefined,
+      message: raw.message,
+    };
+  }
+
+  return null;
+}
+
+function parseLegacyRecipes(raw: unknown): RecipeData[] | null {
+  if (Array.isArray(raw) && raw.every(isRecipeData)) {
+    return raw;
+  }
+  if (isRecipeData(raw)) {
+    return [raw];
+  }
+  return null;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -79,30 +181,59 @@ function ErrorCard({ message }: { message: string }) {
   );
 }
 
-export function AgentUIRenderer({ content }: AgentUIRendererProps) {
-  const parsed = tryParseRecipe(content);
-
-  if (!parsed) {
-    if (
-      content.toLowerCase().includes("error") ||
-      content.toLowerCase().includes("not found")
-    ) {
-      return <ErrorCard message={content} />;
-    }
-    return (
-      <KCard className="p-4 text-base whitespace-pre-wrap">
-        {content}
-      </KCard>
-    );
-  }
-
-  const recipes = Array.isArray(parsed) ? parsed : [parsed];
-
+function RecipesListCard({ payload }: { payload: RecipesListEnvelope }) {
   return (
     <div className="space-y-3">
-      {recipes.map((recipe, i) => (
+      <div className="text-xs text-text-muted px-1">
+        Showing {payload.items.length} of {payload.meta.total}
+        {payload.query ? ` for \"${payload.query}\"` : ""}
+      </div>
+      {payload.items.map((recipe, i) => (
         <RecipeCard key={recipe.name ?? i} recipe={recipe} />
       ))}
     </div>
+  );
+}
+
+export function AgentUIRenderer({ content }: AgentUIRendererProps) {
+  const parsed = tryParseJson(content);
+  const typed = parseTypedEnvelope(parsed);
+
+  if (typed) {
+    switch (typed.type) {
+      case "recipes.list":
+        return <RecipesListCard payload={typed} />;
+      case "recipe.detail":
+        return <RecipeCard recipe={typed.item} />;
+      case "error":
+        return <ErrorCard message={typed.message} />;
+      default:
+        return null;
+    }
+  }
+
+  // Temporary compatibility fallback while old tool payloads may still appear.
+  const legacyRecipes = parseLegacyRecipes(parsed);
+  if (legacyRecipes) {
+    return (
+      <div className="space-y-3">
+        {legacyRecipes.map((recipe, i) => (
+          <RecipeCard key={recipe.name ?? i} recipe={recipe} />
+        ))}
+      </div>
+    );
+  }
+
+  if (
+    content.toLowerCase().includes("error") ||
+    content.toLowerCase().includes("not found")
+  ) {
+    return <ErrorCard message={content} />;
+  }
+
+  return (
+    <KCard className="p-4 text-base whitespace-pre-wrap">
+      {content}
+    </KCard>
   );
 }
