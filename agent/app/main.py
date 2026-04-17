@@ -1,23 +1,24 @@
-import json
-from http import HTTPStatus
+import os
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import ValidationError
-from pydantic_ai.ui import SSE_CONTENT_TYPE
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from .agent import agent  # ← import the agent defined in agent.py
-
 
 # Create the main FastAPI application for this service.
 app = FastAPI()
 
-# Enable very permissive CORS so local frontends can call this service.
-# For production, replace "*" with specific trusted origins.
+origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+
+# CORS (Cross-Origin Resource Sharing) is a browser security mechanism that controls
+# whether a web page can make requests to a different domain (origin) than the one 
+# it was loaded from.
+# CORS configuration driven by environment (dev/prod).
+# Credentials enabled → explicit origins required (no "*").
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # your frontend
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

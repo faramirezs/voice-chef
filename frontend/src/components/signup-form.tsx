@@ -1,3 +1,4 @@
+import type * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,6 +10,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+
 import personImage from "@/assets/voice-chef-person.jpg"
 
 // NOTE
@@ -26,6 +28,16 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     return
   }
 
+  const passwordRegex =
+  /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/
+
+  if (!passwordRegex.test(password)) {
+    alert(
+      "Password must be at least 8 characters and include letters, numbers, and symbols"
+    )
+    return
+  }
+
   try {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
@@ -39,18 +51,26 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     })
 
     if (!res.ok) {
-      const err = await res.json()
-      throw new Error(err.message || "Signup failed")
+      let errorMessage = `Signup failed (${res.status})`
+
+      try {
+        const err = await res.json()
+        errorMessage = err.message || err.detail || errorMessage
+      } catch {}
+
+      throw new Error(errorMessage)
     }
 
     const data = await res.json()
     console.log("User created:", data)
     alert("Account created successfully! Please log in.")
+
     window.location.href = "/login"
 
-  } catch (err: any) {
-    console.error(err.message)
-    alert(`Error: ${err.message}`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Signup failed"
+    console.error(message)
+    alert(`Error: ${message}`)
   }
 }
 
@@ -139,7 +159,7 @@ export function SignupForm({
                 </Button>
               </Field>
               <FieldDescription className="text-center">
-                Already have an account? <a href="#">Sign in</a>
+                Already have an account? <a href="/login">Sign in</a>
               </FieldDescription>
             </FieldGroup>
           </form>
