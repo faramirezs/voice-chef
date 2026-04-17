@@ -34,3 +34,23 @@ def upload_recipe_photo(
         "recipe_id": photo.recipe_id,
         "photo_url": photo.photo_url,
     }
+
+
+# @router.delete("/{photo_id}")
+# def delete_recipe_photo(
+#     photo_id: UUID,
+#     db: Session = Depends(get_session),
+# ):
+#     photo = db.get(RecipePhoto, photo_id)
+
+#     if not photo:
+#         raise HTTPException(status_code=404, detail="Photo not found")
+
+#     # 1. Delete file from disk
+#     delete_file(photo.photo_url)
+
+#     # 2. Delete DB record
+#     db.delete(photo)
+#     db.commit()
+
+#     return {"message": "Photo deleted"}

@@ -2,7 +2,7 @@ import os
 import uuid
 from fastapi import UploadFile, HTTPException
 
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = os.path.abspath("uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 

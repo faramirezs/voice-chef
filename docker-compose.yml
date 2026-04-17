@@ -33,6 +33,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SQL_ECHO: ${SQL_ECHO}
       SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - ./backend/uploads:/code/uploads
 
   agent:
     build:

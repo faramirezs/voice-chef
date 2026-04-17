@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 class RecipePhoto(SQLModel, table=True):
     __tablename__ = "recipe_photos"
     __table_args__ = (
-        # (indexes are already in DB; Alembic will detect if missing)
         Index("idx_recipe_photos_recipe", "recipe_id"),
     )
 

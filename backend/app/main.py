@@ -15,6 +15,7 @@ api_router.include_router(user_router)
 api_router.include_router(recipe_router)
 api_router.include_router(ingredient_router)
 api_router.include_router(recipe_photos_router)
+
 app.include_router(api_router)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

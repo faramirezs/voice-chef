@@ -8,7 +8,7 @@ from sqlalchemy import Index, CheckConstraint, Column, Text, text, Boolean, Date
 if TYPE_CHECKING:
     from app.models.users import Users, Tenants
     from app.models.recipe_ingredients import RecipeIngredient
-    # from app.models.recipe_photos import RecipePhoto
+    from app.models.recipe_photos import RecipePhoto
 
 class Recipe(SQLModel, table=True):
     __tablename__ = "recipes"
@@ -106,7 +106,7 @@ class Recipe(SQLModel, table=True):
 
     # Relationship attributes
     recipe_ingredients: list["RecipeIngredient"] = Relationship(back_populates="recipe", sa_relationship_kwargs={"passive_deletes": True})
-    # recipe_photos: list["RecipePhoto"] = Relationship(back_populates="recipe")
+    recipe_photos: list["RecipePhoto"] = Relationship(back_populates="recipe")
     created_by_user: Optional["Users"] = Relationship(back_populates="recipes")
     tenant: Optional["Tenants"] = Relationship(back_populates="recipes")
 
