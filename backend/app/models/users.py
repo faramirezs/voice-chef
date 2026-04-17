@@ -11,7 +11,6 @@ from pydantic import EmailStr
 
 # NOTE: MP. We provide Pylance with a hint, but in a way that avoids triggering
 # a circular import during execution.
-# In a PR comment I explained every change I did to this file and why.
 if TYPE_CHECKING:
     from recipe import Recipe
     from ingredient import Ingredient
@@ -26,14 +25,43 @@ class Users(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='users_pkey'),
         UniqueConstraint('email', name='users_email_key'),
     )
-    id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    email: str = Field(sa_column=Column('email', String(320), nullable=False))
-    # Argon2 default hash is ~97 chars. 255 provides a safe buffer.
-    password_hash: str = Field(sa_column=Column('password_hash', String(255), nullable=False))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-    role: str = Field(sa_column=Column('role', String(50), nullable=False, server_default=text("'editor'::character varying")))
-    is_active: bool = Field(sa_column=Column('is_active', Boolean, nullable=False, server_default=text('true')))
+    id: UUID = Field(
+        default=None,
+        primary_key=True,
+        sa_column_kwargs={"server_default": text("gen_random_uuid()")}
+    )
+    email: str = Field(max_length=320, nullable=False)
+    password_hash: str = Field(max_length=255, nullable=False)
+    created_at: datetime.datetime = Field(
+        sa_column=Column(
+            'created_at', 
+            DateTime(True), 
+            nullable=False, 
+            server_default=text('now()'))
+    )
+    updated_at: datetime.datetime = Field(
+        sa_column=Column(
+            'updated_at', 
+            DateTime(True), 
+            nullable=False, 
+            server_default=text('now()'))
+    )
+    role: str = Field(
+        sa_column=Column(
+            'role', 
+            String(50),
+            nullable=False,
+            server_default=text("'editor'::character varying")
+        )
+    )
+    is_active: bool = Field(
+        sa_column=Column(
+            'is_active',
+            Boolean, 
+            nullable=False, 
+            server_default=text('true')
+        )
+    )
 
     # Foreign keys
     tenant_id: UUID = Field(sa_column=Column('tenant_id', Uuid, nullable=False))
@@ -78,13 +106,37 @@ class Tenants(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='tenants_pkey'),
         UniqueConstraint('slug', name='tenants_slug_key'),
     )
-    id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
-    name: str = Field(sa_column=Column('name', String(255), nullable=False))
-    slug: str = Field(sa_column=Column('slug', String(100), nullable=False))
-    is_active: bool = Field(sa_column=Column('is_active', Boolean, nullable=False, server_default=text('true')))
-    settings: Optional[dict] = Field(default=None, sa_column=Column('settings', JSONB, server_default=text("'{}'")))
+    id: UUID = Field(
+        default=None,
+        primary_key=True,
+        sa_column_kwargs={"server_default": text("gen_random_uuid()")}
+    )
+    created_at: datetime.datetime = Field(
+        sa_column=Column(
+            'created_at', 
+            DateTime(True), 
+            nullable=False, 
+            server_default=text('now()'))
+    )
+    updated_at: datetime.datetime = Field(
+        sa_column=Column(
+            'updated_at', 
+            DateTime(True), 
+            nullable=False, 
+            server_default=text('now()'))
+        )
+    name: str = Field(max_length=255, nullable=False)
+    slug: str = Field(max_length=100, nullable=False)
+    is_active: bool = Field(
+        sa_column=Column(
+            'is_active', 
+            Boolean, 
+            nullable=False, 
+            server_default=text('true'))
+    )
+    settings: Optional[dict] = Field(
+        default=None, sa_column=Column('settings', JSONB, server_default=text("'{}'"))
+    )
 
     # Relationship attributes
     agents: List['Agents'] = Relationship(back_populates='tenant')
