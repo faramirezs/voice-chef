@@ -187,19 +187,22 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="p-0 [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             } as React.CSSProperties
           }
           side={side}
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="w-(--sidebar-width) bg-sidebar text-sidebar-foreground h-full flex flex-col">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Sidebar</SheetTitle>
+              <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-1 w-full flex-col">{children}</div>
+          </div>
         </SheetContent>
       </Sheet>
     )
