@@ -55,7 +55,7 @@
 
 a {
   font-weight: 500;
-  color: white;
+  /* color: white; */
   text-decoration: inherit;
 }
 a:hover {
