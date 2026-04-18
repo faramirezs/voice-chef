@@ -95,3 +95,17 @@ export function useUpdateRecipe() {
     },
   });
 }
+
+export function useDeleteRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete<Recipe>(`/recipes/${id}`);
+      return data;
+    },
+    onSuccess: (deletedRecipe) => {
+      queryClient.removeQueries({ queryKey: [RECIPES_KEY, deletedRecipe.id] });
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
+    },
+  });
+}
