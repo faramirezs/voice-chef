@@ -100,7 +100,7 @@ button:focus-visible {
   a:hover {
     color: #747bff;
   }
-  button {
+  button:not([data-sidebar="menu-button"]):not([data-slot="sidebar-menu-button"]) {
     background-color: #f9f9f9;
   }
 }
