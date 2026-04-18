@@ -1,3 +1,47 @@
+# Data base
+
+## What is the dump file `db/init/01_dump.sql`
+
+We build our DB this way: 
+
+**empty DB → run 01_dump.sql → → alembic checks db version, then if versions is not head it run migrations until head → ready DB**
+
+The system is designed to be resilient and bring the database up to the latest version automatically so a developer can start working.
+
+## CI Schema Drift Checks (Test)
+
+More details about the test can be found in the [`Dump safety and regeneration`](migrations.md#dump-safety-and-regeneration) section of the migrations document.
+
+The CI jobs in `.github/workflows/schema-drift.yml` independently check for schema drift against the current SQLAlchemy models defined in the Python code.
+
+1. **Migration path**
+
+The `schema-drift` job builds the DB from scratch using migrations (`alembic upgrade head`) and then checks for drift.
+
+**empty DB → run all migrations → DONE**
+
+2. The **Dump path**
+
+The `schema-drift-dump-compat` job builds the DB from 01_dump.sql and then checks for drift.
+
+**empty DB → load dump → DONE**
+
+If either job detects drift, it means the schema source for that path (either the migrations or the dump file) is out of sync with the application models.
+
+**The rule to pass CI test**: Dump alone must already represent the latest schema.
+
+The dump (`db/init/01_dump.sql`) **must be kept up-to-date with the latest schema**. Even though migrations exist, the dump is treated as a canonical snapshot of the current schema.
+
+**After adding a migration, you need to:**
+
+1. Run migrations locally to apply the changes.
+2. Export a fresh dump from the migrated database. 
+3. Replace `db/init/01_dump.sql`.
+
+ It intentionally does not run `alembic upgrade head` because its purpose is to test the dump file itself. If the dump is not updated, CI checks will fail.
+
+---
+
 ## To dump database
 
 ```bash
