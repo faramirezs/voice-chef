@@ -117,7 +117,7 @@ Why Axios instead of `fetch`:
 To make the frontend build environment-agnostic (build once, deploy anywhere), we use a relative path for all API calls. The application code does not know the actual URL of the backend.
 
 - **Code:** All API requests are sent to a relative path, e.g., `/api/users`.
-- **Development:** The Vite development server is configured to proxy any request from `/api` to the backend container (`http://backe nd:80`). This is handled by `vite.config.ts`.
+- **Development:** The Vite development server is configured to proxy any request from `/api` to the backend container (`http://backend:80`). This is handled by `vite.config.ts`.
 - **Production:** The Nginx server is configured to do the same, proxying all `/api` requests to the backend service. This is handled by `nginx.conf`.
 
 This strategy eliminates CORS issues and removes the need to rebuild the frontend for different environments.
