@@ -29,3 +29,4 @@ backend/app/models/bk/
 
 # macOS Finder metadata
 **/.DS_Store
+ag-ui/

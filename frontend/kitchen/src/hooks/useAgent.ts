@@ -13,6 +13,16 @@ export interface ToolActivity {
   toolName: string;
   status: "running" | "done" | "failed";
   result?: string;
+  startedAt: number;
+}
+
+function normalizeToolName(name: string | undefined): string {
+  const raw = (name ?? "tool").trim();
+  if (!raw) return "Tool";
+  return raw
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function useAgent() {
@@ -76,11 +86,35 @@ export function useAgent() {
           if (event.type === EventType.TOOL_CALL_START) {
             const e = event as { toolCallName?: string; toolCallId?: string };
             const toolCallId = e.toolCallId ?? "";
-            const toolName = e.toolCallName ?? "tool";
+            const toolName = normalizeToolName(e.toolCallName);
             setToolActivity((prev) => {
-              if (prev.some((p) => p.toolCallId === toolCallId)) return prev;
-              return [...prev, { toolCallId, toolName, status: "running" }];
+              const existingIndex = prev.findIndex((p) => p.toolCallId === toolCallId);
+              if (existingIndex >= 0) {
+                return prev.map((item, i) =>
+                  i === existingIndex ? { ...item, toolName, status: "running" } : item,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  toolCallId,
+                  toolName,
+                  status: "running",
+                  startedAt: Date.now(),
+                },
+              ];
             });
+          }
+          if (event.type === EventType.TOOL_CALL_END) {
+            const e = event as { toolCallId?: string };
+            const toolCallId = e.toolCallId ?? "";
+            setToolActivity((prev) =>
+              prev.map((item) =>
+                item.toolCallId === toolCallId && item.status === "running"
+                  ? { ...item, status: "done" }
+                  : item,
+              ),
+            );
           }
           if (event.type === EventType.TOOL_CALL_RESULT) {
             const e = event as { toolCallId?: string; content?: string };
@@ -93,6 +127,13 @@ export function useAgent() {
               );
             });
             syncMessages();
+          }
+          if (event.type === EventType.RUN_ERROR) {
+            setToolActivity((prev) =>
+              prev.map((item) =>
+                item.status === "running" ? { ...item, status: "failed" } : item,
+              ),
+            );
           }
         },
       };
@@ -108,6 +149,7 @@ export function useAgent() {
             result,
           });
         }
+
         void result;
       } catch (err) {
         console.error("Agent run failed:", err);
@@ -144,5 +186,7 @@ export function useAgent() {
     threadIdRef.current = uuid();
   }, []);
 
-  return { messages, isStreaming, toolActivity, sendMessage, reset };
+  const sortedToolActivity = [...toolActivity].sort((a, b) => a.startedAt - b.startedAt);
+
+  return { messages, isStreaming, toolActivity: sortedToolActivity, sendMessage, reset };
 }

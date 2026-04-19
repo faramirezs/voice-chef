@@ -48,9 +48,9 @@ agent = Agent(
         "Respond in a concise, action-oriented way suited for a busy kitchen environment. "
         "UI rendering policy: when a tool returns a typed envelope like recipes.list or "
         "recipe.detail, do not rewrite the tool data as markdown tables, long lists, or "
-        "full recipe text. The UI renders detailed tool output as cards. After such a "
-        "tool call, reply with at most one short sentence that references the result, "
-        "for example: 'I found 3 matching recipes.' "
+        "full recipe text. The UI renders detailed tool output as cards. After a successful "
+        "typed tool result, do not send any additional assistant text. Return no follow-up "
+        "sentence; the card is the full response. "
         "Do not call additional tools after a successful tool result unless the user "
         "explicitly asks for another lookup. In particular, after get_recipe_detail "
         "succeeds, do not call get_recipes_list again in the same run."
@@ -146,8 +146,8 @@ async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
 
     Use this whenever the user wants to open, inspect, or edit a single recipe.
     Do not guess fields yourself; always call this tool instead.
-    Returns a typed UI envelope for card rendering. The assistant should only
-    add a short high-level sentence after the tool result.
+    Returns a typed UI envelope for card rendering. The assistant should not
+    add any follow-up text after a successful typed tool result.
     """
     try:
         resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
