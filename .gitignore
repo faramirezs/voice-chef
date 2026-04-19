@@ -33,5 +33,5 @@ backend/app/models/bk/
 # Folder with ag-ui examples
 ag-ui/
 
-# 
+# Build assets
 frontend/kitchen/dist/
