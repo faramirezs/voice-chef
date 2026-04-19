@@ -2,8 +2,10 @@ import { KCard } from "@/components/ui/KCard";
 
 interface AgentUIRendererProps {
   content: unknown;
+  agentState?: unknown;
+  onApplyScaling?: (state: RecipeScalingState) => void;
+  onAutoImprove?: (recipeId: string) => void;
 }
-
 interface RecipeData {
   id?: string;
   name?: string;

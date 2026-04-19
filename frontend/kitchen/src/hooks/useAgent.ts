@@ -5,6 +5,8 @@ import {
   type AgentSubscriber,
   type RunAgentResult,
   EventType,
+  type StateSnapshotEvent,
+  type StateDeltaEvent,
 } from "@ag-ui/client";
 import { chefAgent } from "@/lib/agent";
 
@@ -25,11 +27,42 @@ function normalizeToolName(name: string | undefined): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+
+function applyPatchReplace(
+  obj: Record<string, unknown>,
+  pointer: string,
+  value: unknown
+): void {
+  const parts = pointer.split("/").slice(1); // skip leading /
+  if (parts.length === 0) return;
+
+  let target: unknown = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const key = parts[i];
+    if (target == null || typeof target !== "object") return;
+    const arr = target as unknown[];
+    const idx = Number(key);
+    target = Array.isArray(target) && !Number.isNaN(idx)
+      ? arr[idx]
+      : (target as Record<string, unknown>)[key];
+  }
+
+  const lastKey = parts[parts.length - 1];
+  if (target == null || typeof target !== "object") return;
+
+  if (Array.isArray(target)) {
+    const idx = Number(lastKey);
+    if (!Number.isNaN(idx)) target[idx] = value;
+  } else {
+    (target as Record<string, unknown>)[lastKey] = value;
+  }
+}
 export function useAgent() {
   const debugStream = import.meta.env.VITE_AGENT_DEBUG_STREAM === "1";
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [toolActivity, setToolActivity] = useState<ToolActivity[]>([]);
+  const [agentState, setAgentState] = useState<unknown>(null);
   const threadIdRef = useRef(uuid());
 
   const syncMessages = useCallback(() => {
@@ -75,6 +108,27 @@ export function useAgent() {
           }
           syncMessages();
         },
+        onStateSnapshotEvent({ event }: { event: StateSnapshotEvent }) {
+          if (debugStream) {
+            console.log("[agent-debug] STATE_SNAPSHOT", event.snapshot);
+          }
+          setAgentState(event.snapshot);
+        },
+        onStateDeltaEvent({ event }: { event: StateDeltaEvent }) {
+          if (debugStream) {
+            console.log("[agent-debug] STATE_DELTA", event.delta);
+          }
+          setAgentState((prev) => {
+            if (prev == null || typeof prev !== "object") return prev;
+            let next = { ...(prev as Record<string, unknown>) };
+            for (const op of event.delta) {
+              if (op.op === "replace") {
+                applyPatchReplace(next, op.path, op.value);
+              }
+            }
+            return next;
+          });
+        },
         onEvent({ event }) {
           if (debugStream) {
             console.log("[agent-debug] event", {
@@ -91,7 +145,7 @@ export function useAgent() {
               const existingIndex = prev.findIndex((p) => p.toolCallId === toolCallId);
               if (existingIndex >= 0) {
                 return prev.map((item, i) =>
-                  i === existingIndex ? { ...item, toolName, status: "running" } : item,
+                  i === existingIndex ? { ...item, toolName, status: "running" } : item
                 );
               }
               return [
@@ -112,8 +166,8 @@ export function useAgent() {
               prev.map((item) =>
                 item.toolCallId === toolCallId && item.status === "running"
                   ? { ...item, status: "done" }
-                  : item,
-              ),
+                  : item
+              )
             );
           }
           if (event.type === EventType.TOOL_CALL_RESULT) {
@@ -123,7 +177,7 @@ export function useAgent() {
               return prev.map((item) =>
                 item.toolCallId === toolCallId
                   ? { ...item, status: "done", result: e.content ?? "" }
-                  : item,
+                  : item
               );
             });
             syncMessages();
@@ -131,8 +185,8 @@ export function useAgent() {
           if (event.type === EventType.RUN_ERROR) {
             setToolActivity((prev) =>
               prev.map((item) =>
-                item.status === "running" ? { ...item, status: "failed" } : item,
-              ),
+                item.status === "running" ? { ...item, status: "failed" } : item
+              )
             );
           }
         },
@@ -183,10 +237,11 @@ export function useAgent() {
     chefAgent.setMessages([]);
     setMessages([]);
     setToolActivity([]);
+    setAgentState(null);
     threadIdRef.current = uuid();
   }, []);
 
   const sortedToolActivity = [...toolActivity].sort((a, b) => a.startedAt - b.startedAt);
 
-  return { messages, isStreaming, toolActivity: sortedToolActivity, sendMessage, reset };
+  return { messages, isStreaming, toolActivity: sortedToolActivity, agentState, sendMessage, reset };
 }
