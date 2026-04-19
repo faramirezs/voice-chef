@@ -29,4 +29,9 @@ backend/app/models/bk/
 
 # macOS Finder metadata
 **/.DS_Store
+
+# Folder with ag-ui examples
 ag-ui/
+
+# 
+frontend/kitchen/dist/
