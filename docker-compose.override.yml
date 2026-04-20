@@ -25,28 +25,15 @@ services:
     environment:
       AGENT_DEBUG_STREAM: "1"
 
-  # db:
-  #   image: postgres:17.8
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./db/init:/docker-entrypoint-initdb.d:ro  # auto-runs on first start
-  #   environment:
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #   ports:
-  #     - "5432:5432"
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
+  db:
+    ports:
+      - "5432:5432"
 
-  fastapi:
+  backend:
     ports:
       - "8000:80"
     volumes:
-      - ./fastapi/app:/code/app
+      - ./backend/app:/code/app
 
   stt:
     volumes:
@@ -55,6 +42,7 @@ services:
 volumes:
   postgres_data:
   whisper_models:
+  node_modules:
 
 networks:
   app-network:

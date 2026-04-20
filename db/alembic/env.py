@@ -1,4 +1,7 @@
 import os
+import sys
+import importlib.util
+from pathlib import Path
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -7,23 +10,84 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
 url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
 config.set_main_option("sqlalchemy.url", url)
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+def _load_models_module() -> None:
+    """Load all SQLModel classes so every managed table is registered.
+
+    Priority:
+    1. ``backend/app/models.py`` — comprehensive flat schema file (dev / CI branch)
+    2. ``backend/app/models/__init__.py`` — package entry-point (main branch style)
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    app_dirs = [
+        repo_root / "backend" / "app",
+        Path("/code/app"),
+    ]
+
+    for app_dir in app_dirs:
+        if not app_dir.exists():
+            continue
+        parent = str(app_dir.parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+
+        # 1. Prefer models.py (comprehensive schema for drift gate)
+        models_path = app_dir / "models.py"
+        if models_path.exists():
+            spec = importlib.util.spec_from_file_location("_alembic_models", str(models_path))
+            if spec is not None and spec.loader is not None:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return
+
+        # 2. Fallback: load the models package (__init__.py)
+        pkg_init = app_dir / "models" / "__init__.py"
+        if pkg_init.exists():
+            spec = importlib.util.spec_from_file_location("_alembic_models", str(pkg_init),
+                submodule_search_locations=[str(app_dir / "models")])
+            if spec is not None and spec.loader is not None:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules["_alembic_models"] = module
+                spec.loader.exec_module(module)
+                return
+
+    raise ModuleNotFoundError(
+        "Could not locate models.py or models/__init__.py for Alembic metadata loading"
+    )
+
+
+_load_models_module()
+from sqlmodel import SQLModel
+
+target_metadata = SQLModel.metadata
+MODEL_TABLE_NAMES = set(target_metadata.tables.keys())
+
+
+def include_object(object, name, type_, reflected, compare_to):
+    """Limit autogenerate scope to SQLModel-managed tables and related objects."""
+    if type_ == "table":
+        return name in MODEL_TABLE_NAMES
+
+    if type_ in {"column", "index", "unique_constraint", "foreign_key_constraint", "primary_key_constraint"}:
+        table_name = None
+        parent = getattr(object, "table", None)
+        if parent is not None:
+            table_name = getattr(parent, "name", None)
+        if table_name is None and compare_to is not None:
+            compare_parent = getattr(compare_to, "table", None)
+            if compare_parent is not None:
+                table_name = getattr(compare_parent, "name", None)
+        if table_name is not None:
+            return table_name in MODEL_TABLE_NAMES
+
+    return True
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -49,6 +113,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -70,7 +135,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

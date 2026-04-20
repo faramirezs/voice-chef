@@ -7,7 +7,7 @@ services:
     networks:
       - app-network
     depends_on:
-      - fastapi
+      - backend
 
   kitchen-frontend:
     build:
@@ -29,7 +29,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-       - "5432:5432"
+       - "5432"
     networks:
       - app-network
     healthcheck:
@@ -38,11 +38,10 @@ services:
       timeout: 5s
       retries: 5
 
-  fastapi:
-    container_name: fastapi
+  backend:
     build:
       context: .
-      dockerfile: fastapi/Dockerfile
+      dockerfile: backend/Dockerfile
     depends_on:
       db:
         condition: service_healthy
@@ -51,21 +50,22 @@ services:
     ports:
       - "80"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SQL_ECHO: ${SQL_ECHO}
+      SECRET_KEY: ${SECRET_KEY}
 
   agent:
     build:
       context: ./agent
       dockerfile: Dockerfile
     depends_on:
-      - fastapi
+      - backend
     networks:
       - app-network
     ports:
       - "8001:8001"
     environment:
-      FASTAPI_INTERNAL_URL: http://fastapi:80
+      FASTAPI_INTERNAL_URL: http://backend:80
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       AGENT_MODEL: ${AGENT_MODEL}
