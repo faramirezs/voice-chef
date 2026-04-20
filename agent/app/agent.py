@@ -1,5 +1,6 @@
 import os
 import httpx
+from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai.models.openrouter import OpenRouterModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
@@ -44,7 +45,15 @@ agent = Agent(
         "You have access to the recipe database. Answer questions about recipes, "
         "cooking steps, ingredients, storage, plating, and kitchen operations. "
         "When a chef asks about a recipe, always look it up from the database first. "
-        "Respond in a concise, action-oriented way suited for a busy kitchen environment."
+        "Respond in a concise, action-oriented way suited for a busy kitchen environment. "
+        "UI rendering policy: when a tool returns a typed envelope like recipes.list or "
+        "recipe.detail, do not rewrite the tool data as markdown tables, long lists, or "
+        "full recipe text. The UI renders detailed tool output as cards. After a successful "
+        "typed tool result, do not send any additional assistant text. Return no follow-up "
+        "sentence; the card is the full response. "
+        "Do not call additional tools after a successful tool result unless the user "
+        "explicitly asks for another lookup. In particular, after get_recipe_detail "
+        "succeeds, do not call get_recipes_list again in the same run."
     ),
 )
 
@@ -53,18 +62,107 @@ agent = Agent(
 # it just takes arguments and returns a value.
 
 @agent.tool_plain
-async def search_recipes(query: str) -> list[dict]:
-    """Search recipes by name in the database."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{FASTAPI_URL}/recipes", timeout=10)
+async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) -> dict[str, Any]:
+    """Get recipes with pagination, optional filter by name.
+
+    Returns a typed UI envelope for card rendering. The assistant should not
+    restate returned fields as markdown tables or long recipe dumps.
+
+    Args:
+        query: Optional substring filter for recipe name.
+        limit: Page size. Clamped to [1, 100].
+        offset: Starting row index. Clamped to >= 0.
+    """
+    # Keep tool inputs aligned with backend contract.
+    limit = max(1, min(limit, 100))
+    offset = max(0, offset)
+
+    try:
+        resp = await _http_client.get(
+            f"{FASTAPI_URL}/api/recipes",
+            params={"limit": limit, "offset": offset},
+            timeout=10,
+        )
         resp.raise_for_status()
-        recipes = resp.json()
-        return [r for r in recipes if query.lower() in r["name"].lower()]
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "get_recipes_list",
+            "message": str(exc),
+        }
+
+    # Backend returns a paginated envelope: {items: [...], meta: {...}}.
+    if isinstance(payload, dict):
+        items = payload.get("items", [])
+        meta = payload.get("meta", {})
+    elif isinstance(payload, list):
+        # Backward-safe fallback in case backend returns a raw list.
+        items = payload
+        meta = {"limit": limit, "offset": offset, "total": len(payload)}
+    else:
+        items = []
+        meta = {"limit": limit, "offset": offset, "total": 0}
+
+    if not isinstance(items, list):
+        items = []
+    if not isinstance(meta, dict):
+        meta = {"limit": limit, "offset": offset, "total": len(items)}
+
+    if not query:
+        return {
+            "type": "recipes.list",
+            "version": "1",
+            "items": items,
+            "meta": meta,
+        }
+
+    query_lower = query.lower()
+    filtered = [
+        r for r in items
+        if isinstance(r, dict)
+        and query_lower in str(r.get("name", "")).lower()
+    ]
+
+    result_items = filtered or items
+    result_meta = {
+        "limit": len(result_items),
+        "offset": 0,
+        "total": len(result_items),
+    }
+
+    return {
+        "type": "recipes.list",
+        "version": "1",
+        "items": result_items,
+        "meta": result_meta,
+        "query": query,
+    }
 
 @agent.tool_plain
-async def get_recipe_detail(recipe_id: str) -> dict:
-    """Get full details of a recipe by its UUID."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10)
+async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
+    """Get full details of a recipe by its UUID.
+
+    Use this whenever the user wants to open, inspect, or edit a single recipe.
+    Do not guess fields yourself; always call this tool instead.
+    Returns a typed UI envelope for card rendering. The assistant should not
+    add any follow-up text after a successful typed tool result.
+    """
+    try:
+        resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
         resp.raise_for_status()
-        return resp.json()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "get_recipe_detail",
+            "message": str(exc),
+        }
+
+    return {
+        "type": "recipe.detail",
+        "version": "1",
+        "item": payload,
+    }

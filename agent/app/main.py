@@ -1,4 +1,7 @@
 import json
+import os
+import time
+import logging
 from http import HTTPStatus
 from fastapi import FastAPI
 from fastapi.requests import Request
@@ -8,6 +11,10 @@ from pydantic import ValidationError
 from pydantic_ai.ui import SSE_CONTENT_TYPE
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from .agent import agent  # ← import the agent defined in agent.py
+
+
+logger = logging.getLogger("voice-chef.agent")
+DEBUG_STREAM = os.getenv("AGENT_DEBUG_STREAM", "0") == "1"
 
 
 # Create the main FastAPI application for this service.
@@ -24,7 +31,27 @@ app.add_middleware(
 
 @app.post("/")
 async def run_agent(request: Request) -> Response:
-    return await AGUIAdapter.dispatch_request(request, agent=agent)
+    started = time.perf_counter()
+    if DEBUG_STREAM:
+        logger.warning(
+            "[agent-debug] request:start accept=%s content-type=%s user-agent=%s",
+            request.headers.get("accept"),
+            request.headers.get("content-type"),
+            request.headers.get("user-agent"),
+        )
+
+    response = await AGUIAdapter.dispatch_request(request, agent=agent)
+
+    if DEBUG_STREAM:
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        logger.warning(
+            "[agent-debug] request:end status=%s media_type=%s elapsed_ms=%s",
+            response.status_code,
+            response.media_type,
+            elapsed_ms,
+        )
+
+    return response
 
 # @app.post("/")
 # async def run_agent(request: Request) -> Response:
