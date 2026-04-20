@@ -2,7 +2,8 @@ import os
 import httpx
 from pydantic_ai import Agent
 
-FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
+_BACKEND_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
+FASTAPI_URL = f"{_BACKEND_URL}/api"
 
 # Read model/provider settings from environment variables.
 AGENT_MODEL = os.getenv("AGENT_MODEL")
