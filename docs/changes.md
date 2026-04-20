@@ -180,3 +180,41 @@ git config merge.ours.driver true
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `VITE_STT_URL` | `http://localhost:8002` | STT service URL for kitchen frontend |
+
+## Merge with Main (2026-04-20)
+
+Merged `origin/main` into `voiceInput` to pick up backend restructuring and CRUD recipe endpoints.
+
+### Key changes from main
+
+- **`fastapi/` renamed to `backend/`** — entire directory restructured with proper route organization
+- **API prefix added** — all routes now under `/api` (e.g., `/api/recipes`, `/api/recipes/{id}`)
+- **Full CRUD recipe endpoints** — list, detail, create, update (previously only a test `/recipes` endpoint)
+- **JWT authentication** — `SECRET_KEY` env var added
+- **Database scripts** — drift-gate, dump-blast-check, dump-regen Makefile targets
+
+### Changes we made during merge
+
+### 12. `agent/app/agent.py`
+
+**What changed:**
+- Added `/api` prefix: `FASTAPI_URL = f"{_BACKEND_URL}/api"` — required because main added `APIRouter(prefix="/api")`
+- Added dual provider support: `GOOGLE_API_KEY` (Google Gemini) or `OPENROUTER_API_KEY` (OpenRouter). Google takes priority if both are set.
+- Updated default backend URL from `http://fastapi:80` to `http://backend:80`
+
+### 13. `docker-compose.yml`
+
+**What changed:**
+- `fastapi` service renamed to `backend`
+- Added `GOOGLE_API_KEY` to agent environment
+- Agent `depends_on` changed from `fastapi` to `backend`
+- Office frontend `depends_on` changed from `fastapi` to `backend`
+- DB port changed from exposed `5432:5432` to internal-only `5432`
+- Added `SECRET_KEY` to backend environment
+
+### 14. `.env.example`
+
+**What changed:**
+- Added `SECRET_KEY` for JWT
+- Added `GOOGLE_API_KEY` for dual provider support
+- Default `AGENT_MODEL` set to `gemini-2.5-flash`

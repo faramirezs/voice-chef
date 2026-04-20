@@ -83,11 +83,13 @@ The STT service joins the existing stack as a fifth container:
 | office-frontend    | 8080 | React/Vite UI (office)            |
 | kitchen-frontend   | 8082 | React/Vite UI (kitchen, voice)    |
 | db                 | 5432 | Postgres 17.8                     |
-| fastapi            | 80   | Python API layer                  |
+| backend            | 80   | Python API layer (`/api` prefix)  |
 | agent              | 8001 | Pydantic AI culinary assistant    |
 | **stt**            | **8002** | **faster-whisper transcription** |
 
 The STT container sits on the same `app-network` and has no dependency on other services — it's a standalone transcription endpoint.
+
+**Note:** The agent connects to the backend at `http://backend:80/api/recipes`. The `/api` prefix was added during the backend restructuring on main.
 
 ## Implementation Plan
 
@@ -222,6 +224,9 @@ This allows the agent to leverage its domain knowledge (recipe database, kitchen
 | `STT_LANGUAGE` | (auto)   | Force language code (e.g., `en`, `es`, `de`). Auto-detects if unset |
 | `STT_DEVICE`   | `cpu`    | Compute device: `cpu` or `cuda`                  |
 | `VITE_STT_URL` | `http://localhost:8002` | STT service URL for kitchen frontend |
+| `AGENT_MODEL`  | —        | LLM model ID (e.g., `gemini-2.5-flash` or `nvidia/nemotron-3-super-120b-a12b:free`) |
+| `GOOGLE_API_KEY` | —      | Google AI API key (used if set, takes priority over OpenRouter) |
+| `OPENROUTER_API_KEY` | —  | OpenRouter API key (fallback if no Google key) |
 
 ## Dependencies
 
@@ -240,6 +245,9 @@ websockets>=13.0
 - The XVF3800 provides beam-formed, noise-cancelled audio which significantly improves transcription accuracy in noisy kitchen environments
 - Audio format for WebSocket: 16-bit PCM at 16kHz mono — this is what faster-whisper expects and avoids transcoding overhead
 - Consider adding a model volume in Compose to persist downloaded models across container rebuilds
+- The `voice_chat.py` test script requires `prompt_toolkit` for inline edit support: `pip install prompt_toolkit`
+- The agent supports dual providers: set `GOOGLE_API_KEY` for Google Gemini or `OPENROUTER_API_KEY` for OpenRouter. Google takes priority if both are set.
+- Backend API uses `/api` prefix — agent tool calls go to `http://backend:80/api/recipes`
 
 ## Progress
 
