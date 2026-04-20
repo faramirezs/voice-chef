@@ -1,0 +1,18 @@
+{
+  "text": "Ja, das ist ja nicht so gut.",
+  "language": "de",
+  "language_probability": 0.16,
+  "confidence": "low",
+  "retry_suggested": true,
+  "duration": 1.86,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.0,
+      "text": "Ja, das ist ja nicht so gut.",
+      "avg_logprob": -1.274,
+      "no_speech_prob": 0.295,
+      "compression_ratio": 0.78
+    }
+  ]
+}

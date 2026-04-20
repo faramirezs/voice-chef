@@ -197,8 +197,13 @@ def main():
                 continue
 
             if choice == "e":
-                text = input("Type your message: ").strip()
-                confidence = "high"  # typed input is reliable
+                try:
+                    from prompt_toolkit import prompt as pt_prompt
+                    text = pt_prompt("Edit: ", default=text).strip()
+                except ImportError:
+                    print(f"(install prompt_toolkit for inline editing)")
+                    text = input("Type your message: ").strip()
+                confidence = "high"  # edited input is reliable
                 if not text:
                     print("Empty message, skipping.\n")
                     continue
