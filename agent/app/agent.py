@@ -2,45 +2,33 @@ import os
 import httpx
 from pydantic_ai import Agent
 
+from pydantic_ai.models.openrouter import OpenRouterModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
+
 _BACKEND_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
 FASTAPI_URL = f"{_BACKEND_URL}/api"
 
-# Read model/provider settings from environment variables.
 AGENT_MODEL = os.getenv("AGENT_MODEL")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 if not AGENT_MODEL:
     raise RuntimeError(
-        "Missing AGENT_MODEL. Set it to a model id, "
-        "for example: gemini-2.5-flash or anthropic/claude-sonnet-4-5"
+        "Missing AGENT_MODEL. Set it to an OpenRouter model id, "
+        "for example: nvidia/nemotron-3-super-120b-a12b:free"
     )
 
-# Reuse a single HTTP client for all tool calls instead of opening a new
-# TCP connection on every request. Much faster under load.
+if not OPENROUTER_API_KEY:
+    raise RuntimeError(
+        "Missing OPENROUTER_API_KEY. Set it in your environment before "
+        "starting the agent service."
+    )
+
 _http_client = httpx.AsyncClient()
 
-# Select provider based on which API key is set.
-# Google Gemini takes priority if both are present.
-if GOOGLE_API_KEY:
-    from pydantic_ai.models.gemini import GeminiModel
-    from pydantic_ai.providers.google_gla import GoogleGLAProvider
-    model = GeminiModel(
-        AGENT_MODEL,
-        provider=GoogleGLAProvider(api_key=GOOGLE_API_KEY),
-    )
-elif OPENROUTER_API_KEY:
-    from pydantic_ai.models.openrouter import OpenRouterModel
-    from pydantic_ai.providers.openrouter import OpenRouterProvider
-    model = OpenRouterModel(
-        AGENT_MODEL,
-        provider=OpenRouterProvider(api_key=OPENROUTER_API_KEY),
-    )
-else:
-    raise RuntimeError(
-        "Missing API key. Set GOOGLE_API_KEY or OPENROUTER_API_KEY "
-        "in your environment before starting the agent service."
-    )
+model = OpenRouterModel(
+    AGENT_MODEL,
+    provider=OpenRouterProvider(api_key=OPENROUTER_API_KEY),
+)
 
 agent = Agent(
     model,
