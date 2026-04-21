@@ -1,4 +1,24 @@
 services:
+  office-frontend:
+    build:
+      context: ./frontend/office/
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+  kitchen-frontend:
+    build:
+      context: ./frontend/kitchen/
+    ports:
+      - "8082:80"
+    networks:
+      - app-network
+    depends_on:
+      - agent
+
   db:
     image: postgres:17.8
     volumes:
@@ -50,16 +70,7 @@ services:
       FASTAPI_INTERNAL_URL: http://backend:80
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       AGENT_MODEL: ${AGENT_MODEL}
-
-  frontend:
-    build:
-      context: ./frontend/
-    ports:
-      - "8080:80"
-    networks:
-      - app-network
-    depends_on:
-      - backend
+      AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
 
 volumes:
   postgres_data:
