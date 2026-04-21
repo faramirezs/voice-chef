@@ -126,6 +126,7 @@ function InlineEditableText({
           ) : (
             <Input
               value={draft}
+              className={cn(field === 'name' && 'h-12 text-2xl font-semibold')}
               onChange={(event) => {
                 setDraft(event.target.value);
                 if (validationError) {
@@ -286,7 +287,7 @@ export function RecipeDetailPage() {
             field="name"
             value={recipe.name}
             label=""
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto sm:min-w-[28rem]"
             displayClassName="text-2xl font-semibold"
           />
           <span className={badgeClass}>{recipe.status}</span>

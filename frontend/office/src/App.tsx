@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RecipesPage } from '@/pages/RecipesPage';
 import { RecipeDetailPage } from '@/pages/RecipeDetailPage';
+import { CreateRecipePage } from '@/pages/CreateRecipePage';
 import { MenuPlannerPage } from '@/pages/MenuPlannerPage';
 import { NotesPage } from '@/pages/NotesPage';
 import { TasksPage } from '@/pages/TasksPage';
@@ -24,6 +25,7 @@ function App() {
           <Route index element={<StartingPage />} />
 
           <Route path="recipes" element={<RecipesPage />} />
+          <Route path="recipes/new" element={<CreateRecipePage />} />
           <Route path="recipes/:id" element={<RecipeDetailPage />} />
           
           <Route path="menu-planner" element={<MenuPlannerPage />} />
