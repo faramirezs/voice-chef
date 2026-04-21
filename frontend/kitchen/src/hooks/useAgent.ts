@@ -11,14 +11,25 @@ import { chefAgent } from "@/lib/agent";
 export interface ToolActivity {
   toolCallId: string;
   toolName: string;
+  status: "running" | "done" | "failed";
   result?: string;
+  startedAt: number;
+}
+
+function normalizeToolName(name: string | undefined): string {
+  const raw = (name ?? "tool").trim();
+  if (!raw) return "Tool";
+  return raw
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function useAgent() {
   const debugStream = import.meta.env.VITE_AGENT_DEBUG_STREAM === "1";
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [toolActivity, setToolActivity] = useState<ToolActivity | null>(null);
+  const [toolActivity, setToolActivity] = useState<ToolActivity[]>([]);
   const threadIdRef = useRef(uuid());
 
   const syncMessages = useCallback(() => {
@@ -36,7 +47,7 @@ export function useAgent() {
       chefAgent.addMessage(userMsg);
       setMessages([...chefAgent.messages]);
       setIsStreaming(true);
-      setToolActivity(null);
+      setToolActivity([]);
 
       if (debugStream) {
         console.log("[agent-debug] run:start", {
@@ -74,22 +85,55 @@ export function useAgent() {
 
           if (event.type === EventType.TOOL_CALL_START) {
             const e = event as { toolCallName?: string; toolCallId?: string };
-            setToolActivity({
-              toolCallId: e.toolCallId ?? "",
-              toolName: e.toolCallName ?? "tool",
+            const toolCallId = e.toolCallId ?? "";
+            const toolName = normalizeToolName(e.toolCallName);
+            setToolActivity((prev) => {
+              const existingIndex = prev.findIndex((p) => p.toolCallId === toolCallId);
+              if (existingIndex >= 0) {
+                return prev.map((item, i) =>
+                  i === existingIndex ? { ...item, toolName, status: "running" } : item,
+                );
+              }
+              return [
+                ...prev,
+                {
+                  toolCallId,
+                  toolName,
+                  status: "running",
+                  startedAt: Date.now(),
+                },
+              ];
             });
+          }
+          if (event.type === EventType.TOOL_CALL_END) {
+            const e = event as { toolCallId?: string };
+            const toolCallId = e.toolCallId ?? "";
+            setToolActivity((prev) =>
+              prev.map((item) =>
+                item.toolCallId === toolCallId && item.status === "running"
+                  ? { ...item, status: "done" }
+                  : item,
+              ),
+            );
           }
           if (event.type === EventType.TOOL_CALL_RESULT) {
             const e = event as { toolCallId?: string; content?: string };
             setToolActivity((prev) => {
-              if (!prev || prev.toolCallId !== e.toolCallId) return prev;
-              return {
-                toolCallId: prev.toolCallId,
-                toolName: prev.toolName,
-                result: e.content ?? "",
-              };
+              const toolCallId = e.toolCallId ?? "";
+              return prev.map((item) =>
+                item.toolCallId === toolCallId
+                  ? { ...item, status: "done", result: e.content ?? "" }
+                  : item,
+              );
             });
             syncMessages();
+          }
+          if (event.type === EventType.RUN_ERROR) {
+            setToolActivity((prev) =>
+              prev.map((item) =>
+                item.status === "running" ? { ...item, status: "failed" } : item,
+              ),
+            );
           }
         },
       };
@@ -105,6 +149,7 @@ export function useAgent() {
             result,
           });
         }
+
         void result;
       } catch (err) {
         console.error("Agent run failed:", err);
@@ -115,6 +160,11 @@ export function useAgent() {
             "Sorry, something went wrong reaching the kitchen assistant. Please try again.",
         };
         chefAgent.addMessage(errorMsg);
+        setToolActivity((prev) =>
+          prev.map((item) =>
+            item.status === "running" ? { ...item, status: "failed" } : item,
+          ),
+        );
       } finally {
         if (debugStream) {
           console.log("[agent-debug] run:end", {
@@ -132,9 +182,11 @@ export function useAgent() {
   const reset = useCallback(() => {
     chefAgent.setMessages([]);
     setMessages([]);
-    setToolActivity(null);
+    setToolActivity([]);
     threadIdRef.current = uuid();
   }, []);
 
-  return { messages, isStreaming, toolActivity, sendMessage, reset };
+  const sortedToolActivity = [...toolActivity].sort((a, b) => a.startedAt - b.startedAt);
+
+  return { messages, isStreaming, toolActivity: sortedToolActivity, sendMessage, reset };
 }

@@ -139,6 +139,9 @@ drift-gate-local:
 db-connect:
 	docker exec -it voice-chef-db-1 psql -h localhost -p 5432 -U recipe_user -d recipe_db
 
+agent-terminal:
+	docker exec -it voice-chef-agent-1 bash
+
 .PHONY: all dev prod down re clean fclean status logs help % build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
-.PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect
+.PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal
