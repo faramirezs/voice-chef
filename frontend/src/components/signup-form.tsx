@@ -51,12 +51,35 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     })
 
     if (!res.ok) {
-      let errorMessage = `Signup failed (${res.status})`
+      let errorDetails = ""
 
       try {
         const err = await res.json()
-        errorMessage = err.message || err.detail || errorMessage
+        
+        // Extract error message, handling nested objects/arrays
+        let errorField = err.message || err.detail || err.error || ""
+        
+        if (typeof errorField === "object") {
+          // If it's an object, extract first error or stringify
+          if (Array.isArray(errorField) && errorField.length > 0) {
+            errorDetails = typeof errorField[0] === "string" 
+              ? errorField[0] 
+              : errorField[0]?.msg || JSON.stringify(errorField[0])
+          } else if (errorField?.msg) {
+            errorDetails = errorField.msg
+          } else if (errorField?.message) {
+            errorDetails = errorField.message
+          } else {
+            errorDetails = JSON.stringify(errorField)
+          }
+        } else {
+          errorDetails = String(errorField)
+        }
       } catch {}
+
+      const errorMessage = errorDetails
+        ? `Signup failed (${res.status}): ${errorDetails}`
+        : `Signup failed (${res.status})`
 
       throw new Error(errorMessage)
     }

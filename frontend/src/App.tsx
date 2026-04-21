@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RecipesPage } from '@/pages/RecipesPage';
 import { RecipeDetailPage } from '@/pages/RecipeDetailPage';
@@ -15,15 +16,44 @@ import { TimersPage } from '@/pages/TimersPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
 
+function PublicOnlyRoute({ children }: { children: ReactNode }) {
+  const isLoggedIn = Boolean(localStorage.getItem('token'));
+  return isLoggedIn ? <Navigate to="/" replace /> : children;
+}
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const isLoggedIn = Boolean(localStorage.getItem('token'));
+  return isLoggedIn ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-          <Route path="login" element={<LoginPage />} />
-          <Route path= "signup" element={<SignupPage />} />
+          <Route
+            path="login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="signup"
+            element={
+              <PublicOnlyRoute>
+                <SignupPage />
+              </PublicOnlyRoute>
+            }
+          />
 
-        <Route element={<AppLayout />}>
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
         
           <Route index element={<StartingPage />} />
 
