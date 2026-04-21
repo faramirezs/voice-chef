@@ -7,7 +7,7 @@ from app.models.recipe import Recipe
 # from app.models.recipe_photos import RecipePhoto
 from app.services.file_service import save_file, delete_file
 
-router = APIRouter(prefix="/recipe_photos")
+router = APIRouter(prefix="/recipe_photos", tags=["File Service"])
 
 @router.post("/")
 def upload_recipe_photo(
@@ -20,15 +20,12 @@ def upload_recipe_photo(
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     
-    # Save file locally
-    file_path, filename = save_file(file)
+    filename = save_file(file)  # Save file locally
     new_url = f"/uploads/{filename}"  # URL to access via StaticFiles
 
-    # Delete old file if exists
     if recipe.photo_url:
-        delete_file(recipe.photo_url)
+        delete_file(recipe.photo_url)  # Delete old file if exists
 
-    # Store new url in DB
     recipe.photo_url = new_url  # Update the recipe's photo_url
 
     db.add(recipe)
@@ -36,16 +33,6 @@ def upload_recipe_photo(
     db.refresh(recipe)
 
     return {"photo_url": recipe.photo_url}
-
-    # db.add(photo)
-    # db.commit()
-    # db.refresh(photo)
-
-    # return {
-    #     "id": photo.id,
-    #     "recipe_id": photo.recipe_id,
-    #     "photo_url": photo.photo_url,
-    # }
 
 
 @router.get("/{recipe_id}")
@@ -71,12 +58,9 @@ def delete_recipe_photo(
     if not recipe.photo_url:
         raise HTTPException(status_code=404, detail="Photo not found")
 
-    # 1. Delete file from disk
-    delete_file(recipe.photo_url)
+    delete_file(recipe.photo_url) #  Delete file from disk
+    recipe.photo_url = None # Set value to NULL for db
 
-    recipe.photo_url = None
-
-    # 2. Delete DB record
     db.add(recipe)
     db.commit()
 

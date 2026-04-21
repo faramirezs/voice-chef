@@ -7,10 +7,18 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def save_file(file: UploadFile) -> tuple[str, str]:
-    if file.content_type != "image/jpeg":
-        raise HTTPException(400, "Only JPEG files are allowed")
+    allowed_types = {"image/jpeg", "image/png", "application/pdf"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(400, "Only JPEG, PNG and PDF files are allowed")
 
-    filename = f"{uuid.uuid4()}.jpg"
+    filename = f"{uuid.uuid4()}"
+    if file.content_type == "image/jpeg":
+        filename += ".jpg"
+    elif file.content_type == "image/png":
+        filename += ".png"
+    elif file.content_type == "application/pdf":
+        filename += ".pdf"
+
     file_path = os.path.join(UPLOAD_DIR, filename)
 
     with open(file_path, "wb") as buffer:

@@ -57,7 +57,7 @@ class RecipeSummaryResponse(SQLModel):
     portions_count_resolved: Optional[Decimal]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
-    photo_url: Optional[str]
+    # photo_url: Optional[str] = None
 
 class RecipeDetailResponse(RecipeSummaryResponse):
     ingredients: List[RecipeIngredientResponse]
