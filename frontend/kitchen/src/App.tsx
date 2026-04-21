@@ -1,5 +1,5 @@
-import { ChatInterface } from "@/components/chat/ChatInterface";
+import { KitchenLayout } from "@/components/layout/KitchenLayout";
 
 export default function App() {
-  return <ChatInterface />;
+  return <KitchenLayout />;
 }

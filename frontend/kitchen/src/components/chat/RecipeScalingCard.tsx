@@ -1,15 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { KCard } from "@/components/ui/KCard";
 import { KButton } from "@/components/ui/KButton";
+import { useAgent, useAgentState } from "@/hooks/useAgent";
 import type {
   RecipeScalingState,
   RecipeScalingIngredient,
 } from "@/types/scaling";
-
-interface RecipeScalingCardProps {
-  state: RecipeScalingState;
-  onApply: (state: RecipeScalingState) => void;
-}
+import { isRecipeScalingState } from "@/types/scaling";
 
 type TargetField = "portions" | "totalRawWeight" | "totalCookedWeight";
 
@@ -38,10 +35,51 @@ function scaledIngredients(
   }));
 }
 
-export function RecipeScalingCard({
+function ScalingCardSkeleton() {
+  return (
+    <KCard className="p-4 space-y-4 animate-pulse">
+      <div className="h-5 w-40 rounded bg-border/30" />
+      <div className="grid grid-cols-3 gap-3">
+        <div className="h-10 rounded-xl bg-border/20" />
+        <div className="h-10 rounded-xl bg-border/20" />
+        <div className="h-10 rounded-xl bg-border/20" />
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 w-full rounded bg-border/15" />
+        <div className="h-4 w-3/4 rounded bg-border/15" />
+        <div className="h-4 w-5/6 rounded bg-border/15" />
+      </div>
+    </KCard>
+  );
+}
+
+/**
+ * RecipeScalingCard for the sticky slot.
+ *
+ * Reads agentState from useAgent (populated by STATE_SNAPSHOT/STATE_DELTA).
+ * Shows a skeleton until state arrives.
+ * Calls sendMessage to apply scaling changes.
+ */
+export function RecipeScalingCard(_props: Record<string, unknown>) {
+  const agentState = useAgentState();
+  const { sendMessage } = useAgent();
+  const state = isRecipeScalingState(agentState) ? agentState : null;
+
+  // Skeleton while waiting for STATE_SNAPSHOT
+  if (!state || state.widget !== "recipe.scaling") {
+    return <ScalingCardSkeleton />;
+  }
+
+  return <ScalingCardInner state={state} sendMessage={sendMessage} />;
+}
+
+function ScalingCardInner({
   state,
-  onApply,
-}: RecipeScalingCardProps) {
+  sendMessage,
+}: {
+  state: RecipeScalingState;
+  sendMessage: (text: string) => void;
+}) {
   const { original, current, ingredients, recipeName, suggestedFields, isDirty } =
     state;
 
@@ -73,14 +111,23 @@ export function RecipeScalingCard({
     if (applying) return;
     setApplying(true);
     const finalIngredients = scaledIngredients(ingredients, ratio);
-    onApply({
-      ...state,
-      current: localCurrent,
-      ingredients: finalIngredients,
-      isDirty: false,
-    });
+    const parts: string[] = [
+      `Apply scaling for recipe ${state.recipeId}:`,
+      `portions=${localCurrent.portions ?? ""}`,
+      `total_raw_weight=${localCurrent.totalRawWeight ?? ""}`,
+      `total_cooked_weight=${localCurrent.totalCookedWeight ?? ""}`,
+    ];
+    if (finalIngredients.length > 0) {
+      parts.push(
+        "ingredients=" +
+          finalIngredients
+            .map((i) => `${i.name}:${i.quantity}${i.unit}`)
+            .join(",")
+      );
+    }
+    sendMessage(parts.join(" "));
     setApplying(false);
-  }, [applying, ingredients, ratio, localCurrent, state, onApply]);
+  }, [applying, ingredients, ratio, localCurrent, state.recipeId, sendMessage]);
 
   const targetField = getTargetField(original.yieldMode);
 

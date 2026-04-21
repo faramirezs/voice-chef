@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useAgent } from "@/hooks/useAgent";
 import { KButton } from "@/components/ui/KButton";
 import { KInput } from "@/components/ui/KInput";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceInput } from "./VoiceInput";
-import { RecipeScalingCard } from "./RecipeScalingCard";
 import type { ToolActivity } from "@/hooks/useAgent";
 import type { Message } from "@ag-ui/client";
-import { isRecipeScalingState, type RecipeScalingState } from "@/types/scaling";
 
 function StreamingDots() {
   return (
@@ -102,7 +100,7 @@ function shouldHideAssistantNarration(messages: Message[], index: number): boole
 }
 
 export function ChatInterface() {
-  const { messages, isStreaming, toolActivity, agentState, sendMessage, reset } =
+  const { messages, isStreaming, toolActivity, sendMessage, reset } =
     useAgent();
   const visibleMessages = messages.filter(
     (_msg, index) => !shouldHideAssistantNarration(messages, index),
@@ -111,11 +109,10 @@ export function ChatInterface() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scalingState = isRecipeScalingState(agentState) ? agentState : null;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [visibleMessages, isStreaming, toolActivity, scalingState]);
+  }, [visibleMessages, isStreaming, toolActivity]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -130,35 +127,6 @@ export function ChatInterface() {
     inputRef.current?.focus();
   };
 
-  const handleApplyScaling = useCallback(
-    (state: RecipeScalingState) => {
-      const parts: string[] = [
-        `Apply scaling for recipe ${state.recipeId}:`,
-        `portions=${state.current.portions ?? ""}`,
-        `total_raw_weight=${state.current.totalRawWeight ?? ""}`,
-        `total_cooked_weight=${state.current.totalCookedWeight ?? ""}`,
-      ];
-      if (state.ingredients.length > 0) {
-        parts.push(
-          "ingredients=" +
-            state.ingredients
-              .map((i) => `${i.name}:${i.quantity}${i.unit}`)
-              .join(",")
-        );
-      }
-      sendMessage(parts.join(" "));
-    },
-    [sendMessage]
-  );
-
-  const handleAutoImprove = useCallback(
-    (recipeId: string) => {
-      sendMessage(
-        `Please call the suggest_recipe_improvements tool with recipe_id="${recipeId}" to analyze this recipe and suggest improvements for any missing or incomplete fields.`
-      );
-    },
-    [sendMessage]
-  );
   return (
     <div className="h-full flex flex-col bg-surface/85 backdrop-blur-sm">
       {/* Header */}
@@ -167,18 +135,6 @@ export function ChatInterface() {
           <h1 className="text-xl font-semibold tracking-tight text-text">
             Voice chef
           </h1>
-          {scalingState && (
-            <label className="flex items-center gap-1.5 text-sm text-text-muted cursor-pointer select-none border border-border/50 rounded-lg px-2 py-1 hover:bg-surface/60">
-              <input
-                type="checkbox"
-                className="accent-primary w-3.5 h-3.5"
-                onChange={(e) => {
-                  if (e.target.checked) handleAutoImprove(scalingState.recipeId);
-                }}
-              />
-              Auto-improve
-            </label>
-          )}
         </div>
         <KButton
           type="button"
@@ -217,12 +173,6 @@ export function ChatInterface() {
           </div>
         )}
 
-        {scalingState && (
-          <RecipeScalingCard
-            state={scalingState}
-            onApply={handleApplyScaling}
-          />
-        )}
 
         {isStreaming && <StreamingDots />}
 

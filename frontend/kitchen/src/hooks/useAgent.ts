@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore, useRef, useState } from "react";
 import { v4 as uuid } from "uuid";
 import {
   type Message,
@@ -9,6 +9,98 @@ import {
   type StateDeltaEvent,
 } from "@ag-ui/client";
 import { chefAgent } from "@/lib/agent";
+
+// --- Envelope subscription system ---
+// Module-level subscriber map shared between useAgent and useEnvelope.
+// This works because there is exactly one agent instance per browser session.
+type EnvelopeHandler = (envelope: Record<string, unknown>) => void;
+const _envelopeSubscribers = new Map<string, Set<EnvelopeHandler>>();
+
+// --- Shared agent state store ---
+// STATE_SNAPSHOT/STATE_DELTA are processed once (in the useAgent subscriber)
+// but must be visible to any component (e.g., slotted cards) that wasn't
+// part of the original useAgent() call.
+let _agentState: unknown = null;
+const _agentStateListeners = new Set<() => void>();
+
+function _notifyAgentStateListeners() {
+  for (const fn of _agentStateListeners) fn();
+}
+
+function _setSharedAgentState(state: unknown) {
+  _agentState = state;
+  _notifyAgentStateListeners();
+}
+
+function _patchSharedAgentState(updater: (prev: unknown) => unknown) {
+  _agentState = updater(_agentState);
+  _notifyAgentStateListeners();
+}
+
+function _clearSharedAgentState() {
+  _agentState = null;
+  _notifyAgentStateListeners();
+}
+
+function _subscribeAgentState(listener: () => void) {
+  _agentStateListeners.add(listener);
+  return () => { _agentStateListeners.delete(listener); };
+}
+
+/** Read the shared agent state from any component. */
+export function useAgentState(): unknown {
+  return useSyncExternalStore(
+    _subscribeAgentState,
+    () => _agentState,
+  );
+}
+
+
+function emitEnvelope(raw: string): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as Record<string, unknown>).type !== "string"
+  ) {
+    return;
+  }
+  const envelope = parsed as Record<string, unknown>;
+  const envelopeType = envelope.type as string;
+  const handlers = _envelopeSubscribers.get(envelopeType);
+  if (handlers) {
+    for (const handler of handlers) {
+      handler(envelope);
+    }
+  }
+}
+
+export function useEnvelope(
+  type: string,
+  handler: EnvelopeHandler
+): void {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
+  useEffect(() => {
+    let set = _envelopeSubscribers.get(type);
+    if (!set) {
+      set = new Set();
+      _envelopeSubscribers.set(type, set);
+    }
+    const stable = (e: Record<string, unknown>) => handlerRef.current(e);
+    set.add(stable);
+    return () => {
+      set!.delete(stable);
+      if (set!.size === 0) _envelopeSubscribers.delete(type);
+    };
+  }, [type]);
+}
 
 export interface ToolActivity {
   toolCallId: string;
@@ -113,14 +205,25 @@ export function useAgent() {
             console.log("[agent-debug] STATE_SNAPSHOT", event.snapshot);
           }
           setAgentState(event.snapshot);
+          _setSharedAgentState(event.snapshot);
         },
         onStateDeltaEvent({ event }: { event: StateDeltaEvent }) {
           if (debugStream) {
             console.log("[agent-debug] STATE_DELTA", event.delta);
           }
-          setAgentState((prev) => {
+          setAgentState((prev: unknown) => {
             if (prev == null || typeof prev !== "object") return prev;
             let next = { ...(prev as Record<string, unknown>) };
+            for (const op of event.delta) {
+              if (op.op === "replace") {
+                applyPatchReplace(next, op.path, op.value);
+              }
+            }
+            return next;
+          });
+          _patchSharedAgentState((prev) => {
+            if (prev == null || typeof prev !== "object") return prev;
+            const next = { ...(prev as Record<string, unknown>) };
             for (const op of event.delta) {
               if (op.op === "replace") {
                 applyPatchReplace(next, op.path, op.value);
@@ -180,6 +283,7 @@ export function useAgent() {
                   : item
               );
             });
+            if (e.content) emitEnvelope(e.content);
             syncMessages();
           }
           if (event.type === EventType.RUN_ERROR) {
@@ -238,6 +342,7 @@ export function useAgent() {
     setMessages([]);
     setToolActivity([]);
     setAgentState(null);
+    _clearSharedAgentState();
     threadIdRef.current = uuid();
   }, []);
 

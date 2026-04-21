@@ -57,7 +57,19 @@ agent = Agent(
         "explicitly asks for another lookup. In particular, after get_recipe_detail "
         "succeeds, do not call get_recipes_list again in the same run. "
         "When a chef asks to scale a recipe, edit portions, or adjust ingredient "
-        "quantities, use get_recipe_for_scaling instead of get_recipe_detail."
+        "quantities, use get_recipe_for_scaling instead of get_recipe_detail. "
+        "MANDATORY SCALING SEQUENCE: when scaling a recipe, you MUST call "
+        "render_component(component='recipe_scaling', recipe_id=..., slot='sticky') "
+        "BEFORE calling get_recipe_for_scaling. This places the scaling widget in "
+        "the UI so the user sees it immediately. Never skip render_component. "
+        "UI Component Rendering: render_component places a component in a layout slot. "
+        "Available components: "
+        "* 'placeholder' (any slot): test card. Args: message. "
+        "* 'recipe_scaling' (sticky slot): scaling widget. Args: recipe_id. "
+        "Slot guide: 'main' = center content, 'sticky' = pinned below header, "
+        "'tray' = right slide-in, 'overlay' = full-screen modal. "
+        "After placing a component, STATE_SNAPSHOT from other tools will "
+        "populate its state. Do not duplicate data in render_component args. "
     ),
 )
 
@@ -175,11 +187,54 @@ async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
 
 # --- JSON Patch helper for STATE_DELTA events ---
 
+
 class _PatchOp(BaseModel):
     op: str
     path: str
     value: Any = None
 
+
+# --- render_component: flat-parameter tool ---
+
+VALID_COMPONENTS = ("placeholder", "recipe_scaling")
+VALID_SLOTS = ("main", "sticky", "tray", "overlay")
+
+
+@agent.tool_plain
+async def render_component(
+    component: str,
+    slot: str = "main",
+    message: str = "Slot active",
+    recipe_id: str = "",
+) -> dict[str, Any]:
+    """Render a UI component in a layout slot.
+
+    Call this before sending STATE_SNAPSHOT data. The slot will show a
+    skeleton until state arrives.
+
+    Components:
+    - "placeholder" (any slot): test card. Pass 'message' for display text.
+    - "recipe_scaling" (default slot: sticky): scaling widget. Pass 'recipe_id'.
+
+    Slots: "main" = center, "sticky" = pinned below header,
+    "tray" = right slide-in, "overlay" = full-screen modal.
+    """
+    if component not in VALID_COMPONENTS:
+        return {"type": "error", "version": "1", "message": f"Unknown component: {component}"}
+    if slot not in VALID_SLOTS:
+        return {"type": "error", "version": "1", "message": f"Unknown slot: {slot}"}
+
+    # Validate component-specific requirements.
+    if component == "recipe_scaling" and not recipe_id:
+        return {"type": "error", "version": "1", "message": "recipe_id required for recipe_scaling"}
+
+    payload: dict[str, Any] = {"component": component, "slot": slot}
+    if component == "placeholder":
+        payload["message"] = message
+    elif component == "recipe_scaling":
+        payload["recipe_id"] = recipe_id
+
+    return {"type": "ui.render", "version": "1", **payload}
 
 # --- Recipe scaling tools ---
 
@@ -188,6 +243,11 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
     """Fetch a recipe with its ingredients for the scaling widget.
 
     Use this when the chef wants to scale a recipe, edit portions,
+    or adjust ingredient quantities.
+
+    IMPORTANT: always call render_component(component='recipe_scaling',
+    recipe_id=recipe_id) BEFORE calling this tool, to place the scaling
+    widget in the UI.
     """
     try:
         resp = await _http_client.get(
