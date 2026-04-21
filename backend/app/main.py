@@ -4,7 +4,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as user_router
 from app.api.routes.recipe import router as recipe_router
 from app.api.routes.ingredient import router as ingredient_router
-from app.api.routes.recipe_photos import router as recipe_photos_router
+from app.api.routes.file_service import router as recipe_photos_router
 
 app = FastAPI()
 

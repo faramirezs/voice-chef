@@ -25,7 +25,7 @@ class RecipeWrite(SQLModel):
     total_cooked_weight_grams: Optional[Decimal] = None
 
     portions_count_resolved: Optional[Decimal] = None
-    photo_url: Optional[str] = None
+    # photo_url: Optional[str] = None
 
     # ingredients: List[RecipeIngredientWrite] = []
 
