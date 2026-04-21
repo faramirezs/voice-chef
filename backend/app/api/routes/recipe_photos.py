@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.database import get_session
-from app.models.recipe_photos import RecipePhoto
-from app.services.file_service import save_jpeg
+from app.models.recipe import Recipe
+# from app.models.recipe_photos import RecipePhoto
+from app.services.file_service import save_file, delete_file
 
-router = APIRouter(prefix="/recipe-photos", tags=["recipe-photos"])
+router = APIRouter(prefix="/recipe_photos")
 
 @router.post("/")
 def upload_recipe_photo(
@@ -14,43 +15,69 @@ def upload_recipe_photo(
     file: UploadFile = File(...),
     db: Session = Depends(get_session),
 ):
-    # 1. Save file locally
-    file_path, filename = save_jpeg(file)
+    recipe = db.get(Recipe, recipe_id)
 
-    # 2. Store in DB
-    photo = RecipePhoto(
-        recipe_id=recipe_id,
-        # photo_url=file_path,  # ← storing local path for now
-        photo_url=f"/uploads/{filename}",  # URL to access via StaticFiles
-        photo_type=file.content_type,
-    )
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    # Save file locally
+    file_path, filename = save_file(file)
+    new_url = f"/uploads/{filename}"  # URL to access via StaticFiles
 
-    db.add(photo)
+    # Delete old file if exists
+    if recipe.photo_url:
+        delete_file(recipe.photo_url)
+
+    # Store new url in DB
+    recipe.photo_url = new_url  # Update the recipe's photo_url
+
+    db.add(recipe)
     db.commit()
-    db.refresh(photo)
+    db.refresh(recipe)
 
-    return {
-        "id": photo.id,
-        "recipe_id": photo.recipe_id,
-        "photo_url": photo.photo_url,
-    }
+    return {"photo_url": recipe.photo_url}
+
+    # db.add(photo)
+    # db.commit()
+    # db.refresh(photo)
+
+    # return {
+    #     "id": photo.id,
+    #     "recipe_id": photo.recipe_id,
+    #     "photo_url": photo.photo_url,
+    # }
 
 
-# @router.delete("/{photo_id}")
-# def delete_recipe_photo(
-#     photo_id: UUID,
-#     db: Session = Depends(get_session),
-# ):
-#     photo = db.get(RecipePhoto, photo_id)
+@router.get("/{recipe_id}")
+def get_recipe_photo(recipe_id: UUID, db: Session = Depends(get_session)):
+    recipe = db.get(Recipe, recipe_id)
 
-#     if not photo:
-#         raise HTTPException(status_code=404, detail="Photo not found")
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
 
-#     # 1. Delete file from disk
-#     delete_file(photo.photo_url)
+    return {"photo_url": recipe.photo_url}
 
-#     # 2. Delete DB record
-#     db.delete(photo)
-#     db.commit()
 
-#     return {"message": "Photo deleted"}
+@router.delete("/{recipe_id}/photo")
+def delete_recipe_photo(
+    recipe_id: UUID,
+    db: Session = Depends(get_session),
+):
+    recipe = db.get(Recipe, recipe_id)
+
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    if not recipe.photo_url:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    # 1. Delete file from disk
+    delete_file(recipe.photo_url)
+
+    recipe.photo_url = None
+
+    # 2. Delete DB record
+    db.add(recipe)
+    db.commit()
+
+    return {"message": "Photo deleted"}
