@@ -22,9 +22,10 @@ interface SlotContextValue {
 const SlotContext = createContext<SlotContextValue | null>(null);
 
 const EMPTY_SLOTS: Record<SlotId, SlotState | undefined> = {
-  main: undefined,
+  canvas: undefined,
   sticky: undefined,
-  tray: undefined,
+  chips: undefined,
+  notifications: undefined,
   overlay: undefined,
 };
 

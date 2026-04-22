@@ -48,6 +48,9 @@ agent = Agent(
         "cooking steps, ingredients, storage, plating, and kitchen operations. "
         "When a chef asks about a recipe, always look it up from the database first. "
         "Respond in a concise, action-oriented way suited for a busy kitchen environment. "
+        "You are a display controller, not a chat assistant. Never send free-form text responses. "
+        "Always use render_component to show content. If you have nothing visual to show, "
+        "respond with an empty TEXT_MESSAGE -- the UI has no text rendering target. "
         "UI rendering policy: when a tool returns a typed envelope like recipes.list, "
         "recipe.detail, or recipe.scaling, do not rewrite the tool data as markdown "
         "tables, long lists, or full recipe text. The UI renders detailed tool output "
@@ -66,8 +69,9 @@ agent = Agent(
         "Available components: "
         "* 'placeholder' (any slot): test card. Args: message. "
         "* 'recipe_scaling' (sticky slot): scaling widget. Args: recipe_id. "
-        "Slot guide: 'main' = center content, 'sticky' = pinned below header, "
-        "'tray' = right slide-in, 'overlay' = full-screen modal. "
+        "Slot guide: 'canvas' = primary content area (center), 'sticky' = pinned top bar, "
+        "'chips' = bottom bar for transient actions, 'notifications' = top-right toasts, "
+        "'overlay' = full-screen modal. "
         "After placing a component, STATE_SNAPSHOT from other tools will "
         "populate its state. Do not duplicate data in render_component args. "
     ),
@@ -197,13 +201,13 @@ class _PatchOp(BaseModel):
 # --- render_component: flat-parameter tool ---
 
 VALID_COMPONENTS = ("placeholder", "recipe_scaling")
-VALID_SLOTS = ("main", "sticky", "tray", "overlay")
+VALID_SLOTS = ("canvas", "sticky", "chips", "notifications", "overlay")
 
 
 @agent.tool_plain
 async def render_component(
     component: str,
-    slot: str = "main",
+    slot: str = "canvas",
     message: str = "Slot active",
     recipe_id: str = "",
 ) -> dict[str, Any]:
@@ -216,8 +220,9 @@ async def render_component(
     - "placeholder" (any slot): test card. Pass 'message' for display text.
     - "recipe_scaling" (default slot: sticky): scaling widget. Pass 'recipe_id'.
 
-    Slots: "main" = center, "sticky" = pinned below header,
-    "tray" = right slide-in, "overlay" = full-screen modal.
+    Slots: "canvas" = primary content area, "sticky" = pinned top bar,
+    "chips" = bottom bar, "notifications" = top-right toasts,
+    "overlay" = full-screen modal.
     """
     if component not in VALID_COMPONENTS:
         return {"type": "error", "version": "1", "message": f"Unknown component: {component}"}

@@ -56,6 +56,74 @@ export function useAgentState(): unknown {
 }
 
 
+
+// --- Shared streaming state store ---
+// isStreaming is written by useAgent() but must be readable
+// from HudStatusIndicator and other HUD components.
+let _isStreaming = false;
+const _isStreamingListeners = new Set<() => void>();
+
+function _notifyIsStreamingListeners() {
+  for (const fn of _isStreamingListeners) fn();
+}
+
+function _setIsStreaming(value: boolean) {
+  _isStreaming = value;
+  _notifyIsStreamingListeners();
+}
+
+function _subscribeIsStreaming(listener: () => void) {
+  _isStreamingListeners.add(listener);
+  return () => { _isStreamingListeners.delete(listener); };
+}
+
+export function useIsStreaming(): boolean {
+  return useSyncExternalStore(
+    _subscribeIsStreaming,
+    () => _isStreaming,
+  );
+}
+
+// --- Shared tool activity store ---
+let _toolActivity: ToolActivity[] = [];
+const _toolActivityListeners = new Set<() => void>();
+
+function _notifyToolActivityListeners() {
+  for (const fn of _toolActivityListeners) fn();
+}
+
+function _setToolActivity(value: ToolActivity[] | ((prev: ToolActivity[]) => ToolActivity[])) {
+  _toolActivity = typeof value === "function" ? value(_toolActivity) : value;
+  _notifyToolActivityListeners();
+}
+
+function _subscribeToolActivity(listener: () => void) {
+  _toolActivityListeners.add(listener);
+  return () => { _toolActivityListeners.delete(listener); };
+}
+
+export function useToolActivity(): ToolActivity[] {
+  return useSyncExternalStore(
+    _subscribeToolActivity,
+    () => _toolActivity,
+  );
+}
+
+// --- Stable sendMessage / reset getters ---
+// These are set by useAgent() once during mount, then callable from any component.
+let _sendMessage: ((text: string) => void) | null = null;
+let _reset: (() => void) | null = null;
+
+export function getSendMessage(): (text: string) => void {
+  if (!_sendMessage) throw new Error("Agent not initialized");
+  return _sendMessage;
+}
+
+export function getReset(): () => void {
+  if (!_reset) throw new Error("Agent not initialized");
+  return _reset;
+}
+
 function emitEnvelope(raw: string): void {
   let parsed: unknown;
   try {
@@ -172,7 +240,9 @@ export function useAgent() {
       chefAgent.addMessage(userMsg);
       setMessages([...chefAgent.messages]);
       setIsStreaming(true);
+      _setIsStreaming(true);
       setToolActivity([]);
+      _setToolActivity([]);
 
       if (debugStream) {
         console.log("[agent-debug] run:start", {
@@ -261,11 +331,35 @@ export function useAgent() {
                 },
               ];
             });
+            _setToolActivity((prev) => {
+              const existingIndex = prev.findIndex((p) => p.toolCallId === toolCallId);
+              if (existingIndex >= 0) {
+                return prev.map((item, i) =>
+                  i === existingIndex ? { ...item, toolName, status: "running" } : item
+                );
+              }
+              return [
+                ...prev,
+                {
+                  toolCallId,
+                  toolName,
+                  status: "running",
+                  startedAt: Date.now(),
+                },
+              ];
+            });
           }
           if (event.type === EventType.TOOL_CALL_END) {
             const e = event as { toolCallId?: string };
             const toolCallId = e.toolCallId ?? "";
             setToolActivity((prev) =>
+              prev.map((item) =>
+                item.toolCallId === toolCallId && item.status === "running"
+                  ? { ...item, status: "done" }
+                  : item
+              )
+            );
+            _setToolActivity((prev) =>
               prev.map((item) =>
                 item.toolCallId === toolCallId && item.status === "running"
                   ? { ...item, status: "done" }
@@ -283,11 +377,24 @@ export function useAgent() {
                   : item
               );
             });
+            _setToolActivity((prev) => {
+              const toolCallId = e.toolCallId ?? "";
+              return prev.map((item) =>
+                item.toolCallId === toolCallId
+                  ? { ...item, status: "done", result: e.content ?? "" }
+                  : item
+              );
+            });
             if (e.content) emitEnvelope(e.content);
             syncMessages();
           }
           if (event.type === EventType.RUN_ERROR) {
             setToolActivity((prev) =>
+              prev.map((item) =>
+                item.status === "running" ? { ...item, status: "failed" } : item
+              )
+            );
+            _setToolActivity((prev) =>
               prev.map((item) =>
                 item.status === "running" ? { ...item, status: "failed" } : item
               )
@@ -323,6 +430,11 @@ export function useAgent() {
             item.status === "running" ? { ...item, status: "failed" } : item,
           ),
         );
+        _setToolActivity((prev) =>
+          prev.map((item) =>
+            item.status === "running" ? { ...item, status: "failed" } : item,
+          ),
+        );
       } finally {
         if (debugStream) {
           console.log("[agent-debug] run:end", {
@@ -333,6 +445,7 @@ export function useAgent() {
 
       syncMessages();
       setIsStreaming(false);
+      _setIsStreaming(false);
     },
     [syncMessages],
   );
@@ -341,12 +454,16 @@ export function useAgent() {
     chefAgent.setMessages([]);
     setMessages([]);
     setToolActivity([]);
+    _setToolActivity([]);
     setAgentState(null);
     _clearSharedAgentState();
+    _setIsStreaming(false);
     threadIdRef.current = uuid();
   }, []);
-
   const sortedToolActivity = [...toolActivity].sort((a, b) => a.startedAt - b.startedAt);
+
+  _sendMessage = sendMessage;
+  _reset = reset;
 
   return { messages, isStreaming, toolActivity: sortedToolActivity, agentState, sendMessage, reset };
 }

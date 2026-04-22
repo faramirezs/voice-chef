@@ -1,5 +1,5 @@
 /** Layout slot identifiers. Each slot has a distinct position and z-index. */
-export type SlotId = "main" | "sticky" | "tray" | "overlay";
+export type SlotId = "canvas" | "sticky" | "chips" | "notifications" | "overlay";
 
 /** Shape emitted by the backend render_component tool. */
 export interface RenderInstruction {

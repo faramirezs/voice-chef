@@ -32,7 +32,7 @@ const registry = new Map<string, RegisteredComponent>();
 
 registry.set("placeholder", {
   component: PlaceholderCard as ComponentType<Record<string, unknown>>,
-  defaultSlot: "main",
+  defaultSlot: "canvas",
 });
 
 registry.set("recipe_scaling", {
