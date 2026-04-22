@@ -10,6 +10,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
 
 import personImage from "@/assets/voice-chef-person.jpg"
 
@@ -24,7 +25,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   const confirmPassword = formData.get("confirm-password") as string
 
   if (password !== confirmPassword) {
-    alert("Passwords do not match")
+    toast.error("Passwords do not match")
     return
   }
 
@@ -32,7 +33,7 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
   /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/
 
   if (!passwordRegex.test(password)) {
-    alert(
+    toast.error(
       "Password must be at least 8 characters and include letters, numbers, and symbols"
     )
     return
@@ -75,6 +76,9 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         } else {
           errorDetails = String(errorField)
         }
+        toast.error("Registration error", {
+          description: errorDetails || "Something went wrong.",
+        })
       } catch {}
 
       const errorMessage = errorDetails
@@ -86,14 +90,21 @@ async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 
     const data = await res.json()
     console.log("User created:", data)
-    alert("Account created successfully! Please log in.")
+    toast.success("Account created successfully! Please log in.")
 
     window.location.href = "/login"
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Signup failed"
     console.error(message)
-    alert(`Error: ${message}`)
+    // This toast is for the API error, but we can make it more user-friendly.
+    // The toast.error inside the `if (!res.ok)` block already shows the detailed message.
+    // This outer catch is now mainly for network errors or if the API response isn't valid JSON.
+    if (!message.includes("Signup failed (")) {
+        toast.error("An unexpected error occurred", {
+            description: message,
+        });
+    }
   }
 }
 
