@@ -13,7 +13,7 @@ import { SettingsGeneralPage } from '@/pages/SettingsGeneral';
 import { IngredientsPage } from '@/pages/IngredientsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { TimersPage } from '@/pages/TimersPage';
-import { ProfilePage } from '@/pages/Profile';
+import { ProfilePage } from '@/pages/ProfilePage';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';

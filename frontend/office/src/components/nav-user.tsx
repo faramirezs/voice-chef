@@ -19,7 +19,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useNavigate } from "react-router-dom"
-import { useNavigate } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { UnfoldMoreIcon, CheckmarkBadgeIcon, NotificationIcon, LogoutIcon } from "@hugeicons/core-free-icons"
 
