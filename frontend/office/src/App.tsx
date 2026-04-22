@@ -13,6 +13,7 @@ import { SettingsGeneralPage } from '@/pages/SettingsGeneral';
 import { IngredientsPage } from '@/pages/IngredientsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { TimersPage } from '@/pages/TimersPage';
+import { ProfilePage } from '@/pages/Profile';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
@@ -72,6 +73,7 @@ function App() {
           <Route path="analytics" element={<AnalyticsPage />} />
 
           <Route path="settings/*" element={<SettingsGeneralPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
