@@ -5,7 +5,7 @@ from sqlmodel import (
 )
 from sqlalchemy import (
     CheckConstraint, UniqueConstraint, PrimaryKeyConstraint, ForeignKeyConstraint, 
-    Index, Column, Uuid, String, Integer, Numeric, text, DateTime
+    Index, Column, String, Integer, Numeric, text, DateTime
 )
 from datetime import datetime
 from decimal import Decimal
@@ -30,10 +30,8 @@ class Additives(SQLModel, table=True):
         sa_column=Column('code', Integer, nullable=False))
     
     # Core fields
-    name_de: str = Field(
-        sa_column=Column('name_de', String(255), nullable=False))
-    name_en: str | None = Field(
-        default=None, sa_column=Column('name_en', String(255)))
+    name_de: str = Field(max_length=255, nullable=False)
+    name_en: str | None = Field(default=None, max_length=255)
 
     # Relationship attributes
     ingredient: list['Ingredient'] = Relationship(
@@ -55,12 +53,9 @@ class Allergens(SQLModel, table=True):
         sa_column=Column('code', Integer, nullable=False))
     
     # Core fields
-    name_de: str = Field(
-        sa_column=Column('name_de', String(255), nullable=False))
-    name_en: str | None = Field(
-        default=None, sa_column=Column('name_en', String(255)))
-    parent_code: int | None = Field(
-        default=None, sa_column=Column('parent_code', Integer))
+    name_de: str = Field(max_length=255, nullable=False)
+    name_en: str | None = Field(default=None, max_length=255)
+    parent_code: int | None = Field(default=None)
     
     # Relationship attributes
     ingredient: list['Ingredient'] = Relationship(
@@ -82,14 +77,14 @@ class IngredientPrices(SQLModel, table=True):
     )
 
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    currency: str = Field(sa_column=Column('currency', String(10), nullable=False, server_default=text("'EUR'::character varying")))
+    currency: str = Field(sa_column=Column('currency', String(10), nullable=False, server_default=text("'EUR'")))
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
     price_per_unit: Decimal | None = Field(default=None, sa_column=Column('price_per_unit', Numeric(10, 4)))
-    unit: str | None = Field(default=None, sa_column=Column('unit', String(50)))
-    supplier_name: str | None = Field(default=None, sa_column=Column('supplier_name', String(255)))
-    supplier_id: str | None = Field(default=None, sa_column=Column('supplier_id', String(100)))
-    article_number: str | None = Field(default=None, sa_column=Column('article_number', String(100)))
+    unit: str | None = Field(default=None, max_length=50)
+    supplier_name: str | None = Field(default=None, max_length=255)
+    supplier_id: str | None = Field(default=None, max_length=100)
+    article_number: str | None = Field(default=None, max_length=100)
     price_per_gram: Decimal | None = Field(default=None, sa_column=Column('price_per_gram', Numeric(14, 8)))
     
     # Foreign keys

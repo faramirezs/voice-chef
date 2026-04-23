@@ -12,7 +12,6 @@ from sqlalchemy import (
     PrimaryKeyConstraint,
     String,
     UniqueConstraint,
-    Uuid,
     text,
 )
 
@@ -38,18 +37,18 @@ class Ingredient(SQLModel, table=True):
 
     # Primary key, Core fields, Timestamps
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    name: str = Field(sa_column=Column('name', String(255), nullable=False))
+    name: str = Field(max_length=255, nullable=False)
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     # Varying character fields
-    source: str = Field(sa_column=Column('source', String(50), nullable=False, server_default=text("'standard'::character varying")))
-    name_english: str | None = Field(default=None, sa_column=Column('name_english', String(255)))
-    bls_key: str | None = Field(default=None, sa_column=Column('bls_key', String(50)))
-    default_unit: str | None = Field(default=None, sa_column=Column('default_unit', String(50)))
+    source: str = Field(sa_column=Column('source', String(50), nullable=False, server_default=text("'standard'")))
+    name_english: str | None = Field(default=None, max_length=255)
+    bls_key: str | None = Field(default=None, max_length=50)
+    default_unit: str | None = Field(default=None, max_length=50)
 
     # Booleans
-    is_custom: bool = Field(sa_column=Column('is_custom', Boolean, nullable=False, server_default=text('false')))
+    is_custom: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("false")})
 
     # Foreign keys
     tenant_id: UUID | None = Field(default=None)

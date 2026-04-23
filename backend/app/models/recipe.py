@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
-    Integer, Numeric, PrimaryKeyConstraint, String, Text, Uuid, text
+    Integer, Numeric, PrimaryKeyConstraint, String, Text, text
 )
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -29,7 +29,7 @@ class Recipe(SQLModel, table=True):
         CheckConstraint("status::text <> 'active'::text OR yield_mode::text <> 'weight'::text OR portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric", name='weight_mode_requires_portion_size_when_active'),
         CheckConstraint('total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric', name='positive_total_cooked_weight_grams'),
         CheckConstraint('total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric', name='positive_total_raw_weight_grams'),
-        CheckConstraint("yield_mode::text = ANY (ARRAY['count'::character varying, 'weight'::character varying]::text[])", name='valid_yield_mode'),
+        CheckConstraint("yield_mode::text = ANY (ARRAY['count', 'weight']::text[])", name='valid_yield_mode'),
         ForeignKeyConstraint(['created_by'], ['users.id'], name='recipes_created_by_fkey'),
         ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='recipes_tenant_id_fkey'),
         PrimaryKeyConstraint('id', name='recipes_pkey'),
@@ -41,22 +41,22 @@ class Recipe(SQLModel, table=True):
     )
 
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    name: str = Field(sa_column=Column('name', String(255), nullable=False))
-    description: str | None = Field(default=None, sa_column=Column('description', Text))
+    name: str = Field(max_length=255, nullable=False)
+    description: str | None = Field(default=None, sa_type=Text)
     yield_amount: Decimal | None = Field(default=None)
-    yield_unit: str | None = Field(default=None, sa_column=Column('yield_unit', String(50)))
-    instructions: str | None = Field(default=None, sa_column=Column('instructions', Text))
+    yield_unit: str | None = Field(default=None, max_length=50)
+    instructions: str | None = Field(default=None, sa_type=Text)
     reduction_factor: Decimal | None = Field(default=None, sa_column=Column('reduction_factor', Numeric, server_default=text('1.0')))
-    status: str = Field(sa_column=Column('status', String(50), nullable=False, server_default=text("'draft'::character varying")))
-    is_component: bool = Field(sa_column=Column('is_component', Boolean, nullable=False, server_default=text('false')))
-    recipe_number: str | None = Field(default=None, sa_column=Column('recipe_number', String(100)))
-    preparation_time_minutes: int | None = Field(default=None, sa_column=Column('preparation_time_minutes', Integer, nullable=True))
+    status: str = Field(max_length=50, sa_column_kwargs={"server_default": text("'draft'")}, nullable=False)
+    is_component: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("false")})
+    recipe_number: str | None = Field(default=None, max_length=100)
+    preparation_time_minutes: int | None = Field(default=None, nullable=True)
     cooking_time_minutes: int | None = Field(default=None, nullable=True)
-    shelf_life_text: str | None = Field(default=None, sa_column=Column('shelf_life_text', Text))
-    storage_temperature: str | None = Field(default=None, sa_column=Column('storage_temperature', String(50)))
-    notes: str | None = Field(default=None, sa_column=Column('notes', Text))
-    photo_url: str | None = Field(default=None, sa_column=Column('photo_url', Text))
-    yield_mode: str = Field(sa_column=Column('yield_mode', String(20), nullable=False, server_default=text("'count'::character varying")))
+    shelf_life_text: str | None = Field(default=None, sa_type=Text)
+    storage_temperature: str | None = Field(default=None, max_length=50)
+    notes: str | None = Field(default=None, sa_type=Text)
+    photo_url: str | None = Field(default=None, sa_type=Text)
+    yield_mode: str = Field(max_length=20, nullable=False, sa_column_kwargs={"server_default": text("'count'")})
     portion_size_grams: Decimal | None = Field(default=None)
     total_raw_weight_grams: Decimal | None = Field(default=None)
     total_cooked_weight_grams: Decimal | None = Field(default=None)
@@ -87,7 +87,7 @@ class RecipeNutritionCache(SQLModel, table=True):
         PrimaryKeyConstraint('recipe_id', name='recipe_nutrition_cache_pkey')
     )
 
-    # Primary key, Timestamps
+    # Foreign keys, Primary key,  Timestamps
     # NOTE: mpeshko. In DB, this column is marked as NOT NULL and has no default value, 
     # which means that PostgreSQL expects you to provide the ID when creating the record.
     recipe_id: UUID = Field(primary_key=True, nullable=False)

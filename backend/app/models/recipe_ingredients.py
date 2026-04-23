@@ -5,19 +5,8 @@ from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKeyConstraint,
-    Index,
-    Integer,
-    Numeric,
-    PrimaryKeyConstraint,
-    String,
-    Uuid,
-    text,
-    UniqueConstraint,
-    CheckConstraint,
+    CheckConstraint, ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint,
+    Index, Boolean, Column, DateTime, Integer, Numeric, String, text,
 )
 
 if TYPE_CHECKING:
@@ -47,14 +36,14 @@ class RecipeIngredient(SQLModel, table=True):
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     # Core fields
-    quantity: Decimal | None = Field(default=None, sa_column=Column('quantity', Numeric))
-    quantity_grams: Decimal | None = Field(default=None, sa_column=Column(Numeric))
-    quid_percent: Decimal | None = Field(default=None, sa_column=Column('quid_percent', Numeric))
+    quantity: Decimal | None = Field(default=None)
+    quantity_grams: Decimal | None = Field(default=None)
+    quid_percent: Decimal | None = Field(default=None)
     sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
-    unit: str | None = Field(default=None, sa_column=Column('unit', String(50)))
-    preparation: str | None = Field(default=None, sa_column=Column('preparation', String(255)))
-    item_type: str | None = Field(default=None, sa_column=Column('item_type', String(50)))
-    is_organic: bool | None = Field(default=None, sa_column=Column('is_organic', Boolean, server_default=text('false')))
+    unit: str | None = Field(default=None, max_length=50)
+    preparation: str | None = Field(default=None, max_length=255)
+    item_type: str | None = Field(default=None, max_length=50)
+    is_organic: bool | None = Field(default=None, sa_column_kwargs={"server_default": text("false")})
 
     # Foreign keys
     recipe_id: UUID = Field(nullable=False)

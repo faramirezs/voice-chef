@@ -1,5 +1,4 @@
-from sqlmodel import SQLModel, Field, SQLModel, Relationship
-from typing import Optional
+from sqlmodel import SQLModel, Field
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime

@@ -6,7 +6,8 @@ from typing import Annotated
 
 from app.utils.auth_utils import oauth2_scheme
 from app.core.database import get_session
-from app.models.users import Users, UserSignupResponse, UserLoginResponse, Tenants, TenantsResponse # Token 
+from app.models.users import Users, Tenants
+from app.schemas.users import UserSignupResponse, UserLoginResponse, TenantsResponse
 from app.core.deps import get_current_user
 
 

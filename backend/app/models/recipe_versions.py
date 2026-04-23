@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import (
-    Column, DateTime, ForeignKeyConstraint, PrimaryKeyConstraint, Uuid, text,
-    Integer, Index
+    Column, DateTime, ForeignKeyConstraint, PrimaryKeyConstraint, text,
+    Index
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from uuid import UUID

@@ -10,7 +10,7 @@ from app.schemas.pagination import PaginatedResponse
 
 from app.core.database import get_session
 from app.models.recipe import Recipe
-from app.models.tmp_draft import Ingredient
+from app.models.ingredient import Ingredient
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail

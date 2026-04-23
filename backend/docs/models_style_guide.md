@@ -13,6 +13,7 @@
   - [5.4. Explicitly Named Foreign Key Constraints (`ForeignKeyConstraint`)](#54-explicitly-named-foreign-key-constraints-foreignkeyconstraint)
 - [6. Nullable Types (`Optional`)](#6-nullable-types-optional)
 - [7. Relationship](#7-relationship)
+- [8. sa_type](#8-sa_type)
 
 
 This document outlines the conventions and best practices for creating SQLModel ORM classes in this project. The goal is to maintain a consistent and readable codebase.
@@ -73,7 +74,7 @@ id: UUID = Field(
             'role',
             String(50),
             nullable=False,
-            server_default=text("'editor'::character varying")
+            server_default=text("'editor'")
         )
     )
     ```
@@ -225,3 +226,19 @@ To connect a model to a Many-to-Many table (`t_ingredient_additives`), instead o
 
 back_populates - ...
 
+### 8. sa_type
+
+Using `sa_type` is a good way to keep our SQLModel code clean and concise.
+
+`sa_type` is a shortcut in SQLModel's `Field` for specifying the SQLAlchemy column type when you don't need other specific `Column` configurations.
+
+**Rule**
+
+Use `sa_type=...` when you only need to define the data type (like `Text`, `Numeric`, `Boolean`) and the database column name is the same as your model's attribute name.
+
+Use the more verbose `sa_column=Column(...)` when you need to specify more details.
+
+Example:
+```python
+description: str | None = Field(default=None, sa_type=Text)
+```

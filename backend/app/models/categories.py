@@ -2,7 +2,7 @@ from typing import Optional, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import (
     ForeignKeyConstraint, PrimaryKeyConstraint,
-    Column, String, Uuid, text
+    Column, String, text
 )
 from uuid import UUID
 
@@ -35,8 +35,7 @@ class Categories(SQLModel, table=True):
     # Primary key
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     # Core fields
-    name: str = Field(
-        sa_column=Column('name', String(255), nullable=False))
+    name: str = Field(max_length=255, nullable=False)
     # Foreign keys
     tenant_id: UUID | None = Field(default=None)
     # Relationship attributes
@@ -63,8 +62,7 @@ class Tag(SQLModel, table=True):
     )
 
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    name: str = Field(
-        sa_column=Column('name', String(255), nullable=False))
+    name: str = Field(max_length=255, nullable=False)
     # Foreign keys
     tenant_id: UUID | None = Field(default=None)
     # Relationship attributes

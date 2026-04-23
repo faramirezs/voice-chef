@@ -1,7 +1,7 @@
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import (
-    Column, ForeignKeyConstraint, PrimaryKeyConstraint, String, Boolean, Uuid, 
+    Column, ForeignKeyConstraint, PrimaryKeyConstraint, String, Boolean,
     text, Text, DateTime, Index, Integer, Numeric,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -30,10 +30,8 @@ class Agents(SQLModel, table=True):
         )
     )
     # Core fields
-    agent_type: str = Field(sa_column=Column(
-        'agent_type', String(50), nullable=False))
-    name: str = Field(sa_column=Column(
-        'name', String(255), nullable=False))
+    agent_type: str = Field(max_length=50, nullable=False)
+    name: str = Field(max_length=255, nullable=False)
     
     capabilities: dict = Field(sa_column=Column(
             'capabilities', 
@@ -42,13 +40,7 @@ class Agents(SQLModel, table=True):
             server_default=text("'[]'::jsonb")
         )
     )
-    is_active: bool = Field(sa_column=Column(
-            'is_active', 
-            Boolean, 
-            nullable=False, 
-            server_default=text('true')
-        )
-    )
+    is_active: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("true")})
     # Foreign keys
     tenant_id: UUID = Field(nullable=False)
     # Relationship attributes
@@ -78,14 +70,10 @@ class AgentInteractions(SQLModel, table=True):
     )
     
     # Core fields
-    source: str = Field(sa_column=Column(
-        'source', String(50), nullable=False))
-    raw_input: str = Field(sa_column=Column(
-        'raw_input', Text, nullable=False))
-    parsed_intent: str | None = Field(
-        default=None, sa_column=Column('parsed_intent', String(255)))
-    confidence_score: Decimal | None = Field(
-        default=None, sa_column=Column('confidence_score', Numeric(3, 2)))
+    source: str = Field(max_length=50, nullable=False)
+    raw_input: str = Field(sa_column=Column('raw_input', Text, nullable=False))
+    parsed_intent: str | None = Field(default=None, max_length=255) 
+    confidence_score: Decimal | None = Field(default=None, sa_column=Column('confidence_score', Numeric(3, 2)))
     tool_calls: dict | None = Field(
         default=None, 
         sa_column=Column(
@@ -94,12 +82,9 @@ class AgentInteractions(SQLModel, table=True):
             server_default=text("'[]'::jsonb")
         )
     )
-    response_text: str | None = Field(
-        default=None, sa_column=Column('response_text', Text))
-    latency_ms: int | None = Field(
-        default=None, sa_column=Column('latency_ms', Integer))
-    error: str | None = Field(
-        default=None, sa_column=Column('error', Text))
+    response_text: str | None = Field(default=None, sa_column=Column('response_text', Text))
+    latency_ms: int | None = Field(default=None)
+    error: str | None = Field(default=None, sa_column=Column('error', Text))
 
     # Foreign keys
     tenant_id: UUID = Field(nullable=False)

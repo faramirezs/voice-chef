@@ -1,15 +1,8 @@
-from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel
 from sqlalchemy import (
-    Column,
-    DateTime,
-    Index,
-    PrimaryKeyConstraint,
-    String,
-    Uuid,
-    text,
+    PrimaryKeyConstraint, Index, Column, DateTime, String, Uuid, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -30,15 +23,10 @@ class AuditLogs(SQLModel, table=True):
             'created_at', DateTime(True), nullable=False, server_default=text('now()')))
     
     # Core fields
-    actor_type: str = Field(
-        sa_column=Column('actor_type', String(50), nullable=False))
-    actor_id: UUID = Field(
-        sa_column=Column('actor_id', Uuid, nullable=False))
-    action: str = Field(
-        sa_column=Column('action', String(50), nullable=False))
-    entity: str = Field(
-        sa_column=Column('entity', String(100), nullable=False))
-    entity_id: UUID | None = Field(
-        default=None, sa_column=Column('entity_id', Uuid))
+    actor_type: str = Field(max_length=50, nullable=False)
+    actor_id: UUID = Field(nullable=False)
+    action: str = Field(max_length=50, nullable=False)
+    entity: str = Field(max_length=100, nullable=False)
+    entity_id: UUID | None = Field(default=None)
     old_data: dict | None = Field(default=None, sa_column=Column('old_data', JSONB))
     new_data: dict | None = Field(default=None, sa_column=Column('new_data', JSONB))

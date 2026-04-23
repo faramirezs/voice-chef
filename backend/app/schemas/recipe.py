@@ -1,5 +1,5 @@
-from sqlmodel import SQLModel, Field, SQLModel, Relationship
-from typing import Optional, List
+from sqlmodel import SQLModel
+from typing import List
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
@@ -85,6 +85,3 @@ class RecipeUpdate(SQLModel):
     portions_count_resolved: Decimal | None = None
 
     # ingredients: List[RecipeIngredientUpdate] | None = None
-
-
-
