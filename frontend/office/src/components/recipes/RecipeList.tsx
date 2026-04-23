@@ -4,9 +4,27 @@ import { useRecipes } from '@/hooks/useRecipes';
 import { RecipeCard } from './RecipeCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
+
+const SORT_OPTIONS = [
+  { value: 'name_asc', label: 'Name (A-Z)' },
+  { value: 'name_desc', label: 'Name (Z-A)' },
+  { value: 'updated_at_asc', label: 'Modification date (first-last)' },
+  { value: 'updated_at_desc', label: 'Modification date (last-first)' },
+  { value: 'created_at_asc', label: 'Creation date (first-last)' },
+  { value: 'created_at_desc', label: 'Creation date (last-first)' },
+] as const;
+
+type SortOption = (typeof SORT_OPTIONS)[number]['value'];
 
 function RecipeSkeleton() {
   return (
@@ -24,6 +42,7 @@ export function RecipeList() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('updated_at_desc');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -33,6 +52,7 @@ export function RecipeList() {
   const { data: recipePage, isLoading, isError, error } = useRecipes({
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(normalizedNameFilter ? { name: normalizedNameFilter } : {}),
+    sort_by: sortBy,
     offset,
     limit: PAGE_SIZE,
   });
@@ -60,6 +80,24 @@ export function RecipeList() {
             setPage(0);
           }}
         />
+        <Select
+          value={sortBy}
+          onValueChange={(value) => {
+            setSortBy(value as SortOption);
+            setPage(0);
+          }}
+        >
+          <SelectTrigger aria-label="Sort recipes" className="w-[280px]">
+            <SelectValue placeholder="Sort recipes" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {!isInitialLoading && recipePage && (
           <span className="text-sm text-muted-foreground">
             {recipePage.meta.total} recipe{recipePage.meta.total !== 1 ? 's' : ''}
