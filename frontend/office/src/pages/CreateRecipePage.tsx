@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import { RecipeImagePlaceholder } from '@/components/recipes/RecipeImagePlaceholder';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -73,12 +73,7 @@ export function CreateRecipePage() {
     <div className="space-y-5 max-w-10xl">
       <div className="space-y-4">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
-
-        <div
-          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${recipeImage})` }}
-          aria-hidden="true"
-        />
+        <RecipeImagePlaceholder title={name || 'Untitled recipe'} className="h-72 w-full" />
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="space-y-1 w-full sm:w-auto sm:min-w-[28rem]">

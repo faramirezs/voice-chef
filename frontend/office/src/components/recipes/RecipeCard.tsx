@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Recipe } from '@/types/recipe';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import { RecipeImagePlaceholder } from '@/components/recipes/RecipeImagePlaceholder';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -12,11 +12,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 function ImagePlaceholder() {
   return (
-    <div
-      className="relative flex h-36 w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${recipeImage})` }}
-      aria-hidden="true"
-    />
+    <RecipeImagePlaceholder className="h-36 w-full rounded-none rounded-t-xl" />
   );
 }
 
