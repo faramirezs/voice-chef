@@ -9,7 +9,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKeyConstraint,
     Index,
-    Numeric,
     PrimaryKeyConstraint,
     String,
     UniqueConstraint,
@@ -18,15 +17,13 @@ from sqlalchemy import (
 )
 
 if TYPE_CHECKING:
-    from app.models.tmp_draft import (
-        Additives,
-        Allergens,
-        IngredientPrices,
-        IngredientUnits,
-    )
+    from app.models.units import IngredientUnits
     from app.models.recipe_ingredients import RecipeIngredient
     from app.models.users import Tenants
+    from app.models.ingredient_details import Additives, Allergens, IngredientPrices
 
+
+# ─── ORM SQLMOdel model for ingredients ─────────────────────────────────────────────────
 
 class Ingredient(SQLModel, table=True):
     __tablename__ = "ingredients"
@@ -40,7 +37,7 @@ class Ingredient(SQLModel, table=True):
     )
 
     # Primary key, Core fields, Timestamps
-    id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
+    id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     name: str = Field(sa_column=Column('name', String(255), nullable=False))
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
@@ -55,8 +52,8 @@ class Ingredient(SQLModel, table=True):
     is_custom: bool = Field(sa_column=Column('is_custom', Boolean, nullable=False, server_default=text('false')))
 
     # Foreign keys
-    tenant_id: UUID | None = Field(default=None, sa_column=Column('tenant_id', Uuid))
-    parent_id: UUID | None = Field(default=None, sa_column=Column('parent_id', Uuid))
+    tenant_id: UUID | None = Field(default=None)
+    parent_id: UUID | None = Field(default=None)
 
     # Relationship attributes
     additive: list['Additives'] = Relationship(back_populates='ingredient', sa_relationship_kwargs={'secondary': 'ingredient_additives'})
@@ -75,7 +72,7 @@ Ingredients = Ingredient
 
 
 
-
+# ─── ORM SQLMOdel model for ingredient_nutrition ─────────────────────────────────────────────────
 
 class NutritionFacts(SQLModel, table=True):
     __tablename__ = "ingredient_nutrition"
@@ -86,23 +83,25 @@ class NutritionFacts(SQLModel, table=True):
     )
 
     # Primary key, Core fields, Timestamps
-    id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    ingredient_id: UUID = Field(sa_column=Column('ingredient_id', Uuid, nullable=False))
+    id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     # Decimal nutrition fields
-    energy_kj: Decimal | None = Field(sa_column=Column(Numeric))
-    energy_kcal: Decimal | None = Field(sa_column=Column(Numeric))
-    fat: Decimal | None = Field(sa_column=Column(Numeric))
-    saturates: Decimal | None = Field(sa_column=Column(Numeric))
-    carbs: Decimal | None = Field(sa_column=Column(Numeric))
-    sugars: Decimal | None = Field(sa_column=Column(Numeric))
-    protein: Decimal | None = Field(sa_column=Column(Numeric))
-    fiber: Decimal | None = Field(sa_column=Column(Numeric))
-    salt: Decimal | None = Field(sa_column=Column(Numeric))
-    alcohol: Decimal | None = Field(sa_column=Column(Numeric))
-    water: Decimal | None = Field(sa_column=Column(Numeric))
+    energy_kj: Decimal | None = Field(default=None)
+    energy_kcal: Decimal | None = Field(default=None)
+    fat: Decimal | None = Field(default=None)
+    saturates: Decimal | None = Field(default=None)
+    carbs: Decimal | None = Field(default=None)
+    sugars: Decimal | None = Field(default=None)
+    protein: Decimal | None = Field(default=None)
+    fiber: Decimal | None = Field(default=None)
+    salt: Decimal | None = Field(default=None)
+    alcohol: Decimal | None = Field(default=None)
+    water: Decimal | None = Field(default=None)
+
+    # Foreign keys
+    ingredient_id: UUID = Field(nullable=False)
 
     # Relationship attributes
     ingredient: 'Ingredient' = Relationship(back_populates='ingredient_nutrition')

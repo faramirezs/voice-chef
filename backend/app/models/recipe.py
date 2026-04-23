@@ -1,17 +1,24 @@
 from typing import Optional, TYPE_CHECKING
 import datetime
-import decimal
-import uuid
+from datetime import datetime
+from decimal import Decimal
+from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, PrimaryKeyConstraint, String, Text, Uuid, text
+from sqlalchemy import (
+    Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
+    Integer, Numeric, PrimaryKeyConstraint, String, Text, Uuid, text
+)
 from sqlmodel import Field, Relationship, SQLModel
 
 
 if TYPE_CHECKING:
     from app.models.users import Users, Tenants
     from app.models.recipe_ingredients import RecipeIngredient
-    from app.models.tmp_draft import Categories, Tags, RecipeVersions
+    from app.models.recipe_versions import RecipeVersions
+    from app.models.categories import Categories, Tag
 
+
+# ─── ORM SQLMOdel model for recipes ─────────────────────────────────────────────────
 
 class Recipe(SQLModel, table=True):
     __tablename__ = 'recipes'
@@ -33,36 +40,66 @@ class Recipe(SQLModel, table=True):
         Index('idx_recipes_yield_mode', 'yield_mode'),
     )
 
-    id: uuid.UUID = Field(sa_column=Column('id', Uuid, primary_key=True, server_default=text('gen_random_uuid()')))
-    tenant_id: uuid.UUID = Field(sa_column=Column('tenant_id', Uuid, nullable=False))
+    id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     name: str = Field(sa_column=Column('name', String(255), nullable=False))
-    description: Optional[str] = Field(default=None, sa_column=Column('description', Text))
-    yield_amount: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('yield_amount', Numeric))
-    yield_unit: Optional[str] = Field(default=None, sa_column=Column('yield_unit', String(50)))
-    instructions: Optional[str] = Field(default=None, sa_column=Column('instructions', Text))
-    reduction_factor: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('reduction_factor', Numeric, server_default=text('1.0')))
+    description: str | None = Field(default=None, sa_column=Column('description', Text))
+    yield_amount: Decimal | None = Field(default=None)
+    yield_unit: str | None = Field(default=None, sa_column=Column('yield_unit', String(50)))
+    instructions: str | None = Field(default=None, sa_column=Column('instructions', Text))
+    reduction_factor: Decimal | None = Field(default=None, sa_column=Column('reduction_factor', Numeric, server_default=text('1.0')))
     status: str = Field(sa_column=Column('status', String(50), nullable=False, server_default=text("'draft'::character varying")))
     is_component: bool = Field(sa_column=Column('is_component', Boolean, nullable=False, server_default=text('false')))
-    recipe_number: Optional[str] = Field(default=None, sa_column=Column('recipe_number', String(100)))
-    preparation_time_minutes: Optional[int] = Field(default=None, sa_column=Column('preparation_time_minutes', Integer, nullable=True))
-    cooking_time_minutes: Optional[int] = Field(default=None, sa_column=Column('cooking_time_minutes', Integer, nullable=True))
-    shelf_life_text: Optional[str] = Field(default=None, sa_column=Column('shelf_life_text', Text))
-    storage_temperature: Optional[str] = Field(default=None, sa_column=Column('storage_temperature', String(50)))
-    notes: Optional[str] = Field(default=None, sa_column=Column('notes', Text))
-    photo_url: Optional[str] = Field(default=None, sa_column=Column('photo_url', Text))
-    created_by: Optional[uuid.UUID] = Field(default=None, sa_column=Column('created_by', Uuid))
+    recipe_number: str | None = Field(default=None, sa_column=Column('recipe_number', String(100)))
+    preparation_time_minutes: int | None = Field(default=None, sa_column=Column('preparation_time_minutes', Integer, nullable=True))
+    cooking_time_minutes: int | None = Field(default=None, nullable=True)
+    shelf_life_text: str | None = Field(default=None, sa_column=Column('shelf_life_text', Text))
+    storage_temperature: str | None = Field(default=None, sa_column=Column('storage_temperature', String(50)))
+    notes: str | None = Field(default=None, sa_column=Column('notes', Text))
+    photo_url: str | None = Field(default=None, sa_column=Column('photo_url', Text))
     yield_mode: str = Field(sa_column=Column('yield_mode', String(20), nullable=False, server_default=text("'count'::character varying")))
-    portion_size_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('portion_size_grams', Numeric))
-    total_raw_weight_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('total_raw_weight_grams', Numeric))
-    total_cooked_weight_grams: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('total_cooked_weight_grams', Numeric))
-    portions_count_resolved: Optional[decimal.Decimal] = Field(default=None, sa_column=Column('portions_count_resolved', Numeric))
-    created_at: datetime.datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
-    updated_at: datetime.datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
+    portion_size_grams: Decimal | None = Field(default=None)
+    total_raw_weight_grams: Decimal | None = Field(default=None)
+    total_cooked_weight_grams: Decimal | None = Field(default=None)
+    portions_count_resolved: Decimal | None = Field(default=None)
+    created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
+    updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 
+    # Foreign keys
+    tenant_id: UUID = Field(nullable=False)
+    created_by: UUID | None = Field(default=None)
+    # Relationship attributes
     category: list['Categories'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_categories'})
     created_by_user: Optional['Users'] = Relationship(back_populates='recipes')
     tenant: 'Tenants' = Relationship(back_populates='recipes')
-    tag: list['Tags'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
+    tag: list['Tag'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
     recipe_ingredients: list['RecipeIngredient'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredient.recipe_id]', 'passive_deletes': True})
     recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
+
+# ─── ORM SQLMOdel model for recipe_nutrition_cache ─────────────────────────────────────────────────
+
+# NOTE: mpeshko. In this table, `recipe_id` serves a dual purpose: it is both 
+# a primary key and a foreign key.
+class RecipeNutritionCache(SQLModel, table=True):
+    __tablename__ = 'recipe_nutrition_cache'
+    __table_args__ = (
+        ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_nutrition_cache_recipe_id_fkey'),
+        PrimaryKeyConstraint('recipe_id', name='recipe_nutrition_cache_pkey')
+    )
+
+    # Primary key, Timestamps
+    # NOTE: mpeshko. In DB, this column is marked as NOT NULL and has no default value, 
+    # which means that PostgreSQL expects you to provide the ID when creating the record.
+    recipe_id: UUID = Field(primary_key=True, nullable=False)
+    updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
+    
+    # Core fields
+    energy_kj: Decimal | None = Field(default=None)
+    energy_kcal: Decimal | None = Field(default=None)
+    fat: Decimal | None = Field(default=None)
+    saturates: Decimal | None = Field(default=None)
+    carbs: Decimal | None = Field(default=None)
+    sugars: Decimal | None = Field(default=None)
+    protein: Decimal | None = Field(default=None)
+    salt: Decimal | None = Field(default=None)
+    fiber: Decimal | None = Field(default=None)

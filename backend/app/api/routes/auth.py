@@ -77,7 +77,9 @@ signup_responses = {
     response_model=UserSignupResponse,
     responses=signup_responses
 )
-async def signup(user_data: UserSignupLogin, session: Session = Depends(get_session)
+async def signup(
+        user_data: UserSignupLogin, 
+        session: Session = Depends(get_session)
     ):
     """Handles new user registration."""
     

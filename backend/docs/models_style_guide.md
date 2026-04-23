@@ -12,6 +12,7 @@
   - [5.3. Explicitly Named Indexes (`Index`)](#53-explicitly-named-indexes-index)
   - [5.4. Explicitly Named Foreign Key Constraints (`ForeignKeyConstraint`)](#54-explicitly-named-foreign-key-constraints-foreignkeyconstraint)
 - [6. Nullable Types (`Optional`)](#6-nullable-types-optional)
+- [7. Relationship](#7-relationship)
 
 
 This document outlines the conventions and best practices for creating SQLModel ORM classes in this project. The goal is to maintain a consistent and readable codebase.
@@ -23,7 +24,7 @@ This document outlines the conventions and best practices for creating SQLModel 
 We use DB-side UUID defaults.
 
 ```python
-id: uuid.UUID = Field(
+id: UUID = Field(
     default=None,
     primary_key=True,
     sa_column_kwargs={"server_default": text("gen_random_uuid()")}
@@ -45,13 +46,13 @@ id: uuid.UUID = Field(
     ```
 
 2.  **Level 2: Use `sa_column_kwargs` to add features.**
-    *   **When:** When you are happy with the database column type SQLModel infers from your Python type hint (e.g., `uuid.UUID` -> `Uuid`), but you need to add a database-specific feature that `Field` doesn't have a parameter for.
+    *   **When:** When you are happy with the database column type SQLModel infers from your Python type hint (e.g., `UUID` -> `Uuid`), but you need to add a database-specific feature that `Field` doesn't have a parameter for.
     *   **Common Use Case:** Adding `server_default`.
 
     ```python
     # Good: `sa_column_kwargs` adds a DB-side default to the `Uuid` column
     # that SQLModel correctly infers from the type hint.
-    id: uuid.UUID = Field(
+    id: UUID = Field(
         default=None,
         primary_key=True,
         sa_column_kwargs={"server_default": text("gen_random_uuid()")}
@@ -215,3 +216,12 @@ class User(SQLModel, table=True):
 # Incorrect: This will raise a TypeError
 #     tenant: "Tenant" | None = Relationship(back_populates="users")
 ```
+
+### 7. Relationship
+
+To connect a model to a Many-to-Many table (`t_ingredient_additives`), instead of `link_model`, we use `sa_relationship_kwargs`. 
+
+`sa_relationship_kwargs` passes parameters directly to SQLAlchemy, bypassing the SQLModel's internal validation. Thus, we avoid an error: `TypeError: Boolean value of this clause is not defined`.
+
+back_populates - ...
+

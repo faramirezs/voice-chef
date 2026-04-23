@@ -17,11 +17,11 @@ class IngredientWrite(SQLModel):
 class IngredientSummaryResponse(SQLModel):
     id: UUID
     name: str
-    default_unit: Optional[str]
-    ingredient_type: Optional[str]
-    bls_key: Optional[str]
+    default_unit: str | None
+    ingredient_type: str | None
+    bls_key: str | None
     is_custom: bool
     has_parent: bool
-    parent_id: Optional[UUID]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    parent_id: UUID | None
+    created_at: datetime | None
+    updated_at: datetime | None
