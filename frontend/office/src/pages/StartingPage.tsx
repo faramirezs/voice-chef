@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom"
-import { RecipeImagePlaceholder } from "@/components/recipes/RecipeImagePlaceholder"
+import recipeImage from "@/assets/voice-chef-recipe.jpg"
 import personImage from "@/assets/voice-chef-person.jpg"
 import aiImage from "@/assets/voice-chef-ai.jpg"
 
@@ -16,7 +16,10 @@ export function StartingPage() {
           to="/recipes"
           className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
         >
-          <RecipeImagePlaceholder title="Recipes" className="pointer-events-none absolute inset-0 rounded-none border-0" />
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
+            style={{ backgroundImage: `url(${recipeImage})` }}
+          />
           <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="relative z-10">
           <h2 className="text-3xl font-semibold text-white">Recipes</h2>
