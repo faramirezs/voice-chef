@@ -4,6 +4,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session, engine
 from uuid import UUID
+from typing import Optional
 
 from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse
@@ -56,9 +57,21 @@ def create_recipe(
 @router.get("", response_model=PaginatedResponse[Recipe])
 def retrieve_recipes(
     session: Session = Depends(get_session),
-    pagination: PaginationParams = Depends(pagination_params)):
+    pagination: PaginationParams = Depends(pagination_params),
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    name: Optional[str] = None,
+):
 
     query = select(Recipe)
+
+    if status:
+        query = query.where(Recipe.status == status.strip())
+
+    search_term = (search or name or "").strip()
+    if search_term:
+        query = query.where(Recipe.name.ilike(f"%{search_term}%"))
+
     recipes = paginate(query, session, pagination)
     return recipes
 

@@ -22,17 +22,23 @@ function RecipeSkeleton() {
 
 export function RecipeList() {
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'draft' | 'active' | ''>('');
   const [nameFilter, setNameFilter] = useState('');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const statusOptions: Array<{ label: string; value: 'draft' | 'active' | '' }> = [
+    { label: 'All', value: '' },
+    { label: 'Draft', value: 'draft' },
+    { label: 'Active', value: 'active' },
+  ];
 
   const offset = page * PAGE_SIZE;
   const normalizedNameFilter = nameFilter.trim();
 
   const { data: recipePage, isLoading, isError, error } = useRecipes({
     ...(statusFilter ? { status: statusFilter } : {}),
-    ...(normalizedNameFilter ? { name: normalizedNameFilter } : {}),
+    ...(normalizedNameFilter ? { search: normalizedNameFilter } : {}),
     offset,
     limit: PAGE_SIZE,
   });
@@ -51,15 +57,22 @@ export function RecipeList() {
             setPage(0);
           }}
         />
-        <Input
-          placeholder="Filter by status (e.g. draft, active)…"
-          className="max-w-sm"
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(0);
-          }}
-        />
+        <div className="inline-flex items-center rounded-md bg-background p-1">
+          {statusOptions.map((option) => (
+            <Button
+              key={option.value || 'all'}
+              type="button"
+              variant={statusFilter === option.value ? 'default' : 'ghost'}
+              className="h-8 px-3"
+              onClick={() => {
+                setStatusFilter(option.value);
+                setPage(0);
+              }}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
         {!isInitialLoading && recipePage && (
           <span className="text-sm text-muted-foreground">
             {recipePage.meta.total} recipe{recipePage.meta.total !== 1 ? 's' : ''}
