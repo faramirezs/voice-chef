@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from app.models.users import Users, Tenants
     from app.models.recipe_ingredients import RecipeIngredient
     from app.models.tmp_draft import Categories, Tags, RecipeVersions
-    from app.models.recipe_photos import RecipePhoto
 
 
 class Recipe(SQLModel, table=True):
