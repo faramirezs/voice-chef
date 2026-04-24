@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 12;
+const RESULTS_PER_PAGE_OPTIONS = [12, 24, 48] as const;
 
 const SORT_OPTIONS = [
   { value: 'name_asc', label: 'Name (A-Z)' },
@@ -42,17 +42,17 @@ export function RecipeList() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
+  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(10);
   const [sortBy, setSortBy] = useState<SortOption>('updated_at_desc');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
   const statusOptions: Array<{ label: string; value: 'draft' | 'active' | '' }> = [
     { label: 'All', value: '' },
     { label: 'Draft', value: 'draft' },
     { label: 'Active', value: 'active' },
   ];
 
-  const offset = page * PAGE_SIZE;
+  const offset = page * pageSize;
   const normalizedNameFilter = nameFilter.trim();
 
   const { data: recipePage, isLoading, isError, error } = useRecipes({
@@ -60,7 +60,7 @@ export function RecipeList() {
     ...(normalizedNameFilter ? { name: normalizedNameFilter } : {}),
     sort_by: sortBy,
     offset,
-    limit: PAGE_SIZE,
+    limit: pageSize,
   });
   const visibleRecipes = recipePage?.items ?? [];
   const isInitialLoading = isLoading && !recipePage;
@@ -202,7 +202,29 @@ export function RecipeList() {
             <p className="text-sm text-muted-foreground">
               Showing {offset + 1}-{offset + visibleRecipes.length} of {recipePage?.meta.total ?? 0}
             </p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                Results per page
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value) as (typeof RESULTS_PER_PAGE_OPTIONS)[number]);
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger aria-label="Results per page" className="w-24">
+                    <SelectValue placeholder="10" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RESULTS_PER_PAGE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={String(option)}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <div className="flex gap-2">
               <Button
                 variant="outline"
                 onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
@@ -212,10 +234,11 @@ export function RecipeList() {
               </Button>
               <Button
                 onClick={() => setPage((currentPage) => currentPage + 1)}
-                disabled={offset + PAGE_SIZE >= (recipePage?.meta.total ?? 0)}
+                disabled={offset + pageSize >= (recipePage?.meta.total ?? 0)}
               >
                 Next
               </Button>
+              </div>
             </div>
           </div>
         </>
