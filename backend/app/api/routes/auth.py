@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from uuid import UUID
-from fastapi.security import OAuth2PasswordRequestForm # to make the "Authorize" button work in OpenAPI
+from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
 
 # import our files
 from app.core.database import get_session
-from app.models.users import Users, UserSignupLogin, UserSignupResponse, Tenants, UserLoginResponse, AuthTokenResponse
+from app.models.users import Users, Tenants
+from app.schemas.users import UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse
 from app.utils.auth_utils import get_password_hash, validate_password, verify_password, create_access_token
 
 
@@ -77,7 +78,9 @@ signup_responses = {
     response_model=UserSignupResponse,
     responses=signup_responses
 )
-async def signup(user_data: UserSignupLogin, session: Session = Depends(get_session)
+async def signup(
+        user_data: UserSignupLogin, 
+        session: Session = Depends(get_session)
     ):
     """Handles new user registration."""
     
