@@ -58,10 +58,10 @@ def create_recipe(
 def retrieve_recipes(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
-    status: Optional[str] = None,
-    name: Optional[str] = None,
-    search: Optional[str] = None,
-    sort_by: Optional[str] = None,
+    status: str | None = None,
+    search: str | None = None,
+    name: str | None = None,
+    sort_by: str | None = None,
 ):
 
     query = select(Recipe)
