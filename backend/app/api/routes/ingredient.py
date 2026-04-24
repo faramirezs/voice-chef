@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import UUID, Session, select
 from app.core.database import get_session, engine
-from typing import Optional
 
 from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse
@@ -18,8 +17,8 @@ router = APIRouter(prefix="/ingredient", tags=["Ingredients"])
 def retrieve_ingredient(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
-    search: Optional[str] = None,
-    source: Optional[str] = None,
+    search: str | None = None,
+    source: str | None = None,
 ):
 
     query = select(Ingredients)
