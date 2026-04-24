@@ -46,6 +46,12 @@ export function RecipeList() {
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const statusOptions: Array<{ label: string; value: 'draft' | 'active' | '' }> = [
+    { label: 'All', value: '' },
+    { label: 'Draft', value: 'draft' },
+    { label: 'Active', value: 'active' },
+  ];
+
   const offset = page * PAGE_SIZE;
   const normalizedNameFilter = nameFilter.trim();
 
@@ -71,6 +77,22 @@ export function RecipeList() {
             setPage(0);
           }}
         />
+         <div className="inline-flex items-center rounded-md bg-background p-1">
+          {statusOptions.map((option) => (
+            <Button
+              key={option.value || 'all'}
+              type="button"
+              variant={statusFilter === option.value ? 'default' : 'ghost'}
+              className="h-8 px-3"
+              onClick={() => {
+                setStatusFilter(option.value);
+                setPage(0);
+              }}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
         <Input
           placeholder="Filter by status (e.g. draft, active)…"
           className="max-w-sm"
