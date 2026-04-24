@@ -1,5 +1,5 @@
 import { SignupForm } from "@/components/signup-form"
-
+import { Toaster } from "@/components/ui/sonner"
 
 export function SignupPage() {
   return (
@@ -7,6 +7,16 @@ export function SignupPage() {
       <div className="w-full max-w-sm md:max-w-4xl">
         <SignupForm />
       </div>
+      <Toaster
+        position="top-center"
+        richColors={true} // This flag tells the library: "Use color schemes for different types (success, error)."
+        toastOptions={{
+        classNames: {
+          title: 'font-semibold',
+          description: 'text-black',
+        },
+      }}
+      />
     </div>
   )
 }

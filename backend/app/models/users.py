@@ -1,20 +1,23 @@
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import text, Column, UniqueConstraint
-from sqlalchemy import Boolean, Index, ForeignKeyConstraint, PrimaryKeyConstraint, String, Uuid
+from sqlalchemy import (
+    UniqueConstraint, ForeignKeyConstraint, PrimaryKeyConstraint, 
+    String, text, Column, Boolean
+)
 from sqlalchemy.dialects.postgresql import JSONB
-import datetime
+from datetime import datetime
 from uuid import UUID
 from typing import List, TYPE_CHECKING, Optional
 from sqlalchemy import DateTime # database column type: `timestamp with time zone`
-from pydantic import EmailStr
 
 
 # NOTE: MP. We provide Pylance with a hint, but in a way that avoids triggering
 # a circular import during execution.
 if TYPE_CHECKING:
-    from recipe import Recipe
-    from ingredient import Ingredient
-    from tmp_draft import Agents, Categories, ShoppingLists, Tags, TaskLists, AgentInteractions
+    from app.models.recipe import Recipe
+    from app.models.ingredient import Ingredient
+    from app.models.categories import Categories, Tag
+    from app.models.agents import Agents, AgentInteractions
+    from app.models.tasks import TaskLists, ShoppingLists
 
 # ─── ORM SQLMOdel model for users ─────────────────────────────────────────────────
 
@@ -25,80 +28,38 @@ class Users(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='users_pkey'),
         UniqueConstraint('email', name='users_email_key'),
     )
-    id: UUID = Field(
-        default=None,
-        primary_key=True,
-        sa_column_kwargs={"server_default": text("gen_random_uuid()")}
-    )
+    id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     email: str = Field(max_length=320, nullable=False)
     password_hash: str = Field(max_length=255, nullable=False)
-    created_at: datetime.datetime = Field(
-        sa_column=Column(
+    created_at: datetime = Field(sa_column=Column(
             'created_at', 
             DateTime(True), 
             nullable=False, 
             server_default=text('now()'))
     )
-    updated_at: datetime.datetime = Field(
-        sa_column=Column(
+    updated_at: datetime = Field(sa_column=Column(
             'updated_at', 
             DateTime(True), 
             nullable=False, 
             server_default=text('now()'))
     )
-    role: str = Field(
-        sa_column=Column(
+    role: str = Field(sa_column=Column(
             'role', 
             String(50),
             nullable=False,
-            server_default=text("'editor'::character varying")
+            server_default=text("'editor'")
         )
     )
-    is_active: bool = Field(
-        sa_column=Column(
-            'is_active',
-            Boolean, 
-            nullable=False, 
-            server_default=text('true')
-        )
-    )
-
+    is_active: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("true")})
     # Foreign keys
-    tenant_id: UUID = Field(sa_column=Column('tenant_id', Uuid, nullable=False))
+    tenant_id: UUID = Field(nullable=False)
 
     # Relationship attributes. "Tenants" | None is a forward references
     tenant: Optional["Tenants"] = Relationship(back_populates='users')
     recipes: List["Recipe"] = Relationship(back_populates="created_by_user")
 
-# ─── Pydantic models for users ─────────────────────────────────────────────────
 
-# Base for API schemas (no id, no hashed_password, no table=True)
-class UserBase(SQLModel):
-    email: EmailStr = Field(max_length=255)
-
-# request: a password is in plaintext
-class UserSignupLogin(UserBase):
-    password: str
-
-# SignUp Responce
-class UserSignupResponse(UserBase):
-    id: UUID
-
-# This model defines the user object inside the token response
-class UserLoginResponse(UserBase):
-    id: UUID
-    tenant_id: UUID
-    role: str
-    is_active: bool
-
-# This is the main response model for the /login endpoint
-class AuthTokenResponse(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int # Or timedelta, Pydantic will handle it
-    user: UserLoginResponse
-
-# ─── Tenants ──────────────────────────────────────────────────────────────────
+# ─── ORM SQLMOdel model for tenants ─────────────────────────────────────────────────
 
 class Tenants(SQLModel, table=True):
     __tablename__ = "tenants"
@@ -106,20 +67,14 @@ class Tenants(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='tenants_pkey'),
         UniqueConstraint('slug', name='tenants_slug_key'),
     )
-    id: UUID = Field(
-        default=None,
-        primary_key=True,
-        sa_column_kwargs={"server_default": text("gen_random_uuid()")}
-    )
-    created_at: datetime.datetime = Field(
-        sa_column=Column(
+    id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
+    created_at: datetime = Field(sa_column=Column(
             'created_at', 
             DateTime(True), 
             nullable=False, 
             server_default=text('now()'))
     )
-    updated_at: datetime.datetime = Field(
-        sa_column=Column(
+    updated_at: datetime = Field(sa_column=Column(
             'updated_at', 
             DateTime(True), 
             nullable=False, 
@@ -127,16 +82,8 @@ class Tenants(SQLModel, table=True):
         )
     name: str = Field(max_length=255, nullable=False)
     slug: str = Field(max_length=100, nullable=False)
-    is_active: bool = Field(
-        sa_column=Column(
-            'is_active', 
-            Boolean, 
-            nullable=False, 
-            server_default=text('true'))
-    )
-    settings: Optional[dict] = Field(
-        default=None, sa_column=Column('settings', JSONB, server_default=text("'{}'"))
-    )
+    is_active: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("true")})
+    settings: dict | None = Field(default=None, sa_column=Column('settings', JSONB, server_default=text("'{}'")))
 
     # Relationship attributes
     agents: List['Agents'] = Relationship(back_populates='tenant')
@@ -145,18 +92,6 @@ class Tenants(SQLModel, table=True):
     recipes: List['Recipe'] = Relationship(back_populates="tenant")
     ingredients: List['Ingredient'] = Relationship(back_populates="tenant")
     shopping_lists: List['ShoppingLists'] = Relationship(back_populates='tenant')
-    tags: List['Tags'] = Relationship(back_populates='tenant')
+    tags: List['Tag'] = Relationship(back_populates='tenant')
     task_lists: List['TaskLists'] = Relationship(back_populates='tenant')
     agent_interactions: List['AgentInteractions'] = Relationship(back_populates='tenant')
-
-# ─── Pydantic models for tenants ─────────────────────────────────────────────────
-
-class TenantsBase(SQLModel):
-    name: str
-
-# class TenantsSignupLogin(TenantsBase):
-#     pass
-
-class TenantsResponse(TenantsBase):
-    id: UUID
-    created_at: datetime.datetime
