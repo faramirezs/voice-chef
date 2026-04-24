@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-const RESULTS_PER_PAGE_OPTIONS = [10, 20, 50] as const;
+const RESULTS_PER_PAGE_OPTIONS = [12, 24, 48] as const;
 
 function RecipeSkeleton() {
   return (
