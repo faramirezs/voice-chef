@@ -56,9 +56,21 @@ def create_recipe(
 @router.get("", response_model=PaginatedResponse[Recipe])
 def retrieve_recipes(
     session: Session = Depends(get_session),
-    pagination: PaginationParams = Depends(pagination_params)):
+    pagination: PaginationParams = Depends(pagination_params),
+    status: str | None = None,
+    search: str | None = None,
+    name: str | None = None,
+):
 
     query = select(Recipe)
+
+    if status:
+        query = query.where(Recipe.status == status.strip())
+
+    search_term = (search or name or "").strip()
+    if search_term:
+        query = query.where(Recipe.name.ilike(f"%{search_term}%"))
+
     recipes = paginate(query, session, pagination)
     return recipes
 
