@@ -15,6 +15,17 @@ import { cn } from '@/lib/utils';
 
 const RESULTS_PER_PAGE_OPTIONS = [12, 24, 48] as const;
 
+const SORT_OPTIONS = [
+  { value: 'name_asc', label: 'Name (A-Z)' },
+  { value: 'name_desc', label: 'Name (Z-A)' },
+  { value: 'updated_at_asc', label: 'Modification date (first-last)' },
+  { value: 'updated_at_desc', label: 'Modification date (last-first)' },
+  { value: 'created_at_asc', label: 'Creation date (first-last)' },
+  { value: 'created_at_desc', label: 'Creation date (last-first)' },
+] as const;
+
+type SortOption = (typeof SORT_OPTIONS)[number]['value'];
+
 function RecipeSkeleton() {
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3 animate-pulse">
@@ -32,8 +43,14 @@ export function RecipeList() {
   const [statusFilter, setStatusFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(10);
+  const [sortBy, setSortBy] = useState<SortOption>('updated_at_desc');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const statusOptions: Array<{ label: string; value: 'draft' | 'active' | '' }> = [
+    { label: 'All', value: '' },
+    { label: 'Draft', value: 'draft' },
+    { label: 'Active', value: 'active' },
+  ];
 
   const offset = page * pageSize;
   const normalizedNameFilter = nameFilter.trim();
@@ -41,6 +58,7 @@ export function RecipeList() {
   const { data: recipePage, isLoading, isError, error } = useRecipes({
     ...(statusFilter ? { status: statusFilter } : {}),
     ...(normalizedNameFilter ? { name: normalizedNameFilter } : {}),
+    sort_by: sortBy,
     offset,
     limit: pageSize,
   });
@@ -59,6 +77,22 @@ export function RecipeList() {
             setPage(0);
           }}
         />
+         <div className="inline-flex items-center rounded-md bg-background p-1">
+          {statusOptions.map((option) => (
+            <Button
+              key={option.value || 'all'}
+              type="button"
+              variant={statusFilter === option.value ? 'default' : 'ghost'}
+              className="h-8 px-3"
+              onClick={() => {
+                setStatusFilter(option.value);
+                setPage(0);
+              }}
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
         <Input
           placeholder="Filter by status (e.g. draft, active)…"
           className="max-w-sm"
@@ -68,6 +102,24 @@ export function RecipeList() {
             setPage(0);
           }}
         />
+        <Select
+          value={sortBy}
+          onValueChange={(value) => {
+            setSortBy(value as SortOption);
+            setPage(0);
+          }}
+        >
+          <SelectTrigger aria-label="Sort recipes" className="w-[280px]">
+            <SelectValue placeholder="Sort recipes" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {!isInitialLoading && recipePage && (
           <span className="text-sm text-muted-foreground">
             {recipePage.meta.total} recipe{recipePage.meta.total !== 1 ? 's' : ''}

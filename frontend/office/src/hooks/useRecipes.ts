@@ -12,6 +12,8 @@ const RECIPES_KEY = 'recipe';
 export function useRecipes(filters?: {
   status?: string;
   name?: string;
+  search?: string;
+  sort_by?: string;
   offset?: number;
   limit?: number;
 }) {
