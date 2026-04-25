@@ -4,6 +4,16 @@ import { cn } from '@/lib/utils';
 import type { Recipe } from '@/types/recipe';
 import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
+const RECIPE_CARD_TITLE_MAX_LENGTH = 64;
+
+function formatRecipeCardTitle(title: string) {
+  if (title.length <= RECIPE_CARD_TITLE_MAX_LENGTH) {
+    return title;
+  }
+
+  return `${title.slice(0, RECIPE_CARD_TITLE_MAX_LENGTH - 1).trimEnd()}…`;
+}
+
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
   active: 'bg-green-100 text-green-800',
@@ -26,6 +36,7 @@ interface RecipeCardProps {
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const navigate = useNavigate();
+  const displayTitle = formatRecipeCardTitle(recipe.name);
 
   // const yieldLabel =
   //   recipe.yield_amount != null
@@ -42,7 +53,9 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       <ImagePlaceholder />
       <CardHeader className="pb-2 h-full">
         <div className="flex h-full items-start justify-between gap-2">
-          <CardTitle className="flex-1 text-base leading-snug break-words">{recipe.name}</CardTitle>
+          <CardTitle className="flex-1 text-base leading-snug break-words" title={recipe.name}>
+            {displayTitle}
+          </CardTitle>
           <span className={badgeClass}>{recipe.status}</span>
         </div>
       </CardHeader>
