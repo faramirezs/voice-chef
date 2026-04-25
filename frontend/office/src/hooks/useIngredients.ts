@@ -1,15 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/axios';
-import type { Ingredient } from '@/types/recipe';
+import type { Ingredient, PaginatedResponse } from '@/types/recipe';
 
 const INGREDIENTS_KEY = 'ingredients';
 
-export function useIngredients(search?: string) {
+export function useIngredients(filters?: {
+  search?: string;
+  source?: string;
+  offset?: number;
+  limit?: number;
+}) {
   return useQuery({
-    queryKey: [INGREDIENTS_KEY, search],
+    queryKey: [INGREDIENTS_KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<Ingredient[]>('/ingredients', {
-        params: search ? { search } : undefined,
+      const { data } = await api.get<PaginatedResponse<Ingredient>>('/ingredient', {
+        params: filters,
       });
       return data;
     },
