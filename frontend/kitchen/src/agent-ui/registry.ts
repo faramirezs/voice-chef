@@ -15,10 +15,24 @@ const PlaceholderCard = lazy(() =>
   }))
 );
 
-// Recipe scaling widget for the sticky slot.
-const RecipeScalingCard = lazy(() =>
-  import("@/components/chat/RecipeScalingCard").then((m) => ({
-    default: m.RecipeScalingCard,
+// Unified recipe card for the canvas slot.
+const RecipeDetailCard = lazy(() =>
+  import("@/components/recipe/RecipeDetailCard").then((m) => ({
+    default: m.RecipeDetailCard,
+  }))
+);
+
+// Confirmation chips for the chips slot.
+const ConfirmationChips = lazy(() =>
+  import("@/components/chips/ConfirmationChips").then((m) => ({
+    default: m.ConfirmationChips,
+  }))
+);
+
+// Notification toast for the notifications slot.
+const NotificationToast = lazy(() =>
+  import("@/components/notifications/NotificationToast").then((m) => ({
+    default: m.NotificationToast,
   }))
 );
 
@@ -35,9 +49,19 @@ registry.set("placeholder", {
   defaultSlot: "canvas",
 });
 
-registry.set("recipe_scaling", {
-  component: RecipeScalingCard as ComponentType<Record<string, unknown>>,
-  defaultSlot: "sticky",
+registry.set("recipe_detail", {
+  component: RecipeDetailCard as ComponentType<Record<string, unknown>>,
+  defaultSlot: "canvas",
+});
+
+registry.set("confirmation_chips", {
+  component: ConfirmationChips as ComponentType<Record<string, unknown>>,
+  defaultSlot: "chips",
+});
+
+registry.set("notification", {
+  component: NotificationToast as ComponentType<Record<string, unknown>>,
+  defaultSlot: "notifications",
 });
 
 export function getRegisteredComponent(

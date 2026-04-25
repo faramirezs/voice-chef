@@ -9,31 +9,22 @@ from ag_ui.core import EventType, StateSnapshotEvent, StateDeltaEvent
 
 FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
 
-# Read model/provider settings from environment variables.
 AGENT_MODEL = os.getenv("AGENT_MODEL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# Fail fast with a clear message if the model name is missing.
-# This avoids starting a container with an ambiguous model config.
 if not AGENT_MODEL:
     raise RuntimeError(
         "Missing AGENT_MODEL. Set it to an OpenRouter model id, "
         "for example: anthropic/claude-sonnet-4-5"
     )
 
-# Fail fast if the OpenRouter API key is missing.
-# This produces a direct startup error instead of a later runtime failure.
 if not OPENROUTER_API_KEY:
     raise RuntimeError(
         "Missing OPENROUTER_API_KEY. Set it in your environment before "
         "starting the agent service."
     )
 
-
-# Reuse a single HTTP client for all tool calls instead of opening a new
-# TCP connection on every request. Much faster under load.
 _http_client = httpx.AsyncClient()
-
 
 model = OpenRouterModel(
     AGENT_MODEL,
@@ -42,44 +33,72 @@ model = OpenRouterModel(
 
 agent = Agent(
     model,
-    system_prompt=(
-        "You are Voice Chef, a culinary AI assistant for professional kitchen staff. "
-        "You have access to the recipe database. Answer questions about recipes, "
-        "cooking steps, ingredients, storage, plating, and kitchen operations. "
-        "When a chef asks about a recipe, always look it up from the database first. "
-        "Respond in a concise, action-oriented way suited for a busy kitchen environment. "
-        "You are a display controller, not a chat assistant. Never send free-form text responses. "
-        "Always use render_component to show content. If you have nothing visual to show, "
-        "respond with an empty TEXT_MESSAGE -- the UI has no text rendering target. "
-        "UI rendering policy: when a tool returns a typed envelope like recipes.list, "
-        "recipe.detail, or recipe.scaling, do not rewrite the tool data as markdown "
-        "tables, long lists, or full recipe text. The UI renders detailed tool output "
-        "as cards. After a successful typed tool result, do not send any additional "
-        "assistant text. Return no follow-up sentence; the card is the full response. "
-        "Do not call additional tools after a successful tool result unless the user "
-        "explicitly asks for another lookup. In particular, after get_recipe_detail "
-        "succeeds, do not call get_recipes_list again in the same run. "
-        "When a chef asks to scale a recipe, edit portions, or adjust ingredient "
-        "quantities, use get_recipe_for_scaling instead of get_recipe_detail. "
-        "MANDATORY SCALING SEQUENCE: when scaling a recipe, you MUST call "
-        "render_component(component='recipe_scaling', recipe_id=..., slot='sticky') "
-        "BEFORE calling get_recipe_for_scaling. This places the scaling widget in "
-        "the UI so the user sees it immediately. Never skip render_component. "
-        "UI Component Rendering: render_component places a component in a layout slot. "
-        "Available components: "
-        "* 'placeholder' (any slot): test card. Args: message. "
-        "* 'recipe_scaling' (sticky slot): scaling widget. Args: recipe_id. "
-        "Slot guide: 'canvas' = primary content area (center), 'sticky' = pinned top bar, "
-        "'chips' = bottom bar for transient actions, 'notifications' = top-right toasts, "
-        "'overlay' = full-screen modal. "
-        "After placing a component, STATE_SNAPSHOT from other tools will "
-        "populate its state. Do not duplicate data in render_component args. "
-    ),
+    system_prompt="""\
+You are Voice Chef, the display controller for a professional kitchen management system.
+You operate exclusively through UI components -- never through free-form text.
+Your job is to interpret chef commands and render the right component in the right slot.
+
+RECIPE DISPLAY RULE:
+To show a recipe, call get_recipe_detail(recipe_id). This single tool both fetches
+the recipe data AND renders the recipe card in the canvas. Do NOT call render_component
+separately -- the card appears automatically. Never respond with markdown tables,
+lists, or rewritten recipe text. If the user provides a recipe name, call get_recipes_list
+first to find the ID, then call get_recipe_detail with that ID.
+
+UI RENDERING POLICY:
+When a tool returns a typed envelope like recipes.list or recipe.scaling, do not
+rewrite the tool data as markdown tables, long lists, or full recipe text. The UI
+renders detailed tool output as cards. After a successful typed tool result, do not
+send any additional assistant text. Return no follow-up sentence; the card is the
+full response. Do not call additional tools after a successful tool result unless
+the user explicitly asks for another lookup. In particular, after get_recipe_detail
+succeeds, do not call get_recipes_list again in the same run.
+
+SCALING RULE:
+When a chef asks to scale a recipe, edit portions, or adjust ingredient quantities:
+1. Call get_recipe_detail(recipe_id) to show the recipe card in the canvas.
+2. Call get_recipe_for_scaling(recipe_id) to enable the scaling editor.
+Never skip step 1 -- the card must be visible before scaling data arrives.
+
+COMPONENT GUIDE:
+* 'placeholder' (any slot): test card. Args: message.
+* 'recipe_detail' (canvas slot): unified recipe card with detail + scaling. Args: recipe_id.
+* 'confirmation_chips' (chips slot): action buttons. Args: actions.
+* 'notification' (notifications slot): toast. Args: message, level, duration.
+
+SLOT GUIDE:
+'canvas' = primary content area (center)
+'sticky' = pinned top bar
+'chips' = bottom bar for transient actions
+'notifications' = top-right toasts
+'overlay' = full-screen modal
+
+After placing a component, STATE_SNAPSHOT from other tools will populate its state.
+Do not duplicate data in render_component args.
+
+TRANSIENT UI TOOLS:
+* show_notification(message, level='info', duration=5000): show auto-dismiss toast.
+  Levels: info, success, warning, error.
+* show_chip(actions=[{label, message, variant?}]): show action buttons in chips bar.
+  Each action sends its message back to you when clicked.
+* clear_slot(slot): remove content from a slot.
+
+Use show_notification for status updates (saved, errors, completion confirmations).
+Use show_chip when you need explicit user confirmation before an action.
+
+ERROR & EMPTY STATE HANDLING:
+If get_recipes_list returns 0 results, call show_notification with level='warning'
+and suggest the user try a different search term or browse all recipes.
+If get_recipe_detail returns a 404 or other error, call show_notification with
+level='error' and clear_slot('canvas') to remove any stale content.
+Never fall back to free-form text responses on errors.
+
+LANGUAGE:
+Ingredient names in the database may be in German or other languages.
+Render them exactly as stored -- do not translate ingredient names.
+""",
 )
 
-# @agent.tool_plain registers a function as a tool the LLM can call.
-# "plain" means it doesn't need access to the agent context or run state —
-# it just takes arguments and returns a value.
 
 @agent.tool_plain
 async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) -> dict[str, Any]:
@@ -89,18 +108,21 @@ async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) ->
     restate returned fields as markdown tables or long recipe dumps.
 
     Args:
-        query: Optional substring filter for recipe name.
+        query: Optional substring filter for recipe name (case-insensitive, server-side).
         limit: Page size. Clamped to [1, 100].
         offset: Starting row index. Clamped to >= 0.
     """
-    # Keep tool inputs aligned with backend contract.
     limit = max(1, min(limit, 100))
     offset = max(0, offset)
+
+    params: dict[str, Any] = {"limit": limit, "offset": offset}
+    if query:
+        params["query"] = query
 
     try:
         resp = await _http_client.get(
             f"{FASTAPI_URL}/api/recipes",
-            params={"limit": limit, "offset": offset},
+            params=params,
             timeout=10,
         )
         resp.raise_for_status()
@@ -113,61 +135,43 @@ async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) ->
             "message": str(exc),
         }
 
-    # Backend returns a paginated envelope: {items: [...], meta: {...}}.
+    items: list[Any] = []
+    meta: dict[str, Any] = {"limit": limit, "offset": offset, "total": 0}
+
     if isinstance(payload, dict):
         items = payload.get("items", [])
-        meta = payload.get("meta", {})
+        meta = payload.get("meta", meta)
     elif isinstance(payload, list):
-        # Backward-safe fallback in case backend returns a raw list.
         items = payload
         meta = {"limit": limit, "offset": offset, "total": len(payload)}
-    else:
-        items = []
-        meta = {"limit": limit, "offset": offset, "total": 0}
 
     if not isinstance(items, list):
         items = []
     if not isinstance(meta, dict):
         meta = {"limit": limit, "offset": offset, "total": len(items)}
 
-    if not query:
-        return {
-            "type": "recipes.list",
-            "version": "1",
-            "items": items,
-            "meta": meta,
-        }
-
-    query_lower = query.lower()
-    filtered = [
-        r for r in items
-        if isinstance(r, dict)
-        and query_lower in str(r.get("name", "")).lower()
-    ]
-
-    result_items = filtered or items
-    result_meta = {
-        "limit": len(result_items),
-        "offset": 0,
-        "total": len(result_items),
-    }
-
-    return {
+    envelope: dict[str, Any] = {
         "type": "recipes.list",
         "version": "1",
-        "items": result_items,
-        "meta": result_meta,
-        "query": query,
+        "items": items,
+        "meta": meta,
     }
+    if query:
+        envelope["query"] = query
+
+    return envelope
+
 
 @agent.tool_plain
 async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
-    """Get full details of a recipe by its UUID.
+    """Fetch a recipe by its UUID and render the recipe card in the canvas.
+
+    This tool both fetches the full recipe data AND places the recipe card
+    in the canvas slot. The assistant should not call render_component
+    separately after this tool -- the card is rendered automatically.
 
     Use this whenever the user wants to open, inspect, or edit a single recipe.
     Do not guess fields yourself; always call this tool instead.
-    Returns a typed UI envelope for card rendering. The assistant should not
-    add any follow-up text after a successful typed tool result.
     """
     try:
         resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
@@ -182,25 +186,15 @@ async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
         }
 
     return {
-        "type": "recipe.detail",
+        "type": "ui.render",
         "version": "1",
-        "item": payload,
+        "component": "recipe_detail",
+        "slot": "canvas",
+        "recipe": payload,
     }
 
 
-
-# --- JSON Patch helper for STATE_DELTA events ---
-
-
-class _PatchOp(BaseModel):
-    op: str
-    path: str
-    value: Any = None
-
-
-# --- render_component: flat-parameter tool ---
-
-VALID_COMPONENTS = ("placeholder", "recipe_scaling")
+VALID_COMPONENTS = ("placeholder", "recipe_detail", "confirmation_chips", "notification")
 VALID_SLOTS = ("canvas", "sticky", "chips", "notifications", "overlay")
 
 
@@ -210,6 +204,9 @@ async def render_component(
     slot: str = "canvas",
     message: str = "Slot active",
     recipe_id: str = "",
+    actions: list[dict[str, str]] | None = None,
+    level: str = "info",
+    duration: int = 5000,
 ) -> dict[str, Any]:
     """Render a UI component in a layout slot.
 
@@ -218,7 +215,9 @@ async def render_component(
 
     Components:
     - "placeholder" (any slot): test card. Pass 'message' for display text.
-    - "recipe_scaling" (default slot: sticky): scaling widget. Pass 'recipe_id'.
+    - "recipe_detail" (canvas slot): unified recipe card. Pass 'recipe_id'.
+    - "confirmation_chips" (chips slot): action buttons. Pass 'actions'.
+    - "notification" (notifications slot): toast message. Pass 'message', 'level'.
 
     Slots: "canvas" = primary content area, "sticky" = pinned top bar,
     "chips" = bottom bar, "notifications" = top-right toasts,
@@ -229,19 +228,81 @@ async def render_component(
     if slot not in VALID_SLOTS:
         return {"type": "error", "version": "1", "message": f"Unknown slot: {slot}"}
 
-    # Validate component-specific requirements.
-    if component == "recipe_scaling" and not recipe_id:
-        return {"type": "error", "version": "1", "message": "recipe_id required for recipe_scaling"}
+    if component == "recipe_detail" and not recipe_id:
+        return {"type": "error", "version": "1", "message": "recipe_id required for recipe_detail"}
+    if component == "confirmation_chips" and not actions:
+        return {"type": "error", "version": "1", "message": "actions required for confirmation_chips"}
 
     payload: dict[str, Any] = {"component": component, "slot": slot}
     if component == "placeholder":
         payload["message"] = message
-    elif component == "recipe_scaling":
+    elif component == "recipe_detail":
         payload["recipe_id"] = recipe_id
+    elif component == "confirmation_chips":
+        payload["actions"] = actions
+    elif component == "notification":
+        payload["message"] = message
+        payload["level"] = level
+        payload["duration"] = duration
 
     return {"type": "ui.render", "version": "1", **payload}
 
-# --- Recipe scaling tools ---
+
+@agent.tool_plain
+async def show_notification(
+    message: str,
+    level: str = "info",
+    duration: int = 5000,
+) -> dict[str, Any]:
+    """Show a transient toast notification.
+
+    Levels: "info", "success", "warning", "error".
+    Duration is in milliseconds (default 5000).
+    """
+    return await render_component(
+        component="notification",
+        slot="notifications",
+        message=message,
+        level=level,
+        duration=duration,
+    )
+
+
+@agent.tool_plain
+async def show_chip(
+    actions: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Show action confirmation buttons in the chips bar.
+
+    Each action has: label (button text), message (sent to agent on click).
+    Optional: variant ("default" | "ghost" | "destructive").
+
+    Example: [{"label": "Apply", "message": "confirm apply scaling", "variant": "default"}]
+    """
+    return await render_component(
+        component="confirmation_chips",
+        slot="chips",
+        actions=actions,
+    )
+
+
+@agent.tool_plain
+async def clear_slot(slot: str) -> dict[str, Any]:
+    """Clear a UI slot, removing its rendered component.
+
+    Use this to dismiss chips, notifications, or canvas content.
+    Slots: "canvas", "sticky", "chips", "notifications", "overlay".
+    """
+    if slot not in VALID_SLOTS:
+        return {"type": "error", "version": "1", "message": f"Unknown slot: {slot}"}
+    return {"type": "ui.clear", "version": "1", "slot": slot}
+
+
+class _PatchOp(BaseModel):
+    op: str
+    path: str
+    value: Any = None
+
 
 @agent.tool_plain
 async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
@@ -250,9 +311,8 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
     Use this when the chef wants to scale a recipe, edit portions,
     or adjust ingredient quantities.
 
-    IMPORTANT: always call render_component(component='recipe_scaling',
-    recipe_id=recipe_id) BEFORE calling this tool, to place the scaling
-    widget in the UI.
+    IMPORTANT: always call get_recipe_detail(recipe_id) BEFORE calling this
+    tool, to place the recipe card in the UI.
     """
     try:
         resp = await _http_client.get(
@@ -261,7 +321,6 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
         resp.raise_for_status()
         payload = resp.json()
     except Exception as exc:
-        # Return a minimal error snapshot so the UI can render it.
         return StateSnapshotEvent(
             type=EventType.STATE_SNAPSHOT,
             snapshot={
@@ -271,7 +330,6 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
             },
         )
 
-    # Transform backend response into the widget state shape.
     portions = payload.get("portions_count_resolved")
     raw_weight = payload.get("total_raw_weight_grams")
     cooked_weight = payload.get("total_cooked_weight_grams")
@@ -354,7 +412,6 @@ async def apply_recipe_changes(
             ],
         )
 
-    # Build delta that resets isDirty and updates original values.
     delta_ops: list[dict[str, Any]] = [
         _PatchOp(op="replace", path="/isDirty", value=False).model_dump()
     ]
@@ -411,15 +468,14 @@ async def suggest_recipe_improvements(recipe_id: str) -> StateDeltaEvent:
             ],
         )
 
-    # Identify missing/empty fields that could be improved.
     suggestions: dict[str, str] = {}
     if not payload.get("description") or len(str(payload.get("description", "")).strip()) < 20:
         suggestions["description"] = (
-            "(AI suggestion pending — describe this recipe in 1-2 appealing sentences)"
+            "(AI suggestion pending -- describe this recipe in 1-2 appealing sentences)"
         )
     if not payload.get("instructions") or len(str(payload.get("instructions", "")).strip()) < 20:
         suggestions["instructions"] = (
-            "(AI suggestion pending — add step-by-step cooking instructions)"
+            "(AI suggestion pending -- add step-by-step cooking instructions)"
         )
 
     return StateDeltaEvent(

@@ -29,18 +29,23 @@ export function SlotOutlet({ slot }: { slot: SlotId }) {
 
   const Component = entry.component;
 
+  // Notifications auto-dismiss; chips dismiss on action click. No X button.
+  const hideClose = slot === "notifications" || slot === "chips";
+
   return (
     <Suspense fallback={<SlotSkeleton />}>
       <div data-slot={slot} className="relative">
         <Component {...state.props} slot={slot} />
-        <button
-          type="button"
-          onClick={() => clear(slot)}
-          className="absolute top-2 right-2 h-6 w-6 rounded-full bg-surface/80 border border-border/50 text-text-muted text-xs flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors"
-          aria-label={`Close ${slot} slot`}
-        >
-          &times;
-        </button>
+        {!hideClose && (
+          <button
+            type="button"
+            onClick={() => clear(slot)}
+            className="absolute top-2 right-2 h-6 w-6 rounded-full bg-surface/80 border border-border/50 text-text-muted text-xs flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors"
+            aria-label={`Close ${slot} slot`}
+          >
+            \u00d7
+          </button>
+        )}
       </div>
     </Suspense>
   );

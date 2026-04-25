@@ -129,6 +129,7 @@ function emitEnvelope(raw: string): void {
   try {
     parsed = JSON.parse(raw);
   } catch {
+    console.warn("[emitEnvelope] JSON parse failed for:", raw.slice(0, 200));
     return;
   }
   if (
@@ -136,15 +137,19 @@ function emitEnvelope(raw: string): void {
     parsed === null ||
     typeof (parsed as Record<string, unknown>).type !== "string"
   ) {
+    console.warn("[emitEnvelope] Invalid envelope shape:", parsed);
     return;
   }
   const envelope = parsed as Record<string, unknown>;
   const envelopeType = envelope.type as string;
+  console.log("[emitEnvelope] type=", envelopeType, envelope);
   const handlers = _envelopeSubscribers.get(envelopeType);
   if (handlers) {
     for (const handler of handlers) {
       handler(envelope);
     }
+  } else {
+    console.warn("[emitEnvelope] No handlers for type:", envelopeType);
   }
 }
 

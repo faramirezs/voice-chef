@@ -4,6 +4,8 @@ import { useAgent } from "@/hooks/useAgent";
 import { useAgentSlots } from "./AgentSlotProvider";
 import { HudVoiceBar } from "./HudVoiceBar";
 import { HudStatusIndicator } from "./HudStatusIndicator";
+import { CommandPalette } from "@/components/overlay/CommandPalette";
+import { useEffect, useState } from "react";
 
 export function HudCanvas() {
   return (
@@ -33,9 +35,22 @@ function HudCanvasInner() {
   useAgent();
 
   const { slots } = useAgentSlots();
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const hasCanvas = slots.canvas !== undefined;
   const hasOverlay = slots.overlay !== undefined;
+
+  // Cmd+K toggles the command palette.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden bg-surface/85 backdrop-blur-sm">
@@ -69,12 +84,16 @@ function HudCanvasInner() {
         <SlotOutlet slot="notifications" />
       </div>
 
-      {/* Overlay -- fullscreen modal with backdrop */}
-      {hasOverlay && (
+      {/* Overlay -- fullscreen modal (command palette or agent overlay) */}
+      {paletteOpen ? (
+        <div className="absolute inset-0 z-40 bg-black/50 flex items-start justify-center pt-[15vh]">
+          <CommandPalette onClose={() => setPaletteOpen(false)} />
+        </div>
+      ) : hasOverlay ? (
         <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center">
           <SlotOutlet slot="overlay" />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

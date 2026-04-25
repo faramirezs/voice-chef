@@ -33,6 +33,8 @@ services:
   agent:
     environment:
       AGENT_DEBUG_STREAM: "1"
-
+    volumes:
+      - ./agent/app:/app/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
 volumes:
   node_modules:

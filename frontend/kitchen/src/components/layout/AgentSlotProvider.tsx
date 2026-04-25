@@ -56,6 +56,12 @@ export function AgentSlotProvider({ children }: { children: ReactNode }) {
     dispatch(slot, component, rest);
   });
 
+  // Subscribe to ui.clear envelopes from the agent.
+  useEnvelope("ui.clear", (envelope) => {
+    const slot = envelope.slot as SlotId;
+    if (slot) clear(slot);
+  });
+
   const value = useMemo(
     () => ({ slots, dispatch, clear }),
     [slots, dispatch, clear]

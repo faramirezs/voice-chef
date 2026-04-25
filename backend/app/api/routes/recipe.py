@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
@@ -55,12 +55,14 @@ def create_recipe(
 
 @router.get("", response_model=PaginatedResponse[Recipe])
 def retrieve_recipes(
+    search: str = Query("", alias="query"),
     session: Session = Depends(get_session),
-    pagination: PaginationParams = Depends(pagination_params)):
-
-    query = select(Recipe)
-    recipes = paginate(query, session, pagination)
-    return recipes
+    pagination: PaginationParams = Depends(pagination_params),
+):
+    stmt = select(Recipe)
+    if search:
+        stmt = stmt.where(Recipe.name.ilike(f"%{search}%"))
+    return paginate(stmt, session, pagination)
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetailResponse)
