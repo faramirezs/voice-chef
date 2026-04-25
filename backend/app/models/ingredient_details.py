@@ -4,8 +4,8 @@ from sqlmodel import (
     Field, SQLModel, Relationship,
 )
 from sqlalchemy import (
-    CheckConstraint, UniqueConstraint, PrimaryKeyConstraint, ForeignKeyConstraint, 
-    Index, Column, String, Integer, Numeric, text, DateTime
+    CheckConstraint, UniqueConstraint, PrimaryKeyConstraint, 
+    ForeignKeyConstraint, Index, Column, String, Numeric, text, DateTime
 )
 from datetime import datetime
 from decimal import Decimal
@@ -26,8 +26,7 @@ class Additives(SQLModel, table=True):
     )
     # Primary key, Timestamps
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    code: int = Field(
-        sa_column=Column('code', Integer, nullable=False))
+    code: int = Field(nullable=False)
     
     # Core fields
     name_de: str = Field(max_length=255, nullable=False)
@@ -49,8 +48,7 @@ class Allergens(SQLModel, table=True):
     )
     # Primary key, Timestamps
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    code: int = Field(
-        sa_column=Column('code', Integer, nullable=False))
+    code: int = Field(nullable=False)
     
     # Core fields
     name_de: str = Field(max_length=255, nullable=False)

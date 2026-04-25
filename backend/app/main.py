@@ -1,6 +1,5 @@
 from fastapi import FastAPI, APIRouter
 
-from app.schemas.pagination import PaginatedResponse
 from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as user_router
 from app.api.routes.recipe import router as recipe_router

@@ -112,7 +112,7 @@ If scope is small but many files are listed, that is expected. Only `Effective s
 - Alembic at head but drift exists:
 	this means runtime schema differs from current metadata; head revision alone does not guarantee parity.
 - `has no type within the model; can't compare`:
-	Gate 4 now treats this as a failure. Add explicit SQLAlchemy types in SQLModel `sa_column=Column(...)` declarations (for example `Integer`, `String`, `Numeric`) so Alembic can compare types.
+	Gate 4 now treats this as a failure. This happens when Alembic cannot infer the column type for comparison. The solution is to provide an explicit SQLAlchemy type. Per the [ORM Models Style Guide](../backend/docs/models_style_guide.md#2-usage-of-field-vs-sa_column), this requires escalating to a "Level 3" definition using `sa_column=Column(...)` to specify types like `Integer`, `String`, or `Numeric`.
 
 1. Create migration file (after model change):
 ```bash

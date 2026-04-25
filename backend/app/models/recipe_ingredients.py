@@ -5,8 +5,8 @@ from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import (
-    CheckConstraint, ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint,
-    Index, Boolean, Column, DateTime, Integer, Numeric, String, text,
+    CheckConstraint, ForeignKeyConstraint, PrimaryKeyConstraint, 
+    UniqueConstraint, Index, Column, DateTime, text,
 )
 
 if TYPE_CHECKING:
@@ -39,7 +39,8 @@ class RecipeIngredient(SQLModel, table=True):
     quantity: Decimal | None = Field(default=None)
     quantity_grams: Decimal | None = Field(default=None)
     quid_percent: Decimal | None = Field(default=None)
-    sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
+    sort_order: int = Field(nullable=False, sa_column_kwargs={"server_default": text("0")})
+    
     unit: str | None = Field(default=None, max_length=50)
     preparation: str | None = Field(default=None, max_length=255)
     item_type: str | None = Field(default=None, max_length=50)
