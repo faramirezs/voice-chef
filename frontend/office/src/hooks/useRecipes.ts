@@ -12,6 +12,8 @@ const RECIPES_KEY = 'recipe';
 export function useRecipes(filters?: {
   status?: string;
   name?: string;
+  search?: string;
+  sort_by?: string;
   offset?: number;
   limit?: number;
 }) {
@@ -92,6 +94,20 @@ export function useUpdateRecipe() {
         queryKey: [RECIPES_KEY],
         predicate: (query) => typeof query.queryKey[1] === 'object',
       });
+    },
+  });
+}
+
+export function useDeleteRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete<Recipe>(`/recipes/${id}`);
+      return data;
+    },
+    onSuccess: (deletedRecipe) => {
+      queryClient.removeQueries({ queryKey: [RECIPES_KEY, deletedRecipe.id] });
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
     },
   });
 }

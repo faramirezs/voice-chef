@@ -7,7 +7,7 @@ export function LoginPage() {
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border bg-background shadow-lg md:grid-cols-2">
         <div
           className="relative hidden min-h-[420px] bg-cover bg-center bg-no-repeat md:block"
-          style={{ backgroundImage: `linear-gradient(rgb(0 0 0 / 35%), rgb(0 0 0 / 35%)), url(${personImage})` }}
+          style={{ backgroundImage: `linear-gradient(rgb(0 0 0 / 0%), rgb(0 0 0 / 0%)), url(${personImage})` }}
         >
           <div className="absolute inset-0 flex flex-col justify-end p-8 text-white">
           </div>

@@ -1,3 +1,5 @@
+import { IngredientsList } from '@/components/ingredients/IngredientList';
+
 export function IngredientsPage() {
   return (
     <div className="space-y-6">
@@ -5,9 +7,7 @@ export function IngredientsPage() {
         <h1 className="text-2xl font-semibold">Ingredients</h1>
         <p className="text-muted-foreground">Manage your ingredients and inventory.</p>
       </div>
-      <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-        Coming soon...
-      </div>
+      <IngredientsList />
     </div>
   );
 }
