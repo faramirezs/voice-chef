@@ -38,7 +38,11 @@ def retrieve_ingredient(
 
 
 @router.post("", response_model=IngredientSummaryResponse)
-def create_ingredient(ingredient: IngredientWrite, session: Session = Depends(get_session)):
+def create_ingredient(
+    ingredient: IngredientWrite, 
+    session: Session = Depends(get_session)
+):
+    
     new_ingredient = Ingredients(**ingredient.model_dump())
 
     session.add(new_ingredient)

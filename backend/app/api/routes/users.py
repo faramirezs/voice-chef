@@ -24,7 +24,8 @@ ALGORITHM = "HS256"
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=list[UserSignupResponse])
-async def read_users(session: Session = Depends(get_session)) -> list[UserSignupResponse]:
+async def read_users(
+    session: Session = Depends(get_session)) -> list[UserSignupResponse]:
     """
     Retrieves a list of all users from the database.
     Returns an empty list if no users are found.
@@ -33,7 +34,8 @@ async def read_users(session: Session = Depends(get_session)) -> list[UserSignup
     return users
 
 @router.get("/list_all_tenants/", response_model=list[TenantsResponse])
-async def read_users(session: Session = Depends(get_session)) -> list[TenantsResponse]:
+async def read_users(
+    session: Session = Depends(get_session)) -> list[TenantsResponse]:
     """
     Retrieves a list of all tenants from the database.
     Returns an empty list if no tenants are found.
@@ -44,7 +46,8 @@ async def read_users(session: Session = Depends(get_session)) -> list[TenantsRes
 
 # NOTE: Mpeshko. Endpoint to test and learn how JWT token works.
 @router.get("/decode_token")
-async def decode_token_for_testing(token: str):
+async def decode_token_for_testing(
+    token: str):
     """
     Decodes a JWT provided as a query parameter to inspect its payload.
 

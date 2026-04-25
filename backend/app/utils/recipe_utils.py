@@ -19,22 +19,27 @@ def to_recipe_ingredient_response(link):
     }
 
 
+# NOTE: mpeshko - link is RecipeIngredient, link.ingredient is an Ingredient
 def to_recipe_detail(recipe):
-    return {
-        "id": recipe.id,
-        "name": recipe.name,
-        "description": recipe.description,
-        "instructions": recipe.instructions,
-        "status": recipe.status,
-        "yield_mode": recipe.yield_mode,
-        "portion_size_grams": recipe.portion_size_grams,
-        "total_raw_weight_grams": recipe.total_raw_weight_grams,
-        "total_cooked_weight_grams": recipe.total_cooked_weight_grams,
-        "portions_count_resolved": recipe.portions_count_resolved,
-        "created_at": recipe.created_at,
-        "updated_at": recipe.updated_at,
-        # "ingredients": [
-        #     to_recipe_ingredient_response(link)
-        #     for link in sorted(recipe.recipe_ingredients, key=lambda x: x.sort_order)
-        # ],
-    }
+    result = recipe.model_dump()
+
+    ingredients_list = []
+    for link in sorted(recipe.recipe_ingredients, key=lambda x: x.sort_order or 0):
+        if link.ingredient:
+            ingredients_list.append({
+                "id": link.id,
+                "ingredient_id": link.ingredient.id,
+                "ingredient_name": link.ingredient.name,
+                "ingredient_default_unit": link.ingredient.default_unit,
+                
+                "quantity": link.quantity,
+                "unit": link.unit,
+                "quantity_grams": link.quantity_grams,
+                
+                # Прибираємо зайві пробіли
+                "preparation": link.preparation.strip() if link.preparation else None,
+                "sort_order": link.sort_order
+            })
+    
+    result["ingredients"] = ingredients_list
+    return result

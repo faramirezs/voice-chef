@@ -25,10 +25,14 @@ class Recipe(SQLModel, table=True):
     __table_args__ = (
         CheckConstraint("status IN ('draft', 'active', 'archived')", name='valid_status'),
         CheckConstraint('portion_size_grams IS NULL OR portion_size_grams > 0::numeric', name='positive_portion_size_grams'),
-        CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', name='positive_portions_count_resolved'),
-        CheckConstraint("status::text <> 'active'::text OR yield_mode::text <> 'weight'::text OR portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric", name='weight_mode_requires_portion_size_when_active'),
-        CheckConstraint('total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric', name='positive_total_cooked_weight_grams'),
-        CheckConstraint('total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric', name='positive_total_raw_weight_grams'),
+        CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', 
+                        name='positive_portions_count_resolved'),
+        CheckConstraint("status::text <> 'active'::text OR yield_mode::text <> 'weight'::text OR portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric", 
+                        name='weight_mode_requires_portion_size_when_active'),
+        CheckConstraint('total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric', 
+                        name='positive_total_cooked_weight_grams'),
+        CheckConstraint('total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric', 
+                        name='positive_total_raw_weight_grams'),
         CheckConstraint("yield_mode::text = ANY (ARRAY['count', 'weight']::text[])", name='valid_yield_mode'),
         ForeignKeyConstraint(['created_by'], ['users.id'], name='recipes_created_by_fkey'),
         ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='recipes_tenant_id_fkey'),
@@ -58,9 +62,9 @@ class Recipe(SQLModel, table=True):
     photo_url: str | None = Field(default=None, sa_type=Text)
     yield_mode: str = Field(max_length=20, nullable=False, sa_column_kwargs={"server_default": text("'count'")})
     portion_size_grams: Decimal | None = Field(default=None)
+    portions_count_resolved: Decimal | None = Field(default=None)
     total_raw_weight_grams: Decimal | None = Field(default=None)
     total_cooked_weight_grams: Decimal | None = Field(default=None)
-    portions_count_resolved: Decimal | None = Field(default=None)
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 

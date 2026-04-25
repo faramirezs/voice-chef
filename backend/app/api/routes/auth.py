@@ -17,6 +17,8 @@ from app.utils.auth_utils import get_password_hash, validate_password, verify_pa
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
+# old tenant_id - f5504206-d0a6-48c0-8aa5-2ae8791be730
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
@@ -50,11 +52,24 @@ signup_responses = {
         },
     },
     status.HTTP_400_BAD_REQUEST: {
-        "description": "Password is too weak",
+        "description": "Bad Request: Invalid input data",
         "content": {
             "application/json": {
-                "example": {
-                    "value": "Password is too weak. It must have a minimum of 8 characters, and include uppercase, lowercase, digits, and symbols.",
+                "examples": {
+                    "weak_password": {
+                        "summary": "Password is too weak",
+                        "value": {
+                            "detail": "Password is too weak. It must have a minimum of 8 characters, and include uppercase, lowercase, digits, and symbols."
+                        },
+                    },
+                    "invalid_uuid": {
+                        "summary": "Invalid UUID format",
+                        "value": {"detail": "Invalid UUID format for tenant_id"},
+                    },
+                    "database_error": {
+                        "summary": "A database error occurred",
+                        "value": {"detail": "Database error: <specific_error_message>"},
+                    },
                 }
             }
         },
@@ -72,16 +87,15 @@ signup_responses = {
 }
 
 # mpreshko "tenant_id": "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0" is hard-coded
-@router.post(
-    "/signup", 
+@router.post("/signup", 
     status_code=status.HTTP_201_CREATED,
     response_model=UserSignupResponse,
     responses=signup_responses
-)
+    )
 async def signup(
-        user_data: UserSignupLogin, 
-        session: Session = Depends(get_session)
-    ):
+    user_data: UserSignupLogin,
+    session: Session = Depends(get_session)
+):
     """Handles new user registration."""
     
     # 1. Validate password strength FIRST
@@ -106,9 +120,9 @@ async def signup(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="E-Mail already registered."
             )
-    # 3. Create a new User instance. tenant_id 'f5504206-d0a6-48c0-8aa5-2ae8791be730' is hardcoded for MVP
+    # 3. Create a new User instance. DEFAULT_TENANT_ID is hardcoded for MVP
     try:
-        target_id = UUID("f5504206-d0a6-48c0-8aa5-2ae8791be730")
+        target_id = DEFAULT_TENANT_ID
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format for tenant_id")
     new_user = Users(
@@ -120,14 +134,15 @@ async def signup(
     # 4. Check if this tenant actually exists in your DB
     tenant_exists = session.get(Tenants, new_user.tenant_id)
     if not tenant_exists:
-        raise HTTPException(
-            status_code=503, 
-            detail="Default tenant not configured in the database."
-        )
-
-    session.add(new_user)
-    session.commit()
-    session.refresh(new_user)
+        raise HTTPException(status_code=503, detail="Default tenant not configured in the database.")
+    
+    try:
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
     return new_user
 
 
@@ -175,8 +190,7 @@ login_responses = {
     }
 }
 
-@router.post(
-    "/login",
+@router.post("/login",
     status_code=status.HTTP_200_OK,
     response_model=AuthTokenResponse,
     responses=login_responses,

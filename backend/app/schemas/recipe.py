@@ -1,8 +1,9 @@
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 from typing import List
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
+from pydantic import field_validator
 
 class RecipeIngredientWrite(SQLModel):
     ingredient_id: UUID
@@ -35,9 +36,9 @@ class RecipeIngredientResponse(SQLModel):
     ingredient_name: str
     ingredient_default_unit: str
 
-    quantity: Decimal
+    quantity: float
     unit: str
-    quantity_grams: Decimal
+    quantity_grams: float
 
     preparation: str | None = None
     sort_order: int
@@ -50,10 +51,10 @@ class RecipeSummaryResponse(SQLModel):
     instructions: str | None
     status: str
     yield_mode: str
-    portion_size_grams: Decimal | None
-    total_raw_weight_grams: Decimal | None
-    total_cooked_weight_grams: Decimal | None
-    portions_count_resolved: Decimal | None
+    portion_size_grams: float | None
+    total_raw_weight_grams: float | None
+    total_cooked_weight_grams: float | None
+    portions_count_resolved: float | None
     created_at: datetime | None
     updated_at: datetime | None
 
@@ -76,12 +77,20 @@ class RecipeUpdate(SQLModel):
     instructions: str | None = None
 
     status: str | None = None
-    yield_mode: str | None = "count"
+    yield_mode: str | None = None
 
-    portion_size_grams: Decimal | None = None
-    total_raw_weight_grams: Decimal | None = None
-    total_cooked_weight_grams: Decimal | None = None
+    portion_size_grams: Decimal | None = Field(default=None, gt=0)
+    portions_count_resolved: Decimal | None = Field(default=None, gt=0)
+    total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
+    total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
 
-    portions_count_resolved: Decimal | None = None
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_empty(cls, v: str | None):
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Recipe name cannot be empty")
+        return v
 
     # ingredients: List[RecipeIngredientUpdate] | None = None
