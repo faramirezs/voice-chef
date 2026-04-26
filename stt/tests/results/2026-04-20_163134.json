@@ -1,0 +1,18 @@
+{
+  "text": "I'm looking for a recipe for lasagna.",
+  "language": "en",
+  "language_probability": 0.91,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 2.31,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.24,
+      "text": "I'm looking for a recipe for lasagna.",
+      "avg_logprob": -0.307,
+      "no_speech_prob": 0.003,
+      "compression_ratio": 0.9
+    }
+  ]
+}

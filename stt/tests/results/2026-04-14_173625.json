@@ -1,0 +1,15 @@
+{
+  "text": "Sosisli sand\u0131, hi\u00e7 tarife",
+  "language": "tr",
+  "language_probability": 0.51,
+  "confidence": "low",
+  "retry_suggested": true,
+  "duration": 5.78,
+  "segments": [
+    {
+      "start": 2.9,
+      "end": 4.9,
+      "text": "Sosisli sand\u0131, hi\u00e7 tarife"
+    }
+  ]
+}

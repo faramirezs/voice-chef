@@ -1,0 +1,18 @@
+{
+  "text": "Ja, man wei\u00df, warum diese Format ist, aber man hat ja auch das.",
+  "language": "de",
+  "language_probability": 0.45,
+  "confidence": "low",
+  "retry_suggested": true,
+  "duration": 4.81,
+  "segments": [
+    {
+      "start": 2.16,
+      "end": 4.96,
+      "text": "Ja, man wei\u00df, warum diese Format ist, aber man hat ja auch das.",
+      "avg_logprob": -1.122,
+      "no_speech_prob": 0.392,
+      "compression_ratio": 0.94
+    }
+  ]
+}
