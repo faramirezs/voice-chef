@@ -1,4 +1,11 @@
 import { lazy, type ComponentType } from "react";
+// Recipe list grid for browsing recipes in the canvas slot.
+const RecipeListView = lazy(() =>
+  import("@/components/recipe/RecipeListView").then((m) => ({
+    default: m.RecipeListView,
+  }))
+);
+
 
 /**
  * Component registry: maps component keys (from render_component tool)
@@ -48,6 +55,12 @@ registry.set("placeholder", {
   component: PlaceholderCard as ComponentType<Record<string, unknown>>,
   defaultSlot: "canvas",
 });
+
+registry.set("recipe_list", {
+  component: RecipeListView as ComponentType<Record<string, unknown>>,
+  defaultSlot: "canvas",
+});
+
 
 registry.set("recipe_detail", {
   component: RecipeDetailCard as ComponentType<Record<string, unknown>>,

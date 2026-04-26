@@ -1,49 +1,74 @@
 import os
 import httpx
+import logging
 from typing import Any
 from pydantic import BaseModel
-from pydantic_ai import Agent
-from pydantic_ai.models.openrouter import OpenRouterModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.ui import StateDeps
 from ag_ui.core import EventType, StateSnapshotEvent, StateDeltaEvent
+from .state import KitchenState
+
+logger = logging.getLogger("voice-chef.agent")
 
 FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
 
-AGENT_MODEL = os.getenv("AGENT_MODEL")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+AGENT_MODEL = os.getenv("AGENT_MODEL", "meta/llama-3.3-70b-instruct")
 
-if not AGENT_MODEL:
+AGENT_PROVIDER = os.getenv("AGENT_PROVIDER", "nvidia").lower()
+PROVIDER_DEFAULT_BASE_URLS = {
+    "nvidia": "https://integrate.api.nvidia.com/v1",
+    "openrouter": "https://openrouter.ai/api/v1",
+    "openai": "https://api.openai.com/v1",
+}
+
+if AGENT_PROVIDER not in PROVIDER_DEFAULT_BASE_URLS:
     raise RuntimeError(
-        "Missing AGENT_MODEL. Set it to an OpenRouter model id, "
-        "for example: anthropic/claude-sonnet-4-5"
+        "Invalid AGENT_PROVIDER. Supported values: nvidia, openrouter, openai."
     )
 
-if not OPENROUTER_API_KEY:
+AGENT_BASE_URL = os.getenv("AGENT_BASE_URL") or PROVIDER_DEFAULT_BASE_URLS[AGENT_PROVIDER]
+
+# Preferred key is AGENT_API_KEY; provider-specific keys are backward-compatible fallbacks.
+AGENT_API_KEY = os.getenv("AGENT_API_KEY")
+if not AGENT_API_KEY:
+    provider_key_env = {
+        "nvidia": "NVIDIA_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "openai": "OPENAI_API_KEY",
+    }[AGENT_PROVIDER]
+    AGENT_API_KEY = os.getenv(provider_key_env)
+
+if not AGENT_API_KEY:
     raise RuntimeError(
-        "Missing OPENROUTER_API_KEY. Set it in your environment before "
-        "starting the agent service."
+        "Missing API key. Set AGENT_API_KEY or the provider-specific key "
+        f"for '{AGENT_PROVIDER}' in your environment."
     )
+
+# Set OpenAI-compatible env vars so OpenAIModel picks them up automatically.
+os.environ["OPENAI_BASE_URL"] = AGENT_BASE_URL
+os.environ["OPENAI_API_KEY"] = AGENT_API_KEY
+
+model = OpenAIModel(AGENT_MODEL)
 
 _http_client = httpx.AsyncClient()
-
-model = OpenRouterModel(
-    AGENT_MODEL,
-    provider=OpenRouterProvider(api_key=OPENROUTER_API_KEY),
-)
-
-agent = Agent(
-    model,
-    system_prompt="""\
+SYSTEM_PROMPT = """\
 You are Voice Chef, the display controller for a professional kitchen management system.
 You operate exclusively through UI components -- never through free-form text.
 Your job is to interpret chef commands and render the right component in the right slot.
 
 RECIPE DISPLAY RULE:
-To show a recipe, call get_recipe_detail(recipe_id). This single tool both fetches
+To show a recipe, call get_recipe_detail(recipe_id) recipe_id: UUID format only (e.g. "bd3083b9-10ca-557b-9428-88bb6c9f6733").
+NEVER pass a recipe name, slug, or any other string as recipe_id. This single tool both fetches
 the recipe data AND renders the recipe card in the canvas. Do NOT call render_component
 separately -- the card appears automatically. Never respond with markdown tables,
 lists, or rewritten recipe text. If the user provides a recipe name, call get_recipes_list
-first to find the ID, then call get_recipe_detail with that ID.
+first to find the ID (UUID format only), then call get_recipe_detail with that ID.
+
+If get_recipe_detail returns ANY error → call show_notification(level: "error").
+STOP. Do not generate text. Do not try get_recipes_list as a fallback.
+
+"do not send any additional assistant text after a typed tool result"
 
 UI RENDERING POLICY:
 When a tool returns a typed envelope like recipes.list or recipe.scaling, do not
@@ -54,11 +79,33 @@ full response. Do not call additional tools after a successful tool result unles
 the user explicitly asks for another lookup. In particular, after get_recipe_detail
 succeeds, do not call get_recipes_list again in the same run.
 
+"do not send any additional assistant text after a typed tool result"
+
+Example: User: "show chimichurri"
+→ get_recipes_list(query="chimichurri") → extract id
+→ get_recipe_detail(recipe_id=<uuid>) → ui.render fires
+→ NO TEXT RESPONSE. The card is the answer.
+
 SCALING RULE:
 When a chef asks to scale a recipe, edit portions, or adjust ingredient quantities:
-1. Call get_recipe_detail(recipe_id) to show the recipe card in the canvas.
-2. Call get_recipe_for_scaling(recipe_id) to enable the scaling editor.
-Never skip step 1 -- the card must be visible before scaling data arrives.
+1. Use the CURRENT STATE below. If a recipe is selected, use its id for recipe_id.
+2. If no recipe is selected, call get_recipes_list to find the recipe_id.
+3. Call get_recipe_detail(recipe_id) to render the recipe card in the canvas.
+4. Call scale_recipe(recipe_id, target_portions) to activate the scaling editor.
+   Compute target from the chef's words: "double" = original*2, "triple" = original*3,
+   "scale to 20" = 20, "halve" = original/2.
+5. Never skip step 3 -- the card must be visible before scaling data arrives.
+6. When the chef confirms "apply", call apply_recipe_changes with the final values.
+
+Before calling scale_recipe:
+1. Read snapshot.recipeId from the current STATE_SNAPSHOT.
+   ALWAYS pass this value as recipe_id. NEVER pass an empty string.
+2. Compare the requested target_portions to snapshot.current.portions.
+   If they are equal, DO NOT call scale_recipe. The recipe is already scaled.
+   Respond: "The recipe is already at [N] portions."
+3. isDirty in STATE_SNAPSHOT means the widget has unsaved UI changes.
+   It does NOT mean your last scale call failed.
+   After one successful scale_recipe call, stop and confirm to the user.
 
 COMPONENT GUIDE:
 * 'placeholder' (any slot): test card. Args: message.
@@ -75,6 +122,10 @@ SLOT GUIDE:
 
 After placing a component, STATE_SNAPSHOT from other tools will populate its state.
 Do not duplicate data in render_component args.
+
+When the user says "this recipe" or "scale this", check CURRENT STATE first.
+If a recipe is selected, use it directly instead of calling get_recipes_list.
+If no recipe is selected, fall back to searching by name as usual.
 
 TRANSIENT UI TOOLS:
 * show_notification(message, level='info', duration=5000): show auto-dismiss toast.
@@ -96,12 +147,55 @@ Never fall back to free-form text responses on errors.
 LANGUAGE:
 Ingredient names in the database may be in German or other languages.
 Render them exactly as stored -- do not translate ingredient names.
-""",
+"""
+
+agent = Agent(
+    model,
+    system_prompt=SYSTEM_PROMPT,
+    deps_type=StateDeps[KitchenState],
 )
 
 
-@agent.tool_plain
-async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) -> dict[str, Any]:
+@agent.instructions
+def state_instructions(ctx: RunContext[StateDeps[KitchenState]]) -> str:
+    """Inject current frontend state into the LLM's context.
+
+    AGUIAdapter validates the request body state into ctx.deps.state before
+    the agent runs. This instruction makes that state visible to the LLM so
+    it can make intelligent tool calls without guessing.
+    """
+    state = ctx.deps.state
+    selected = state.selected_recipe
+    scaling = state.scaling
+
+    lines = ["CURRENT STATE:"]
+    if selected:
+        lines.append(
+            f'- View: "{state.view}"'
+        )
+        lines.append(
+            f'- Selected recipe: "{selected.name}" (id: {selected.id}, portions: {selected.portions or "unknown"}, yield_mode: {selected.yield_mode})'
+        )
+    else:
+        lines.append(f'- View: "{state.view}"')
+        lines.append("- No recipe selected")
+
+    if scaling and scaling.target_portions is not None:
+        lines.append(f"- Scaling: target_portions={scaling.target_portions}, is_dirty={scaling.is_dirty}")
+
+    if state.last_action:
+        lines.append(f"- Last action: {state.last_action.type}")
+
+    return "\n".join(lines)
+
+
+@agent.tool
+async def get_recipes_list(
+    ctx: RunContext[StateDeps[KitchenState]],
+    query: str = "",
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
     """Get recipes with pagination, optional filter by name.
 
     Returns a typed UI envelope for card rendering. The assistant should not
@@ -162,10 +256,22 @@ async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) ->
     return envelope
 
 
-@agent.tool_plain
-async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
+@agent.tool
+async def get_recipe_detail(
+    ctx: RunContext[StateDeps[KitchenState]],
+    recipe_id: str = "",
+) -> dict[str, Any]:
     """Fetch a recipe by its UUID and render the recipe card in the canvas.
+    recipe_id: UUID format only (e.g. "bd3083b9-10ca-557b-9428-88bb6c9f6733").
+    NEVER pass a recipe name, slug, or any other string as recipe_id.
+  
+    If recipe_id is not provided, uses get_recipes_list(query="recipe name") or
+    state.selected_recipe.id and extract id as fallback.
 
+    Example: User: "show chimichurri"
+        → get_recipes_list(query="chimichurri") → extract id
+        → get_recipe_detail(recipe_id=<uuid>) → ui.render fires
+        → NO TEXT RESPONSE. The card is the answer.
     This tool both fetches the full recipe data AND places the recipe card
     in the canvas slot. The assistant should not call render_component
     separately after this tool -- the card is rendered automatically.
@@ -173,6 +279,15 @@ async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
     Use this whenever the user wants to open, inspect, or edit a single recipe.
     Do not guess fields yourself; always call this tool instead.
     """
+    state = ctx.deps.state
+    if not recipe_id and state.selected_recipe:
+        recipe_id = state.selected_recipe.id
+    if not recipe_id:
+        return {
+            "type": "error",
+            "version": "1",
+            "message": "No recipe_id provided and no recipe selected",
+        }
     try:
         resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
         resp.raise_for_status()
@@ -198,8 +313,9 @@ VALID_COMPONENTS = ("placeholder", "recipe_detail", "confirmation_chips", "notif
 VALID_SLOTS = ("canvas", "sticky", "chips", "notifications", "overlay")
 
 
-@agent.tool_plain
+@agent.tool
 async def render_component(
+    ctx: RunContext[StateDeps[KitchenState]],
     component: str,
     slot: str = "canvas",
     message: str = "Slot active",
@@ -248,8 +364,9 @@ async def render_component(
     return {"type": "ui.render", "version": "1", **payload}
 
 
-@agent.tool_plain
+@agent.tool
 async def show_notification(
+    ctx: RunContext[StateDeps[KitchenState]],
     message: str,
     level: str = "info",
     duration: int = 5000,
@@ -268,8 +385,9 @@ async def show_notification(
     )
 
 
-@agent.tool_plain
+@agent.tool
 async def show_chip(
+    ctx: RunContext[StateDeps[KitchenState]],
     actions: list[dict[str, str]],
 ) -> dict[str, Any]:
     """Show action confirmation buttons in the chips bar.
@@ -286,8 +404,8 @@ async def show_chip(
     )
 
 
-@agent.tool_plain
-async def clear_slot(slot: str) -> dict[str, Any]:
+@agent.tool
+async def clear_slot(ctx: RunContext[StateDeps[KitchenState]], slot: str) -> dict[str, Any]:
     """Clear a UI slot, removing its rendered component.
 
     Use this to dismiss chips, notifications, or canvas content.
@@ -304,16 +422,38 @@ class _PatchOp(BaseModel):
     value: Any = None
 
 
-@agent.tool_plain
-async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
-    """Fetch a recipe with its ingredients for the scaling widget.
+@agent.tool
+async def scale_recipe(
+    ctx: RunContext[StateDeps[KitchenState]],
+    recipe_id: str = "",
+    target_portions: float = 0,
+) -> StateSnapshotEvent:
+    """Activate the scaling editor for a recipe with a target portion count.
 
-    Use this when the chef wants to scale a recipe, edit portions,
-    or adjust ingredient quantities.
+    If recipe_id is not provided, uses state.selected_recipe.id as fallback.
 
-    IMPORTANT: always call get_recipe_detail(recipe_id) BEFORE calling this
-    tool, to place the recipe card in the UI.
+    Fetches the recipe data and sends a STATE_SNAPSHOT that activates scaling mode
+    on the recipe card. The frontend computes the ratio and scales ingredients locally.
+
+    IMPORTANT: always call get_recipe_detail(recipe_id) BEFORE this tool,
+    so the recipe card is already visible in the canvas.
+
+    Args:
+        recipe_id: UUID of the recipe to scale.
+        target_portions: The desired number of portions. Compute this from the
+            chef's words: "double" = original*2, "triple" = original*3,
+            "scale to 20" = 20, "halve" = original/2.
     """
+    state = ctx.deps.state
+    logger.warning("[scale_recipe] state.selected_recipe: %s", state.selected_recipe)
+    if not recipe_id and state.selected_recipe:
+        recipe_id = state.selected_recipe.id
+    if not recipe_id:
+        return StateSnapshotEvent(
+            type=EventType.STATE_SNAPSHOT,
+            snapshot={"widget": "recipe.scaling", "version": "1", "error": "No recipe_id provided"},
+        )
+
     try:
         resp = await _http_client.get(
             f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10
@@ -326,6 +466,7 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
             snapshot={
                 "widget": "recipe.scaling",
                 "version": "1",
+                "recipeId": recipe_id,
                 "error": str(exc),
             },
         )
@@ -337,13 +478,22 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
 
     ingredients = []
     for ing in payload.get("ingredients", []):
+        qty = float(ing["quantity"]) if ing.get("quantity") is not None else 0
         ingredients.append({
             "id": ing.get("id"),
             "name": ing.get("ingredient_name", ""),
-            "quantity": float(ing["quantity"]) if ing.get("quantity") is not None else 0,
+            "quantity": qty,
             "unit": ing.get("unit", ""),
-            "originalQuantity": float(ing["quantity"]) if ing.get("quantity") is not None else 0,
+            "originalQuantity": qty,
         })
+
+    # Compute derived weights from ratio so frontend has full context.
+    # Frontend will re-compute these anyway, but pre-filling helps the initial render.
+    orig_portions = float(portions) if portions is not None else None
+    ratio = target_portions / orig_portions if orig_portions else 1
+
+    orig_raw = float(raw_weight) if raw_weight is not None else None
+    orig_cooked = float(cooked_weight) if cooked_weight is not None else None
 
     snapshot = {
         "widget": "recipe.scaling",
@@ -351,19 +501,19 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
         "recipeId": str(payload.get("id", recipe_id)),
         "recipeName": payload.get("name", ""),
         "original": {
-            "portions": float(portions) if portions is not None else None,
-            "totalRawWeight": float(raw_weight) if raw_weight is not None else None,
-            "totalCookedWeight": float(cooked_weight) if cooked_weight is not None else None,
+            "portions": orig_portions,
+            "totalRawWeight": orig_raw,
+            "totalCookedWeight": orig_cooked,
             "yieldMode": yield_mode,
         },
         "current": {
-            "portions": float(portions) if portions is not None else None,
-            "totalRawWeight": float(raw_weight) if raw_weight is not None else None,
-            "totalCookedWeight": float(cooked_weight) if cooked_weight is not None else None,
+            "portions": target_portions,
+            "totalRawWeight": round(orig_raw * ratio, 2) if orig_raw else None,
+            "totalCookedWeight": round(orig_cooked * ratio, 2) if orig_cooked else None,
         },
         "ingredients": ingredients,
         "suggestedFields": None,
-        "isDirty": False,
+        "isDirty": True,
     }
 
     return StateSnapshotEvent(
@@ -372,8 +522,9 @@ async def get_recipe_for_scaling(recipe_id: str) -> StateSnapshotEvent:
     )
 
 
-@agent.tool_plain
+@agent.tool
 async def apply_recipe_changes(
+    ctx: RunContext[StateDeps[KitchenState]],
     recipe_id: str,
     portions: float | None = None,
     total_raw_weight: float | None = None,
@@ -443,8 +594,8 @@ async def apply_recipe_changes(
     )
 
 
-@agent.tool_plain
-async def suggest_recipe_improvements(recipe_id: str) -> StateDeltaEvent:
+@agent.tool
+async def suggest_recipe_improvements(ctx: RunContext[StateDeps[KitchenState]], recipe_id: str) -> StateDeltaEvent:
     """Analyze a recipe and suggest improvements for missing or weak fields.
 
     Returns a STATE_DELTA patch with suggestedFields containing proposed values

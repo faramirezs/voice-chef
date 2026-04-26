@@ -9,6 +9,7 @@ import {
   type StateDeltaEvent,
 } from "@ag-ui/client";
 import { chefAgent } from "@/lib/agent";
+import { DEFAULT_KITCHEN_STATE, type KitchenState } from "@/types/agent-state";
 
 // --- Envelope subscription system ---
 // Module-level subscriber map shared between useAgent and useEnvelope.
@@ -142,7 +143,6 @@ function emitEnvelope(raw: string): void {
   }
   const envelope = parsed as Record<string, unknown>;
   const envelopeType = envelope.type as string;
-  console.log("[emitEnvelope] type=", envelopeType, envelope);
   const handlers = _envelopeSubscribers.get(envelopeType);
   if (handlers) {
     for (const handler of handlers) {
@@ -256,6 +256,49 @@ export function useAgent() {
         });
       }
 
+      // Capture the KitchenState we want to send before runAgent.
+      // This is needed because STATE_SNAPSHOT events may overwrite chefAgent.state
+      // before the request is sent.
+      const kitchenState: KitchenState = (() => {
+        const agentState = chefAgent.state as Record<string, unknown> | null;
+        const looksLikeKitchenState = agentState != null && typeof agentState.view === "string";
+
+        if (looksLikeKitchenState) {
+          return {
+            view: agentState.view as KitchenState["view"],
+            selected_recipe: (agentState.selected_recipe as KitchenState["selected_recipe"]) ?? null,
+            scaling: (agentState.scaling as KitchenState["scaling"]) ?? null,
+            last_action: { type: "search", timestamp: Date.now() },
+          };
+        } else {
+          const currentState = _agentState as Record<string, unknown> | null;
+          return {
+            view: currentState && (currentState as { widget?: string }).widget === "recipe.scaling"
+              ? "scaling"
+              : (_agentState ? "recipe_detail" : "empty"),
+            selected_recipe: currentState && (currentState as { recipeId?: string }).recipeId
+              ? {
+                  id: String((currentState as { recipeId: unknown }).recipeId),
+                  name: String((currentState as { recipeName?: unknown }).recipeName ?? ""),
+                  portions: typeof (currentState as { original?: { portions?: unknown } }).original?.portions === "number"
+                    ? (currentState as { original: { portions: number } }).original.portions
+                    : null,
+                  yield_mode: String((currentState as { original?: { yieldMode?: unknown } }).original?.yieldMode ?? "count"),
+                }
+              : null,
+            scaling: currentState && (currentState as { widget?: string }).widget === "recipe.scaling"
+              ? {
+                  target_portions: typeof (currentState as { current?: { portions?: unknown } }).current?.portions === "number"
+                    ? (currentState as { current: { portions: number } }).current.portions
+                    : null,
+                  is_dirty: Boolean((currentState as { isDirty?: unknown }).isDirty),
+                }
+              : null,
+            last_action: { type: "search", timestamp: Date.now() },
+          };
+        }
+      })();
+
       const subscriber: AgentSubscriber = {
         onTextMessageContentEvent(input) {
           if (debugStream) {
@@ -281,6 +324,7 @@ export function useAgent() {
           }
           setAgentState(event.snapshot);
           _setSharedAgentState(event.snapshot);
+          return { stopPropagation: true };
         },
         onStateDeltaEvent({ event }: { event: StateDeltaEvent }) {
           if (debugStream) {
@@ -306,6 +350,7 @@ export function useAgent() {
             }
             return next;
           });
+          return { stopPropagation: true };
         },
         onEvent({ event }) {
           if (debugStream) {
@@ -408,6 +453,11 @@ export function useAgent() {
         },
       };
 
+      // Set state synchronously before runAgent so it will be in the request body.
+      // This must happen before the async runAgent call to avoid race conditions
+      // with STATE_SNAPSHOT events overwriting chefAgent.state.
+      chefAgent.setState(kitchenState);
+
       try {
         const result: RunAgentResult = await chefAgent.runAgent(
           { runId: uuid() },
@@ -463,6 +513,7 @@ export function useAgent() {
     setAgentState(null);
     _clearSharedAgentState();
     _setIsStreaming(false);
+    chefAgent.setState(DEFAULT_KITCHEN_STATE);
     threadIdRef.current = uuid();
   }, []);
   const sortedToolActivity = [...toolActivity].sort((a, b) => a.startedAt - b.startedAt);

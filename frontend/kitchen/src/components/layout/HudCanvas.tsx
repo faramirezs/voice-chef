@@ -2,9 +2,11 @@ import { AgentSlotProvider } from "./AgentSlotProvider";
 import { SlotOutlet } from "./SlotOutlet";
 import { useAgent } from "@/hooks/useAgent";
 import { useAgentSlots } from "./AgentSlotProvider";
-import { HudVoiceBar } from "./HudVoiceBar";
 import { HudStatusIndicator } from "./HudStatusIndicator";
+
 import { CommandPalette } from "@/components/overlay/CommandPalette";
+import { VoiceInput } from "@/components/chat/VoiceInput";
+import { getSendMessage } from "@/hooks/useAgent";
 import { useEffect, useState } from "react";
 
 export function HudCanvas() {
@@ -15,18 +17,17 @@ export function HudCanvas() {
   );
 }
 
-function EmptyCanvas() {
+function EmptyCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
   return (
-    <div className="flex items-center justify-center h-full text-center">
-      <div>
-        <p className="text-2xl text-text">Tap the mic to start</p>
-        <p className="text-base text-text-muted mt-2">
-          Say a recipe name or ask a question
-        </p>
+    <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+      <p className="text-2xl text-text">Voice Chef</p>
+      <div className="w-full max-w-lg px-4 flex items-center gap-2">
+        <p className="flex-1 text-sm text-text-secondary">Use Cmd + K to open command palette.</p>
       </div>
     </div>
   );
 }
+
 
 function HudCanvasInner() {
   // Single source of the AG-UI stream lifecycle.
@@ -39,6 +40,14 @@ function HudCanvasInner() {
 
   const hasCanvas = slots.canvas !== undefined;
   const hasOverlay = slots.overlay !== undefined;
+
+  // Auto-close palette when canvas content arrives so user can see the card.
+  useEffect(() => {
+    if (hasCanvas && paletteOpen) {
+      setPaletteOpen(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCanvas]);
 
   // Cmd+K toggles the command palette.
   useEffect(() => {
@@ -59,19 +68,18 @@ function HudCanvasInner() {
         <SlotOutlet slot="sticky" />
       </div>
 
-      {/* Canvas -- primary content, centered */}
-      <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
+      {/* Canvas -- primary content area */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {hasCanvas ? (
           <SlotOutlet slot="canvas" />
         ) : (
-          <EmptyCanvas />
+          <EmptyCanvas onOpenPalette={() => setPaletteOpen(true)} />
         )}
       </div>
 
-      {/* Voice input + status indicator -- bottom center */}
+      {/* Status indicator -- bottom center */}
       <div className="flex-shrink-0">
         <HudStatusIndicator />
-        <HudVoiceBar />
       </div>
 
       {/* Chips -- bottom bar for action confirmations */}

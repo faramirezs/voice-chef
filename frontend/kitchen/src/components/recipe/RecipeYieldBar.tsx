@@ -61,7 +61,7 @@ function YieldChip({ field }: { field: YieldField }) {
           </span>
         )}
       </div>
-      <div className="text-lg font-mono font-medium text-text">
+      <div className="text-base font-mono font-medium text-text">
         {formatValue(field.value)}
       </div>
     </div>

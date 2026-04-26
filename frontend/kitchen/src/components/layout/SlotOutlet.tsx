@@ -29,8 +29,8 @@ export function SlotOutlet({ slot }: { slot: SlotId }) {
 
   const Component = entry.component;
 
-  // Notifications auto-dismiss; chips dismiss on action click. No X button.
-  const hideClose = slot === "notifications" || slot === "chips";
+  // Notifications auto-dismiss; chips dismiss on action click. Canvas has its own close button.
+  const hideClose = slot === "notifications" || slot === "chips" || slot === "canvas";
 
   return (
     <Suspense fallback={<SlotSkeleton />}>

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 interface DetailIngredient {
   id: string;
   ingredient_name: string;
@@ -42,35 +44,19 @@ export function RecipeIngredientTable({
 }
 
 function DetailTable({ ingredients }: { ingredients: DetailIngredient[] }) {
+  const multiCol = ingredients.length > 15;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-base">
-        <thead>
-          <tr className="border-b border-border/50 text-text-muted text-left text-xs uppercase tracking-wide">
-            <th className="py-2.5 pr-3 font-medium">Ingredient</th>
-            <th className="py-2.5 pr-3 font-medium">Prep</th>
-            <th className="py-2.5 pr-3 font-medium text-right">Quantity</th>
-            <th className="py-2.5 font-medium">Unit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ingredients.map((ing) => (
-            <tr
-              key={ing.id}
-              className="border-b border-border/20 hover:bg-surface/40 transition-colors"
-            >
-              <td className="py-2.5 pr-3">{ing.ingredient_name}</td>
-              <td className="py-2.5 pr-3 text-text-muted">
-                {ing.preparation?.trim() || "\u2014"}
-              </td>
-              <td className="py-2.5 pr-3 text-right font-mono">
-                {stripTrailingZeros(ing.quantity)}
-              </td>
-              <td className="py-2.5">{ing.unit}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className={cn("text-sm", multiCol && "columns-2 gap-4")}>
+      {ingredients.map((ing) => (
+        <div key={ing.id} className="py-1 break-inside-avoid">
+          <span className="font-mono">{stripTrailingZeros(ing.quantity)}</span>{" "}
+          <span>{ing.unit}</span>{" "}
+          <span className="font-medium">{ing.ingredient_name}</span>
+          {ing.preparation?.trim() && (
+            <span className="text-text-muted"> ({ing.preparation.trim()})</span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -81,41 +67,28 @@ function ScalingTable({
   ingredients: ScalingIngredient[];
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-base">
-        <thead>
-          <tr className="border-b border-border/50 text-text-muted text-left text-xs uppercase tracking-wide">
-            <th className="py-2.5 pr-3 font-medium">Ingredient</th>
-            <th className="py-2.5 pr-3 font-medium text-right">Original</th>
-            <th className="py-2.5 pr-3 font-medium text-right">Scaled</th>
-            <th className="py-2.5 font-medium">Unit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ingredients.map((ing) => {
-            const changed = ing.quantity !== ing.originalQuantity;
-            return (
-              <tr
-                key={ing.id}
-                className="border-b border-border/20 hover:bg-surface/40 transition-colors"
-              >
-                <td className="py-2.5 pr-3">{ing.name}</td>
-                <td className="py-2.5 pr-3 text-right font-mono text-text-muted text-sm">
-                  {formatNum(ing.originalQuantity)}
-                </td>
-                <td
-                  className={`py-2.5 pr-3 text-right font-mono ${
-                    changed ? "text-primary" : ""
-                  }`}
-                >
-                  {formatNum(ing.quantity)}
-                </td>
-                <td className="py-2.5">{ing.unit}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="text-sm space-y-0.5">
+      {ingredients.map((ing) => {
+        const changed = ing.quantity !== ing.originalQuantity;
+        return (
+          <div
+            key={ing.id}
+            className="flex items-center justify-between gap-3 py-1"
+          >
+            <span className="font-medium">{ing.name}</span>
+            <span className="font-mono text-right shrink-0">
+              <span className="text-text-muted">
+                {formatNum(ing.originalQuantity)}
+              </span>
+              {" → "}
+              <span className={changed ? "text-primary" : ""}>
+                {formatNum(ing.quantity)}
+              </span>{" "}
+              <span className="text-text-muted">{ing.unit}</span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

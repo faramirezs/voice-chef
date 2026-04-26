@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -17,6 +18,8 @@ interface SlotContextValue {
   dispatch: (slot: SlotId, component: string, props?: Record<string, unknown>) => void;
   /** Clear a slot (e.g. user closes an overlay). */
   clear: (slot: SlotId) => void;
+  /** ID of the recipe currently shown in canvas, if any. */
+  selectedRecipeId: string | null;
 }
 
 const SlotContext = createContext<SlotContextValue | null>(null);
@@ -31,6 +34,8 @@ const EMPTY_SLOTS: Record<SlotId, SlotState | undefined> = {
 
 export function AgentSlotProvider({ children }: { children: ReactNode }) {
   const [slots, setSlots] = useState(EMPTY_SLOTS);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+
 
   const dispatch = useCallback(
     (slot: SlotId, component: string, props: Record<string, unknown> = {}) => {
@@ -49,6 +54,19 @@ export function AgentSlotProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  // Derive selected recipe from canvas slot props.
+  useEffect(() => {
+    const canvas = slots.canvas;
+    if (canvas?.component === "recipe_detail") {
+      const recipe = canvas.props.recipe as Record<string, unknown> | undefined;
+      if (recipe && typeof recipe.id === "string") {
+        setSelectedRecipeId(recipe.id);
+        return;
+      }
+    }
+    setSelectedRecipeId(null);
+  }, [slots.canvas]);
+
   // Subscribe to ui.render envelopes from the agent.
   useEnvelope("ui.render", (envelope) => {
     if (!isRenderInstruction(envelope)) return;
@@ -63,8 +81,8 @@ export function AgentSlotProvider({ children }: { children: ReactNode }) {
   });
 
   const value = useMemo(
-    () => ({ slots, dispatch, clear }),
-    [slots, dispatch, clear]
+    () => ({ slots, dispatch, clear, selectedRecipeId }),
+    [slots, dispatch, clear, selectedRecipeId]
   );
 
   return (

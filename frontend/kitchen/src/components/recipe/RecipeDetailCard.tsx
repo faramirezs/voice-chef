@@ -1,13 +1,15 @@
-import { useCallback, useMemo, useState } from "react";
-import { KCard } from "@/components/ui/KCard";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { KButton } from "@/components/ui/KButton";
 import { useAgent, useAgentState } from "@/hooks/useAgent";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
+import { cn } from "@/lib/utils";
+
 import { isRecipeScalingState } from "@/types/scaling";
 import type { RecipeScalingState, RecipeScalingIngredient } from "@/types/scaling";
 import { RecipeYieldBar } from "./RecipeYieldBar";
 import { RecipeIngredientTable } from "./RecipeIngredientTable";
-import { RecipeSection } from "./RecipeSection";
+import { chefAgent } from "@/lib/agent";
+import { type KitchenState } from "@/types/agent-state";
 
 // --- Data shapes ---
 
@@ -74,22 +76,21 @@ const STATUS_STYLES: Record<string, string> = {
 
 function RecipeCardSkeleton() {
   return (
-    <KCard className="p-5 space-y-5 animate-pulse max-w-2xl w-full">
-      <div className="flex items-center justify-between">
-        <div className="h-7 w-48 rounded bg-border/30" />
+    <div className="w-full h-full flex flex-col px-4 pt-2 animate-pulse gap-3">
+      <div className="flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="h-8 w-48 rounded bg-border/30" />
         <div className="h-6 w-16 rounded-full bg-border/20" />
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div className="h-16 rounded-2xl bg-border/20" />
-        <div className="h-16 rounded-2xl bg-border/20" />
-        <div className="h-16 rounded-2xl bg-border/20" />
+      <div className="grid grid-cols-3 gap-3 flex-shrink-0">
+        <div className="h-14 rounded-xl bg-border/20" />
+        <div className="h-14 rounded-xl bg-border/20" />
+        <div className="h-14 rounded-xl bg-border/20" />
       </div>
-      <div className="space-y-2">
-        <div className="h-4 w-full rounded bg-border/15" />
-        <div className="h-4 w-3/4 rounded bg-border/15" />
-        <div className="h-4 w-5/6 rounded bg-border/15" />
+      <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
+        <div className="h-full rounded-xl bg-border/15" />
+        <div className="h-full rounded-xl bg-border/15" />
       </div>
-    </KCard>
+    </div>
   );
 }
 
@@ -102,6 +103,7 @@ export function RecipeDetailCard(props: Record<string, unknown>) {
 
   // Extract recipe data from slot props (set by render_component -> ui.render)
   const recipe = extractRecipeData(props);
+  const fromList = Boolean(props.from_list);
 
   // Detect scaling mode: scaling state must match this recipe's ID
   const scalingState = isRecipeScalingState(agentState) ? agentState : null;
@@ -118,9 +120,11 @@ export function RecipeDetailCard(props: Record<string, unknown>) {
       scalingState={isScaling ? scalingState : null}
       sendMessage={sendMessage}
       clearCanvas={() => clear("canvas")}
+      fromList={fromList}
     />
   );
 }
+
 
 function extractRecipeData(
   props: Record<string, unknown>
@@ -147,6 +151,7 @@ interface InnerProps {
   scalingState: RecipeScalingState | null;
   sendMessage: (text: string) => void;
   clearCanvas: () => void;
+  fromList: boolean;
 }
 
 function RecipeCardInner({
@@ -154,8 +159,11 @@ function RecipeCardInner({
   scalingState,
   sendMessage,
   clearCanvas,
+  fromList,
 }: InnerProps) {
+  const { dispatch } = useAgentSlots();
   const mode = scalingState ? "scaling" : "detail";
+
 
   // Scaling state
   const [localCurrent, setLocalCurrent] = useState(
@@ -166,6 +174,34 @@ function RecipeCardInner({
     }
   );
   const [applying, setApplying] = useState(false);
+
+  // Re-sync local state when scaling STATE_SNAPSHOT arrives after mount.
+  // Sync agent state whenever recipe or scaling state changes.
+  useEffect(() => {
+    const ks: KitchenState = {
+      view: scalingState ? "scaling" : "recipe_detail",
+      selected_recipe: {
+        id: recipe.id,
+        name: recipe.name,
+        portions: parseNum(recipe.portions_count_resolved),
+        yield_mode: recipe.yield_mode,
+      },
+      scaling: scalingState
+        ? {
+            target_portions: scalingState.current.portions,
+            is_dirty: scalingState.isDirty,
+          }
+        : null,
+      last_action: { type: "select", timestamp: Date.now() },
+    };
+    chefAgent.setState(ks);
+  }, [recipe.id, recipe.name, scalingState, recipe.yield_mode, recipe.portions_count_resolved]);
+
+  useEffect(() => {
+    if (scalingState?.current) {
+      setLocalCurrent(scalingState.current);
+    }
+  }, [scalingState?.current]);
 
   const yieldMode = scalingState?.original.yieldMode ?? recipe.yield_mode;
   const targetField = getTargetField(yieldMode);
@@ -256,29 +292,68 @@ function RecipeCardInner({
 
   const handleReset = useCallback(() => {
     if (scalingState) {
-      setLocalCurrent(scalingState.current);
+      const { yieldMode: _, ...rest } = scalingState.original;
+      setLocalCurrent(rest);
     }
   }, [scalingState]);
+
+  const handleQuickScale = useCallback(
+    (multiplier: number) => {
+      const base = original.portions ?? 0;
+      if (base <= 0) return;
+      setLocalCurrent((prev) => ({
+        ...prev,
+        portions: Math.round(base * multiplier * 100) / 100,
+      }));
+    },
+    [original.portions]
+  );
 
   // Error state
   if (scalingState?.error) {
     return (
-      <KCard className="p-5 max-w-2xl w-full">
+      <div className="w-full h-full flex flex-col px-4 pt-2">
         <div className="bg-error/10 border border-error/30 rounded-2xl p-4">
           <p className="text-error font-semibold">Error loading recipe</p>
           <p className="text-sm mt-1 text-error/80">{scalingState.error}</p>
         </div>
-      </KCard>
+      </div>
     );
   }
 
+  const mainGridClass = cn(
+    "flex-1 min-h-0 grid gap-4",
+    recipe.ingredients.length > 15 ? "grid-cols-[2fr_1fr]" : "grid-cols-2"
+  );
+
   return (
-    <KCard className="p-5 space-y-5 max-w-2xl w-full">
+    <div className="w-full h-full flex flex-col px-4 pt-2 gap-3">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-2xl font-semibold text-text truncate">
-          {recipe.name}
-        </h2>
+      <div className="flex items-center justify-between gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          {fromList && (
+            <KButton
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                chefAgent.setState({
+                  view: "recipe_list",
+                  selected_recipe: null,
+                  scaling: null,
+                  last_action: { type: "browse", timestamp: Date.now() },
+                });
+                dispatch("canvas", "recipe_list", {});
+              }}
+
+              className="h-9 px-3 text-base shrink-0"
+            >
+              ← Back
+            </KButton>
+          )}
+          <h2 className="text-2xl font-semibold text-text truncate">
+            {recipe.name}
+          </h2>
+        </div>
         <div className="flex items-center gap-2 shrink-0">
           {mode === "scaling" && dirty && (
             <span className="text-xs text-warning bg-warning/15 border border-warning/30 px-2 py-0.5 rounded-full">
@@ -305,44 +380,86 @@ function RecipeCardInner({
 
       {/* Description */}
       {recipe.description && (
-        <p className="text-base text-text-muted leading-relaxed">
+        <p className="text-sm text-text-muted leading-relaxed flex-shrink-0">
           {recipe.description}
         </p>
       )}
 
       {/* Yield bar */}
-      <RecipeYieldBar
-        fields={yieldFields}
-        mode={mode}
-        onChange={handleYieldChange}
-      />
+      <div className="flex-shrink-0">
+        <RecipeYieldBar
+          fields={yieldFields}
+          mode={mode}
+          onChange={handleYieldChange}
+        />
+      </div>
 
-      {/* Ingredients */}
-      <RecipeIngredientTable
-        ingredients={recipe.ingredients}
-        scalingIngredients={
-          mode === "scaling" && scaledIng.length > 0 ? scaledIng : undefined
-        }
-        mode={mode}
-        scalingRatio={ratio}
-      />
-
-      {/* Instructions */}
-      {recipe.instructions && (
-        <RecipeSection
-          title="Instructions"
-          defaultOpen={mode === "detail"}
-          forceOpen={mode === "detail"}
-        >
-          <p className="text-base text-text whitespace-pre-line leading-relaxed">
-            {recipe.instructions}
-          </p>
-        </RecipeSection>
+      {/* Quick-scale buttons (scaling mode only) */}
+      {mode === "scaling" && (
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-text-muted uppercase tracking-wide">Quick scale</span>
+          {[2, 3, 5].map((mult) => {
+            const base = original.portions ?? 0;
+            const target = Math.round(base * mult * 100) / 100;
+            const active = localCurrent.portions === target;
+            return (
+              <KButton
+                key={mult}
+                type="button"
+                variant={active ? "default" : "ghost"}
+                onClick={() => handleQuickScale(mult)}
+                className="h-8 px-3 text-sm"
+              >
+                &times;{mult}
+              </KButton>
+            );
+          })}
+          {original.portions != null && original.portions > 2 && (
+            <KButton
+              type="button"
+              variant={localCurrent.portions === Math.round((original.portions / 2) * 100) / 100 ? "default" : "ghost"}
+              onClick={() => handleQuickScale(0.5)}
+              className="h-8 px-3 text-sm"
+            >
+              &frac12;
+            </KButton>
+          )}
+        </div>
       )}
+
+      {/* Main content: ingredients + instructions */}
+      <div className={mainGridClass}>
+        {/* Ingredients */}
+        <div className="flex flex-col min-h-0">
+          <h3 className="text-xs text-text-muted uppercase tracking-wide mb-2">Ingredients</h3>
+          <div className="flex-1 overflow-y-auto">
+            <RecipeIngredientTable
+              ingredients={recipe.ingredients}
+              scalingIngredients={
+                mode === "scaling" && scaledIng.length > 0 ? scaledIng : undefined
+              }
+              mode={mode}
+              scalingRatio={ratio}
+            />
+          </div>
+        </div>
+
+        {/* Instructions */}
+        {recipe.instructions && (
+          <div className="flex flex-col min-h-0">
+            <h3 className="text-xs text-text-muted uppercase tracking-wide mb-2">Instructions</h3>
+            <div className="flex-1 overflow-y-auto">
+              <p className="text-base text-text whitespace-pre-line leading-relaxed">
+                {recipe.instructions}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Footer actions (scaling mode only) */}
       {mode === "scaling" && dirty && (
-        <div className="flex justify-end gap-3 pt-2 border-t border-border/30">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border/30 flex-shrink-0">
           <KButton
             type="button"
             variant="ghost"
@@ -361,7 +478,7 @@ function RecipeCardInner({
           </KButton>
         </div>
       )}
-    </KCard>
+    </div>
   );
 }
 
