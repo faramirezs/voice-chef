@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import or_
 from app.core.database import get_session, engine
 from uuid import UUID
 
@@ -15,7 +16,7 @@ from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
-    RecipeDetailResponse
+    RecipeDetailResponse, RecipeFilters, RecipeSort
 )
 from app.models.recipe_ingredients import RecipeIngredient
 
@@ -32,34 +33,42 @@ DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
-@router.get("", response_model=PaginatedResponse[Recipe])
+@router.get("", response_model=PaginatedResponse[RecipeSummaryResponse])
 def retrieve_recipes(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
-    status: str | None = None,
-    search: str | None = None,
-    name: str | None = None,
-    sort_by: str | None = None,
+    filters: RecipeFilters = Depends(),
 ):
 
     query = select(Recipe)
-    if status:
-        query = query.where(Recipe.status == status.strip())
+    if filters.status:
+        query = query.where(Recipe.status == filters.status.strip())
 
-    search_term = (search or name or "").strip()
-    if search_term:
-        query = query.where(Recipe.name.ilike(f"%{search_term}%"))
+    # Apply broad "search" across name and description for user-facing search bars.
+    if filters.search:
+        term = f"%{filters.search.strip()}%"
+        query = query.where(or_(
+            Recipe.name.ilike(term), 
+            Recipe.description.ilike(term)))
+
+    # Apply precise "name" filter for exact matching or programmatic filtering.
+    if filters.name:
+        term = f"%{filters.name.strip()}%"
+        query = query.where(Recipe.name.ilike(term))
 
     sort_options = {
-        "name_asc": (Recipe.name.asc(), Recipe.id.asc()),
-        "name_desc": (Recipe.name.desc(), Recipe.id.desc()),
-        "updated_at_asc": (Recipe.updated_at.asc(), Recipe.id.asc()),
-        "updated_at_desc": (Recipe.updated_at.desc(), Recipe.id.desc()),
-        "created_at_asc": (Recipe.created_at.asc(), Recipe.id.asc()),
-        "created_at_desc": (Recipe.created_at.desc(), Recipe.id.desc()),
+        RecipeSort.name_asc: (Recipe.name.asc(), Recipe.id.asc()),
+        RecipeSort.name_desc: (Recipe.name.desc(), Recipe.id.desc()),
+        RecipeSort.updated_at_asc: (Recipe.updated_at.asc(), Recipe.id.asc()),
+        RecipeSort.updated_at_desc: (Recipe.updated_at.desc(), Recipe.id.desc()),
+        RecipeSort.created_at_asc: (Recipe.created_at.asc(), Recipe.id.asc()),
+        RecipeSort.created_at_desc: (Recipe.created_at.desc(), Recipe.id.desc()),
     }
 
-    selected_sort = sort_options.get((sort_by or "").strip(), (Recipe.updated_at.desc(), Recipe.id.desc()))
+    selected_sort = sort_options.get(
+        filters.sort_by,
+        sort_options[RecipeSort.updated_at_desc]
+    )
     query = query.order_by(*selected_sort)
 
     recipes = paginate(query, session, pagination)

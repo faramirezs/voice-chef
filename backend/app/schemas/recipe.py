@@ -4,6 +4,8 @@ from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
 from pydantic import field_validator
+from fastapi import Query
+from enum import Enum
 
 class RecipeIngredientWrite(SQLModel):
     ingredient_id: UUID
@@ -47,19 +49,24 @@ class RecipeIngredientResponse(SQLModel):
 class RecipeSummaryResponse(SQLModel):
     id: UUID
     name: str
-    description: str | None
-    instructions: str | None
     status: str
     yield_mode: str
-    portion_size_grams: float | None
-    total_raw_weight_grams: float | None
-    total_cooked_weight_grams: float | None
     portions_count_resolved: float | None
     created_at: datetime | None
     updated_at: datetime | None
+    photo_url: str | None
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):
+    description: str | None
+    instructions: str | None
+    preparation_time_minutes: int | None
+    cooking_time_minutes: int | None
+    portion_size_grams: float | None
+    total_raw_weight_grams: float | None
+    total_cooked_weight_grams: float | None
+    recipe_number: str | None
+    is_component: bool | None
     ingredients: List[RecipeIngredientResponse]
 
 
@@ -94,3 +101,27 @@ class RecipeUpdate(SQLModel):
         return v
 
     # ingredients: List[RecipeIngredientUpdate] | None = None
+
+
+class RecipeSort(str, Enum):
+    name_asc = "name_asc"
+    name_desc = "name_desc"
+    updated_at_asc = "updated_at_asc"
+    updated_at_desc = "updated_at_desc"
+    created_at_asc = "created_at_asc"
+    created_at_desc = "created_at_desc"
+
+
+class RecipeFilters(SQLModel):
+    # NOTE: mpeshko - ^ and $ are parts of RegEx (Regular Expressions).
+    # This is a special language for searching and checking text by pattern.
+    
+    status: str | None = Query(None, max_length=50, pattern="^(draft|active)$")
+    search: str | None = Query(
+        None, description="Broad search across name and description")
+    name: str | None = Query(
+        None, description="Filter for exact or partial match in name only")
+    sort_by: RecipeSort | None = Query(
+        RecipeSort.updated_at_desc,
+        description="List sorting. Format: field_direction",
+    )
