@@ -32,15 +32,12 @@ def upload_recipe_photo(
         db.refresh(recipe)
 
     except Exception:
-        # Rollback DB changes
         db.rollback()
 
-        # Cleanup the newly uploaded file (since DB failed)
         delete_file(new_url)
 
         raise
 
-    # Only delete old file AFTER successful commit
     if old_url:
         delete_file(old_url)
 

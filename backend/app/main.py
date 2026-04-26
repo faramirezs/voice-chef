@@ -26,9 +26,6 @@ def lifespan(app: FastAPI):
     yield
     # Cleanup code can be added here if needed
 
-# @app.on_event("startup")
-# def create_upload_dir():
-#     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
