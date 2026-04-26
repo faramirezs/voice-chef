@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRecipe, useUpdateRecipe } from '@/hooks/useRecipes';
+import { useDeleteRecipe, useRecipe, useUpdateRecipe } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -126,6 +126,7 @@ function InlineEditableText({
           ) : (
             <Input
               value={draft}
+              className={cn(field === 'name' && 'h-12 text-2xl font-semibold')}
               onChange={(event) => {
                 setDraft(event.target.value);
                 if (validationError) {
@@ -209,6 +210,7 @@ export function RecipeDetailPage() {
   const navigate = useNavigate();
   const { data: recipe, isLoading, isError } = useRecipe(id!);
   const moveToActive = useUpdateRecipe();
+  const deleteRecipe = useDeleteRecipe();
 
   const handleMoveToActive = () => {
     if (!recipe) {
@@ -218,6 +220,26 @@ export function RecipeDetailPage() {
     moveToActive.mutate({
       id: recipe.id,
       status: recipe.status === 'active' ? 'draft' : 'active',
+    });
+  };
+
+  const handleDeleteRecipe = () => {
+    if (!recipe) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete recipe "${recipe.name}"? This cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    deleteRecipe.mutate(recipe.id, {
+      onSuccess: () => {
+        navigate('/recipes');
+      },
     });
   };
 
@@ -265,7 +287,7 @@ export function RecipeDetailPage() {
             field="name"
             value={recipe.name}
             label=""
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto sm:min-w-[28rem]"
             displayClassName="text-2xl font-semibold"
           />
           <span className={badgeClass}>{recipe.status}</span>
@@ -287,7 +309,13 @@ export function RecipeDetailPage() {
           <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
             Duplicate recipe
           </Button>
-          <Button size="lg" variant="destructive" onClick={() => alert('Delete recipe functionality coming soon!')}>
+          <Button
+            size="lg"
+            variant="destructive"
+            onClick={handleDeleteRecipe}
+            disabled={deleteRecipe.isPending}
+            aria-busy={deleteRecipe.isPending}
+          >
             Delete recipe
           </Button>
         </div>

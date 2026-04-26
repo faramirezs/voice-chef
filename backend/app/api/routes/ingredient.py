@@ -16,9 +16,23 @@ router = APIRouter(prefix="/ingredient", tags=["Ingredients"])
 @router.get("", response_model=PaginatedResponse[Ingredients])
 def retrieve_ingredient(
     session: Session = Depends(get_session),
-    pagination: PaginationParams = Depends(pagination_params)):
+    pagination: PaginationParams = Depends(pagination_params),
+    search: str | None = None,
+    source: str | None = None,
+):
 
     query = select(Ingredients)
+
+    normalized_search = (search or "").strip()
+    if normalized_search:
+        query = query.where(Ingredients.name.ilike(f"%{normalized_search}%"))
+
+    normalized_source = (source or "").strip()
+    if normalized_source:
+        query = query.where(Ingredients.source.ilike(f"%{normalized_source}%"))
+
+    query = query.order_by(Ingredients.name.asc(), Ingredients.id.asc())
+
     ingredients = paginate(query, session, pagination)
     return ingredients
 

@@ -62,5 +62,10 @@ export interface PaginatedResponse<T> {
 export interface Ingredient {
   id: string;
   name: string;
+  source?: string | null;
+  default_unit?: string | null;
+  is_custom?: boolean;
+  created_at?: string;
+  updated_at?: string;
   [key: string]: unknown;
 }
