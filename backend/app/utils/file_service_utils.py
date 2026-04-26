@@ -7,9 +7,9 @@ UPLOAD_DIR = settings.UPLOAD_DIR
 
 
 def save_file(file: UploadFile) -> str:
-    allowed_types = {"image/jpeg", "image/png", "application/pdf"}
+    allowed_types = {"image/jpeg", "image/png"}
     if file.content_type not in allowed_types:
-        raise HTTPException(400, "Only JPEG, PNG and PDF files are allowed")
+        raise HTTPException(400, "Only JPEG and PNG files are allowed")
 
     filename = f"{uuid.uuid4()}"
     if file.content_type == "image/jpeg":
