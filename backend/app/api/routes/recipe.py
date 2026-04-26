@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
@@ -15,7 +15,7 @@ from app.models.ingredient import Ingredient
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail
-from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeDetailResponse, RecipeUpdate
+from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
 from app.models.recipe_ingredients import RecipeIngredient
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
@@ -56,10 +56,11 @@ def create_recipe(
 
 @router.get("", response_model=PaginatedResponse[Recipe])
 def retrieve_recipes(
-    search: str = Query("", alias="query"),
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
     status: str | None = None,
+    search: str | None = None,
+    name: str | None = None,
     sort_by: str | None = None,
 ):
 
@@ -68,7 +69,7 @@ def retrieve_recipes(
     if status:
         query = query.where(Recipe.status == status.strip())
 
-    search_term = search.strip()
+    search_term = (search or name or "").strip()
     if search_term:
         query = query.where(Recipe.name.ilike(f"%{search_term}%"))
 
@@ -88,7 +89,7 @@ def retrieve_recipes(
     return recipes
 
 
-@router.get("/{recipe_id}", response_model=RecipeDetailResponse)
+@router.get("/{recipe_id}", response_model=RecipeSummaryResponse)
 def retrieve_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     statement = (
         select(Recipe)
@@ -147,5 +148,3 @@ def delete_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     session.commit()
 
     return result
-
-
