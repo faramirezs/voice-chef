@@ -60,8 +60,6 @@ def retrieve_recipes(
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
     status: str | None = None,
-    search: str | None = None,
-    name: str | None = None,
     sort_by: str | None = None,
 ):
 
@@ -70,7 +68,7 @@ def retrieve_recipes(
     if status:
         query = query.where(Recipe.status == status.strip())
 
-    search_term = (search or name or "").strip()
+    search_term = search.strip()
     if search_term:
         query = query.where(Recipe.name.ilike(f"%{search_term}%"))
 
