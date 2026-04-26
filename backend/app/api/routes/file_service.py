@@ -20,23 +20,32 @@ def upload_recipe_photo(
 
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    
+
+    old_url = recipe.photo_url
     new_url = save_file(file)
 
-    is_update = False
-    if recipe.photo_url:
-        delete_file(recipe.photo_url)
-        is_update = True
+    try:
+        recipe.photo_url = new_url
 
-    recipe.photo_url = new_url
+        db.add(recipe)
+        db.commit()
+        db.refresh(recipe)
 
-    db.add(recipe)
-    db.commit()
-    db.refresh(recipe)
+    except Exception:
+        # Rollback DB changes
+        db.rollback()
+
+        # Cleanup the newly uploaded file (since DB failed)
+        delete_file(new_url)
+
+        raise
+
+    # Only delete old file AFTER successful commit
+    if old_url:
+        delete_file(old_url)
 
     return JSONResponse(
-        status_code=status.HTTP_200_OK if is_update 
-                    else status.HTTP_201_CREATED,
+        status_code=status.HTTP_200_OK if old_url else status.HTTP_201_CREATED,
         content={"photo_url": recipe.photo_url},
     )
 
