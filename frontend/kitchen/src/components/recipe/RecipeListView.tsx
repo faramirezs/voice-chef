@@ -87,7 +87,7 @@ export function RecipeListView(props: RecipeListViewProps) {
       offset: String(meta.offset),
       sort_by: sortBy,
     });
-    if (query) params.set("query", query);
+    if (query) params.set("search", query);
     if (status) params.set("status", status);
 
     fetch(`/api/recipes?${params}`, { signal: controller.signal })
