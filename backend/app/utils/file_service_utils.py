@@ -31,7 +31,8 @@ def delete_file(path: str):
     if not path:
         return
 
-    filename = path.split("/")[-1]
+    normalized_path = path.split("?", 1)[0].split("#", 1)[0]
+    filename = os.path.basename(normalized_path)
     full_path = os.path.join(UPLOAD_DIR, filename)
 
     if os.path.exists(full_path):
