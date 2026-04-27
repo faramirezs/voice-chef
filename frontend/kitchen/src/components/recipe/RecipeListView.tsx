@@ -125,7 +125,7 @@ export function RecipeListView(props: RecipeListViewProps) {
       };
       chefAgent.setState(ks);
 
-      fetch(`/api/recipes/${recipe.id}`)
+      fetch(`/recipes/${recipe.id}`)
         .then((r) => r.json())
         .then((data) =>
           dispatch("canvas", "recipe_detail", { recipe: data, from_list: true })

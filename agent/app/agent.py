@@ -290,7 +290,7 @@ async def get_recipe_detail(
             "message": "No recipe_id provided and no recipe selected",
         }
     try:
-        resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
+        resp = await _http_client.get(f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10)
         resp.raise_for_status()
         payload = resp.json()
     except Exception as exc:
@@ -457,7 +457,7 @@ async def scale_recipe(
 
     try:
         resp = await _http_client.get(
-            f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10
+            f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10
         )
         resp.raise_for_status()
         payload = resp.json()
@@ -535,7 +535,7 @@ async def apply_recipe_changes(
     """Apply scaled recipe changes to the database.
 
     Persists the updated portions, weights, and ingredient quantities via
-    PUT /api/recipes/:id, then returns a STATE_DELTA confirming the clean state.
+    PUT /recipes/:id, then returns a STATE_DELTA confirming the clean state.
     """
     updates: dict[str, Any] = {}
     if portions is not None:
@@ -547,7 +547,7 @@ async def apply_recipe_changes(
 
     try:
         resp = await _http_client.put(
-            f"{FASTAPI_URL}/api/recipes/{recipe_id}",
+            f"{FASTAPI_URL}/recipes/{recipe_id}",
             json=updates,
             timeout=10,
         )
@@ -604,7 +604,7 @@ async def suggest_recipe_improvements(ctx: RunContext[StateDeps[KitchenState]], 
     """
     try:
         resp = await _http_client.get(
-            f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10
+            f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10
         )
         resp.raise_for_status()
         payload = resp.json()
