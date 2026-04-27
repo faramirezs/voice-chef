@@ -92,7 +92,8 @@ function HudCanvasInner() {
       </div>
 
       {/* Notifications -- top-right corner */}
-      <div className="absolute top-4 right-4 z-30">
+      {/* Notifications -- top-right corner, above overlays */}
+      <div className="absolute top-4 right-4 z-50">
         <SlotOutlet slot="notifications" />
       </div>
 

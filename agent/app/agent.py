@@ -69,7 +69,7 @@ first to find the ID (UUID format only), then call get_recipe_detail with that I
 If get_recipe_detail returns ANY error → call show_notification(level: "error").
 STOP. Do not generate text. Do not try get_recipes_list as a fallback.
 
-"do not send any additional assistant text after a typed tool result"
+Do not send any additional assistant text after a typed tool result.
 
 UI RENDERING POLICY:
 When a tool returns a typed envelope like recipes.list or recipe.scaling, do not
@@ -80,8 +80,6 @@ full response. Do not call additional tools after a successful tool result unles
 the user explicitly asks for another lookup. In particular, after get_recipe_detail
 succeeds, do not call get_recipes_list again in the same run.
 
-"do not send any additional assistant text after a typed tool result"
-
 Example: User: "show chimichurri"
 → get_recipes_list(query="chimichurri") → extract id
 → get_recipe_detail(recipe_id=<uuid>) → ui.render fires
@@ -89,24 +87,34 @@ Example: User: "show chimichurri"
 
 SCALING RULE:
 When a chef asks to scale a recipe, edit portions, or adjust ingredient quantities:
-1. Use the CURRENT STATE below. If a recipe is selected, use its id for recipe_id.
-2. If no recipe is selected, call get_recipes_list to find the recipe_id.
-3. Call get_recipe_detail(recipe_id) to render the recipe card in the canvas.
-4. Call scale_recipe(recipe_id, target_portions) to activate the scaling editor.
-   Compute target from the chef's words: "double" = original*2, "triple" = original*3,
-   "scale to 20" = 20, "halve" = original/2.
-5. Never skip step 3 -- the card must be visible before scaling data arrives.
-6. When the chef confirms "apply", call apply_recipe_changes with the final values.
 
-Before calling scale_recipe:
-1. Read snapshot.recipeId from the current STATE_SNAPSHOT.
-   ALWAYS pass this value as recipe_id. NEVER pass an empty string.
-2. Compare the requested target_portions to snapshot.current.portions.
-   If they are equal, DO NOT call scale_recipe. The recipe is already scaled.
-   Respond: "The recipe is already at [N] portions."
-3. isDirty in STATE_SNAPSHOT means the widget has unsaved UI changes.
-   It does NOT mean your last scale call failed.
-   After one successful scale_recipe call, stop and confirm to the user.
+STEP 1 — Identify the target recipe_id:
+  a. If the chef names a recipe AND it differs from the currently selected recipe
+     (or snapshot.recipeId is empty):
+       → Call get_recipes_list(query=<name>) to find its UUID.
+       → Call get_recipe_detail(recipe_id) to render the card in the canvas.
+  b. If the chef says "this", "that", "it", or names the already-selected recipe:
+       → Use snapshot.recipeId directly. Do NOT call get_recipes_list or get_recipe_detail.
+         The card is already visible.
+  c. If no recipe can be identified from either the request or state:
+       → Ask the chef which recipe they want to scale.
+
+STEP 2 — Activate the scaling editor:
+  Call scale_recipe(recipe_id, target_portions).
+  Compute target from the chef's words:
+    "double" = original*2, "triple" = original*3,
+    "halve" = original/2, "scale to 20" = 20.
+  After one successful call, STOP. Confirm to the user. Do not call scale_recipe again.
+
+STEP 3 — Apply changes:
+  When the chef confirms "apply", call apply_recipe_changes with the final values.
+
+ADDITIONAL RULES:
+- NEVER pass an empty string as recipe_id to scale_recipe.
+- isDirty in STATE_SNAPSHOT means the widget has unsaved UI changes.
+  It does NOT mean your last scale_recipe call failed. Do not retry on isDirty alone.
+- Never skip STEP 1a's get_recipe_detail when loading a new recipe —
+  the card must be visible in the canvas before scaling data arrives.
 
 COMPONENT GUIDE:
 * 'placeholder' (any slot): test card. Args: message.
@@ -123,10 +131,6 @@ SLOT GUIDE:
 
 After placing a component, STATE_SNAPSHOT from other tools will populate its state.
 Do not duplicate data in render_component args.
-
-When the user says "this recipe" or "scale this", check CURRENT STATE first.
-If a recipe is selected, use it directly instead of calling get_recipes_list.
-If no recipe is selected, fall back to searching by name as usual.
 
 TRANSIENT UI TOOLS:
 * show_notification(message, level='info', duration=5000): show auto-dismiss toast.
@@ -230,6 +234,12 @@ async def get_recipes_list(
             "message": str(exc),
         }
 
+    _LIST_FIELDS = {
+        "id", "name", "status", "yield_mode", "yield_unit",
+        "yield_amount", "portions_count_resolved", "is_component",
+        "total_raw_weight_grams", "recipe_number",
+    }
+
     items: list[Any] = []
     meta: dict[str, Any] = {"limit": limit, "offset": offset, "total": 0}
 
@@ -244,6 +254,12 @@ async def get_recipes_list(
         items = []
     if not isinstance(meta, dict):
         meta = {"limit": limit, "offset": offset, "total": len(items)}
+
+    items = [
+        {k: v for k, v in item.items() if k in _LIST_FIELDS}
+        for item in items
+        if isinstance(item, dict)
+    ]
 
     envelope: dict[str, Any] = {
         "type": "recipes.list",
@@ -378,6 +394,7 @@ async def show_notification(
     Duration is in milliseconds (default 5000).
     """
     return await render_component(
+        ctx,
         component="notification",
         slot="notifications",
         message=message,
@@ -399,6 +416,7 @@ async def show_chip(
     Example: [{"label": "Apply", "message": "confirm apply scaling", "variant": "default"}]
     """
     return await render_component(
+        ctx,
         component="confirmation_chips",
         slot="chips",
         actions=actions,
