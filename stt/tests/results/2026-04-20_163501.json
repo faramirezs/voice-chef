@@ -1,0 +1,18 @@
+{
+  "text": "1,2,3,4,weizen Bier.",
+  "language": "de",
+  "language_probability": 0.96,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 2.46,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.4,
+      "text": "1,2,3,4,weizen Bier.",
+      "avg_logprob": -0.618,
+      "no_speech_prob": 0.155,
+      "compression_ratio": 0.71
+    }
+  ]
+}

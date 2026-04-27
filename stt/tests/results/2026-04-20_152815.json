@@ -1,0 +1,18 @@
+{
+  "text": "One, two, three, four, five, six, seven.",
+  "language": "en",
+  "language_probability": 0.41,
+  "confidence": "medium",
+  "retry_suggested": false,
+  "duration": 4.31,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.24,
+      "text": "One, two, three, four, five, six, seven.",
+      "avg_logprob": -0.347,
+      "no_speech_prob": 0.192,
+      "compression_ratio": 0.98
+    }
+  ]
+}

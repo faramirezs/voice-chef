@@ -1,0 +1,18 @@
+{
+  "text": "Can you give me the recipe von Nussbraten veganbefehl, please?",
+  "language": "de",
+  "language_probability": 0.71,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 5.33,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "text": "Can you give me the recipe von Nussbraten veganbefehl, please?",
+      "avg_logprob": -0.548,
+      "no_speech_prob": 0.028,
+      "compression_ratio": 0.91
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "text": "1, 2, 3, 4 leizen wir.",
+  "language": "de",
+  "language_probability": 0.99,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 2.72,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.68,
+      "text": "1, 2, 3, 4 leizen wir.",
+      "avg_logprob": -0.437,
+      "no_speech_prob": 0.026,
+      "compression_ratio": 0.73
+    }
+  ]
+}

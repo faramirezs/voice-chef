@@ -1,0 +1,18 @@
+{
+  "text": "1, 2, 3, 4 weizen wir.",
+  "language": "de",
+  "language_probability": 0.99,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 2.69,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.52,
+      "text": "1, 2, 3, 4 weizen wir.",
+      "avg_logprob": -0.444,
+      "no_speech_prob": 0.018,
+      "compression_ratio": 0.73
+    }
+  ]
+}
