@@ -67,10 +67,7 @@ def retrieve_recipes(
 
 
 @router.get("/{id}", response_model=RecipeDetailResponse)
-def retrieve_recipe(
-    id: UUID, 
-    session: Session = Depends(get_session)
-):
+def retrieve_recipe(id: UUID, session: Session = Depends(get_session)):
     statement = (
         select(Recipe)
         .where(Recipe.id == id)

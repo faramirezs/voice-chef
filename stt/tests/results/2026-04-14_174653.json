@@ -1,0 +1,15 @@
+{
+  "text": "Sag mal was machst du? Nur da kannst du das mal ein bisschen schneller machen. Wir wollen noch hier irgendwann fertig werden.",
+  "language": "de",
+  "language_probability": 1.0,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 4.19,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.0,
+      "text": "Sag mal was machst du? Nur da kannst du das mal ein bisschen schneller machen. Wir wollen noch hier irgendwann fertig werden."
+    }
+  ]
+}

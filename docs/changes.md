@@ -1,0 +1,220 @@
+# Changes to Existing Files — STT Service Integration
+
+This documents all modifications to files that existed before this branch, for group discussion.
+
+## Modified Files
+
+### 1. `docker-compose.yml`
+
+**What changed:**
+- Added `stt` service block (port **8002**, on `app-network`, no dependencies on other services)
+- Added `whisper_models` named volume (persists downloaded model files across container rebuilds)
+
+**Discussion points:**
+- **Port 8002** — new port exposed to host. Confirm no conflict with other team members' setups.
+- The STT service is **standalone** — it does not `depends_on` any other service. It only needs network access if another service calls it.
+- The `whisper_models:/models` volume avoids re-downloading ~150MB+ model files on every rebuild.
+
+### 2. `docker-compose.override.yml`
+
+**What changed:**
+- Added `stt` service dev override: mounts `./stt/app` for hot-reload during development
+- Added `whisper_models` volume declaration (must match production compose)
+
+### 3. `.env.example`
+
+**What changed:**
+- Added three new environment variables:
+  - `STT_MODEL=base` — whisper model size (tiny/base/small/medium/large-v3)
+  - `STT_LANGUAGE=` — empty = auto-detect, or force a language code (en, es, de, etc.)
+  - `STT_DEVICE=cpu` — compute device (cpu or cuda)
+
+**Action needed:** Team members should add these to their local `.env` files after pulling.
+
+### 4. `.gitignore`
+
+**What changed:**
+- Added `stt/tests/samples/` — excludes recorded audio files from git
+
+### 5. `.gitattributes` (new file)
+
+**What changed:**
+- Created `.gitattributes` with `merge=ours` strategy for `stt/tests/results/*.json`
+- STT test result JSONs are committed and pushed but will never cause merge conflicts — on merge, the current branch's version is kept silently
+
+**Action needed:** Each team member must run this once to register the merge driver:
+```bash
+git config merge.ours.driver true
+```
+
+### 6. `Makefile`
+
+**What changed:**
+- Added three new targets: `stt-build`, `stt-build-nocache`, `stt-recreate` (mirrors existing agent-* pattern)
+- Added these to help text and `.PHONY` declaration
+- Fixed duplicate `.PHONY` line (was already present from prior commit, just extended it)
+
+## Interface Contract (for group discussion)
+
+### STT Service API
+
+**Base URL:** `http://stt:8002` (internal) or `http://localhost:8002` (host)
+
+**Endpoints:**
+
+| Method | Path | Content-Type | Request | Response |
+|--------|------|-------------|---------|----------|
+| GET | `/health` | — | — | `{"status": "ok"}` |
+| POST | `/transcribe` | `multipart/form-data` | `file` field with audio (WAV, MP3, OGG, FLAC, WebM) | See below |
+
+**Response format for `/transcribe`:**
+```json
+{
+  "text": "the full transcribed text",
+  "language": "en",
+  "language_probability": 0.98,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 3.45,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 1.52,
+      "text": "the full",
+      "avg_logprob": -0.234,
+      "no_speech_prob": 0.012,
+      "compression_ratio": 0.89
+    },
+    {
+      "start": 1.52,
+      "end": 3.45,
+      "text": "transcribed text",
+      "avg_logprob": -0.187,
+      "no_speech_prob": 0.008,
+      "compression_ratio": 0.92
+    }
+  ]
+}
+```
+
+**Confidence tiers:** `high`, `medium`, `low`, `none`
+
+| Tier | Meaning | `retry_suggested` |
+|------|---------|-------------------|
+| `high` | Transcription reliable | `false` |
+| `medium` | Probably correct, some uncertainty | `false` |
+| `low` | Likely contains errors | `true` |
+| `none` | No usable speech detected | `true` |
+
+**Confidence scoring signals:**
+- `no_speech_prob > 0.6` → "none" (silence/noise)
+- `compression_ratio > 2.4` → downgrade (hallucination detection)
+- `avg_logprob < -1.0` (mean) → downgrade (low token confidence)
+- `language_probability < 0.5` → downgrade
+- `< 0.5 words/sec for > 3s audio` → downgrade (likely noise)
+
+**Error responses:**
+- `415` — unsupported audio content type
+- `422` — missing file field
+
+### New Port Allocation
+
+| Service | Port | Status |
+|---------|------|--------|
+| office-frontend | 8080 (prod) / 5173 (dev) | existing (renamed from frontend) |
+| kitchen-frontend | 8082 (prod) / 5174 (dev) | new (from branch 36) |
+| db | 5432 | existing |
+| fastapi | 80 (internal) / 8000 (dev) | existing |
+| agent | 8001 | existing |
+| **stt** | **8002** | **new** |
+
+### New Volume
+
+| Volume | Purpose |
+|--------|---------|
+| `whisper_models` | Persists faster-whisper model downloads (~150MB for `base`) |
+
+## Phase 3: Kitchen Frontend STT Integration
+
+### Modified Files (from branch 36)
+
+### 7. `frontend/kitchen/src/components/chat/VoiceInput.tsx`
+
+**What changed:**
+- Replaced Web Speech API (cloud-dependent, Chrome-only) with MediaRecorder API + local STT container
+- Records audio as WebM/Opus via browser's MediaRecorder
+- POSTs audio blob to STT service at `VITE_STT_URL`
+- Handles confidence warnings from STT response (`retry_suggested` field)
+- Three visual states: idle (mic icon), recording (red pulse), transcribing (spinner)
+
+**Discussion points:**
+- Voice input now goes through our local STT container — no audio leaves the network
+- Works in all modern browsers (MediaRecorder is widely supported, unlike Web Speech API)
+- Multilingual by default (faster-whisper auto-detects language)
+
+### 8. `frontend/kitchen/src/components/chat/ChatInterface.tsx`
+
+**What changed:**
+- Added `confidenceWarning` state
+- Added `onConfidenceWarning` callback wired to VoiceInput
+- Shows "Low confidence — review before sending" warning above the text input when STT is unsure
+- Warning clears on new transcript or message send
+
+### 9. `frontend/kitchen/src/vite-env.d.ts`
+
+**What changed:**
+- Added `VITE_STT_URL` type declaration
+
+### 10. `docker-compose.override.yml`
+
+**What changed:**
+- Added `VITE_STT_URL: http://localhost:8002` to kitchen-frontend environment
+
+### 11. `frontend/kitchen/src/speech.d.ts`
+
+**What changed:**
+- Removed — Web Speech API type definitions no longer needed
+
+### New Environment Variables (frontend)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_STT_URL` | `http://localhost:8002` | STT service URL for kitchen frontend |
+
+## Merge with Main (2026-04-20)
+
+Merged `origin/main` into `voiceInput` to pick up backend restructuring and CRUD recipe endpoints.
+
+### Key changes from main
+
+- **`fastapi/` renamed to `backend/`** — entire directory restructured with proper route organization
+- **API prefix added** — all routes now under `/api` (e.g., `/api/recipes`, `/api/recipes/{id}`)
+- **Full CRUD recipe endpoints** — list, detail, create, update (previously only a test `/recipes` endpoint)
+- **JWT authentication** — `SECRET_KEY` env var added
+- **Database scripts** — drift-gate, dump-blast-check, dump-regen Makefile targets
+
+### Changes we made during merge
+
+### 12. `agent/app/agent.py`
+
+**What changed:**
+- Added `/api` prefix: `FASTAPI_URL = f"{_BACKEND_URL}/api"` — required because main added `APIRouter(prefix="/api")`
+- Added dual provider support: `GOOGLE_API_KEY` (Google Gemini) or `OPENROUTER_API_KEY` (OpenRouter). Google takes priority if both are set.
+- Updated default backend URL from `http://fastapi:80` to `http://backend:80`
+
+### 13. `docker-compose.yml`
+
+**What changed:**
+- `fastapi` service renamed to `backend`
+- Added `GOOGLE_API_KEY` to agent environment
+- Agent `depends_on` changed from `fastapi` to `backend`
+- Office frontend `depends_on` changed from `fastapi` to `backend`
+- DB port changed from exposed `5432:5432` to internal-only `5432`
+- Added `SECRET_KEY` to backend environment
+
+### 14. `.env.example`
+
+**What changed:**
+- Added `SECRET_KEY` for JWT
+- Added `GOOGLE_API_KEY` for dual provider support
+- Default `AGENT_MODEL` set to `gemini-2.5-flash`

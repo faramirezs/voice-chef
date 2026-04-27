@@ -1,0 +1,15 @@
+{
+  "text": "Can you give me the recipe for my Dmg Chorbasa?",
+  "language": "en",
+  "language_probability": 0.47,
+  "confidence": "low",
+  "retry_suggested": true,
+  "duration": 4.74,
+  "segments": [
+    {
+      "start": 0.02,
+      "end": 4.02,
+      "text": "Can you give me the recipe for my Dmg Chorbasa?"
+    }
+  ]
+}
