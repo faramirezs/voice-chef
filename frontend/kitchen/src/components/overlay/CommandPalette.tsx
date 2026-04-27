@@ -1,3 +1,5 @@
+import { useVoiceSubmit } from "@/hooks/useVoiceSubmit";
+import { type SttResult } from "@/components/chat/VoiceInput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KCard } from "@/components/ui/KCard";
 import { KInput } from "@/components/ui/KInput";
@@ -22,6 +24,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const { dispatch } = useAgentSlots();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; name: string }>>([]);
+  const [confidenceWarning, setConfidenceWarning] = useState("");
+  const submitVoice = useVoiceSubmit();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const isStreaming = useIsStreaming();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -183,19 +187,24 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     ]
   );
 
-  const handleVoiceTranscript = useCallback((text: string) => {
-    setQuery(text);
-    const ks: KitchenState = {
-      view: "empty",
-      selected_recipe: null,
-      scaling: null,
-      last_action: { type: "search", timestamp: Date.now() },
-    };
-    chefAgent.setState(ks);
-    getSendMessage()(text);
-    setResults([]);
-    setSelectedIndex(0);
-  }, []);
+  const handleVoiceTranscript = useCallback((text: string, sttResult?: SttResult) => {
+    const result = submitVoice(text, sttResult);
+    if (result.submitted) {
+      setQuery(text);
+      setResults([]);
+      setSelectedIndex(0);
+      if (result.warning) {
+        setConfidenceWarning(result.warning);
+      }
+    }
+  }, [submitVoice]);
+
+  // Auto-dismiss low-confidence warning after 4 seconds.
+  useEffect(() => {
+    if (!confidenceWarning) return;
+    const timer = setTimeout(() => setConfidenceWarning(""), 4000);
+    return () => clearTimeout(timer);
+  }, [confidenceWarning]);
 
 
   const activeItems = isCommandMode
@@ -209,7 +218,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   return (
     <KCard className="w-full max-w-lg flex flex-col overflow-hidden">
       {/* Input row */}
-      <div className="flex items-center gap-2 p-4">
+      <div className="relative flex items-center gap-2 p-4">
         <KInput
           ref={inputRef}
           value={query}
@@ -224,11 +233,16 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         />
         <VoiceInput
           onTranscript={handleVoiceTranscript}
+          onConfidenceWarning={(w) => setConfidenceWarning(w)}
           disabled={isStreaming}
         />
+        {confidenceWarning && (
+          <span className="absolute -bottom-5 left-4 text-xs text-warning bg-warning/10 px-2 py-0.5 rounded">
+            {confidenceWarning}
+          </span>
+        )}
       </div>
 
-      {/* Results list */}
       <div className="flex-1 overflow-y-auto max-h-64 px-4 pb-2">
         {showSearching && (
           <div className="py-4 text-center text-text-muted">Searching...</div>

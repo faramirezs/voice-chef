@@ -216,7 +216,7 @@ async def get_recipes_list(
 
     try:
         resp = await _http_client.get(
-            f"{FASTAPI_URL}/api/recipes",
+            f"{FASTAPI_URL}/recipes",
             params=params,
             timeout=10,
         )

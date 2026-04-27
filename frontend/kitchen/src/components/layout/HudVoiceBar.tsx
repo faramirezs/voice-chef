@@ -1,14 +1,29 @@
+import { useVoiceSubmit } from "@/hooks/useVoiceSubmit";
+import { type SttResult } from "@/components/chat/VoiceInput";
 import { useState, useCallback, useEffect } from "react";
 import { VoiceInput } from "@/components/chat/VoiceInput";
-import { getSendMessage } from "@/hooks/useAgent";
 
 export function HudVoiceBar() {
   const [heardChip, setHeardChip] = useState<string | null>(null);
+  const [confidenceWarning, setConfidenceWarning] = useState("");
+  const submitVoice = useVoiceSubmit();
 
-  const handleTranscript = useCallback((text: string) => {
-    getSendMessage()(text);
-    setHeardChip(text);
-  }, []);
+  const handleTranscript = useCallback((text: string, sttResult?: SttResult) => {
+    const result = submitVoice(text, sttResult);
+    if (result.submitted) {
+      setHeardChip(text);
+      if (result.warning) {
+        setConfidenceWarning(result.warning);
+      }
+    }
+  }, [submitVoice]);
+
+  // Auto-dismiss low-confidence warning after 4 seconds.
+  useEffect(() => {
+    if (!confidenceWarning) return;
+    const timer = setTimeout(() => setConfidenceWarning(""), 4000);
+    return () => clearTimeout(timer);
+  }, [confidenceWarning]);
 
   // Auto-dismiss the "heard" chip after 3 seconds.
   useEffect(() => {
@@ -23,6 +38,11 @@ export function HudVoiceBar() {
       {heardChip && (
         <span className="text-sm text-text-muted bg-surface-alt/80 px-3 py-1.5 rounded-full border border-border/50 max-w-xs truncate">
           {heardChip}
+        </span>
+      )}
+      {confidenceWarning && (
+        <span className="text-xs text-warning bg-warning/10 px-2 py-1 rounded-full">
+          {confidenceWarning}
         </span>
       )}
     </div>

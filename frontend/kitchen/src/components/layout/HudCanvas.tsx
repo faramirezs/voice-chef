@@ -3,12 +3,10 @@ import { SlotOutlet } from "./SlotOutlet";
 import { useAgent } from "@/hooks/useAgent";
 import { useAgentSlots } from "./AgentSlotProvider";
 import { HudStatusIndicator } from "./HudStatusIndicator";
+import { HudVoiceBar } from "./HudVoiceBar";
 
 import { CommandPalette } from "@/components/overlay/CommandPalette";
-import { VoiceInput } from "@/components/chat/VoiceInput";
-import { getSendMessage } from "@/hooks/useAgent";
 import { useEffect, useState } from "react";
-
 export function HudCanvas() {
   return (
     <AgentSlotProvider>
@@ -80,6 +78,12 @@ function HudCanvasInner() {
       {/* Status indicator -- bottom center */}
       <div className="flex-shrink-0">
         <HudStatusIndicator />
+      </div>
+
+
+      {/* Voice bar -- bottom center, above status */}
+      <div className="flex-shrink-0 flex justify-center">
+        <HudVoiceBar />
       </div>
 
       {/* Chips -- bottom bar for action confirmations */}
