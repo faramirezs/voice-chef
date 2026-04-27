@@ -1,0 +1,18 @@
+{
+  "text": "I'm looking for a recipe for Nusperater.",
+  "language": "en",
+  "language_probability": 0.73,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 3.79,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 3.6,
+      "text": "I'm looking for a recipe for Nusperater.",
+      "avg_logprob": -0.576,
+      "no_speech_prob": 0.015,
+      "compression_ratio": 0.91
+    }
+  ]
+}

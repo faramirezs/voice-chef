@@ -1,14 +1,4 @@
 services:
-  db:
-    ports:
-      - "5432:5432"
-
-  backend:
-    ports:
-      - "8000:80"
-    volumes:
-      - ./backend/app:/code/app
-
   office-frontend:
     build:
       target: dev
@@ -28,6 +18,7 @@ services:
       - "5174:5174"
     environment:
       VITE_AGENT_URL: http://localhost:8001
+      VITE_STT_URL: http://localhost:8002
       VITE_AGENT_DEBUG_STREAM: "1"
 
   agent:
@@ -41,5 +32,24 @@ services:
     volumes:
       - ./agent/app:/app/app
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+  db:
+    ports:
+      - "5432:5432"
+
+  backend:
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend/app:/code/app
+
+  stt:
+    volumes:
+      - ./stt/app:/app/app
+
 volumes:
+  postgres_data:
+  whisper_models:
   node_modules:
+
+networks:
+  app-network:

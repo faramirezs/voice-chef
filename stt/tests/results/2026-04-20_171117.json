@@ -1,0 +1,18 @@
+{
+  "text": "please give me the recipe for lasagna",
+  "language": "en",
+  "language_probability": 0.97,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 3.1,
+  "segments": [
+    {
+      "start": 0.43,
+      "end": 2.43,
+      "text": "please give me the recipe for lasagna",
+      "avg_logprob": -0.347,
+      "no_speech_prob": 0.032,
+      "compression_ratio": 0.82
+    }
+  ]
+}

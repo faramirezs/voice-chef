@@ -1,0 +1,18 @@
+{
+  "text": "Wir haben eine Rezepte von Nuss Braten.",
+  "language": "de",
+  "language_probability": 0.58,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 2.91,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 3.0,
+      "text": "Wir haben eine Rezepte von Nuss Braten.",
+      "avg_logprob": -0.919,
+      "no_speech_prob": 0.031,
+      "compression_ratio": 0.83
+    }
+  ]
+}

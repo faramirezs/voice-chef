@@ -21,7 +21,7 @@ DEBUG_STREAM = os.getenv("AGENT_DEBUG_STREAM", "0") == "1"
 # Create the main FastAPI application for this service.
 app = FastAPI()
 
-origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174").split(",")
 
 # CORS (Cross-Origin Resource Sharing) is a browser security mechanism that controls
 # whether a web page can make requests to a different domain (origin) than the one

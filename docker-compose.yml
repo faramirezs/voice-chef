@@ -72,7 +72,23 @@ services:
       AGENT_MODEL: ${AGENT_MODEL:-deepseek-ai/deepseek-v4-flash}
       AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
 
+  stt:
+    build:
+      context: ./stt
+      dockerfile: Dockerfile
+    networks:
+      - app-network
+    ports:
+      - "8002:8002"
+    environment:
+      STT_MODEL: ${STT_MODEL:-base}
+      STT_LANGUAGE: ${STT_LANGUAGE:-}
+      STT_DEVICE: ${STT_DEVICE:-cpu}
+    volumes:
+      - whisper_models:/models
+
 volumes:
+  whisper_models:
   postgres_data:
 
 networks:

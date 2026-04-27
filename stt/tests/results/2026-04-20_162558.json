@@ -1,0 +1,18 @@
+{
+  "text": "Please give me a recipe for Kartofferzaland.",
+  "language": "en",
+  "language_probability": 0.93,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 2.75,
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 2.72,
+      "text": "Please give me a recipe for Kartofferzaland.",
+      "avg_logprob": -0.63,
+      "no_speech_prob": 0.007,
+      "compression_ratio": 0.85
+    }
+  ]
+}

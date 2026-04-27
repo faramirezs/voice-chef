@@ -77,7 +77,11 @@ define HELP_TEXT
 	" make build:	Build images from compose file" \
 	" make agent-build:\tBuild only agent service" \
 	" make agent-build-nocache:\tBuild only agent service without cache" \
-	" make agent-recreate:\tRecreate and run only agent service" \
+	" make agent-recreate:\tRecreate and run only agent service\n" \
+	" make stt-build:\tBuild only stt service" \
+	" make stt-build-nocache:\tBuild only stt service without cache" \
+	" make stt-recreate:\tRecreate and run only stt service\n" \
+	" make refresh-env-agent:\tRecreate backend and agent with fresh env\n" \
 	" make up:	Calling the command dev" \
 	" make start:	Start the containers" \
 	" make stop:	Stop running containers"
@@ -96,8 +100,17 @@ agent-build-nocache: $(ENV)
 agent-recreate: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate agent
 
+stt-build: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build stt
+
+stt-build-nocache: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache stt
+
+stt-recreate: $(ENV)
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate stt
+
 refresh-env-agent: $(ENV)
-	$(COMPOSE)  -f $(PROD_FILE) -f $(DEV_FILE) up -d --no-deps --force-recreate fastapi ag
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --no-deps --force-recreate backend agent
 
 up: dev
 
@@ -129,4 +142,6 @@ db-connect:
 agent-terminal:
 	docker exec -it voice-chef-agent-1 bash
 
-.PHONY: all dev prod down re clean fclean status logs help % build up start stop agent-build agent-build-nocache agent-recreate dump-blast-check dump-regen drift-gate-local
+.PHONY: all dev prod down re clean fclean status logs help % build up start stop
+.PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
+.PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal

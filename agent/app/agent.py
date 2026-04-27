@@ -11,7 +11,8 @@ from .state import KitchenState
 
 logger = logging.getLogger("voice-chef.agent")
 
-FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
+_BACKEND_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
+FASTAPI_URL = f"{_BACKEND_URL}/api"
 
 AGENT_MODEL = os.getenv("AGENT_MODEL", "meta/llama-3.3-70b-instruct")
 
@@ -264,7 +265,7 @@ async def get_recipe_detail(
     """Fetch a recipe by its UUID and render the recipe card in the canvas.
     recipe_id: UUID format only (e.g. "bd3083b9-10ca-557b-9428-88bb6c9f6733").
     NEVER pass a recipe name, slug, or any other string as recipe_id.
-  
+
     If recipe_id is not provided, uses get_recipes_list(query="recipe name") or
     state.selected_recipe.id and extract id as fallback.
 

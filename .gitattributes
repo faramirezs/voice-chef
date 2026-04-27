@@ -1,0 +1,2 @@
+# STT test results: keep current branch version on merge, never conflict
+stt/tests/results/*.json merge=ours
