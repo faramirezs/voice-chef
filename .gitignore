@@ -55,3 +55,7 @@ ag-ui/
 frontend/kitchen/dist/
 local/PLAN.md
 AGENTS.md
+
+# Learning folders
+target-docs/
+knowledge/
