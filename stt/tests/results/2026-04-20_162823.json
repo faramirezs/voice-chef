@@ -1,0 +1,18 @@
+{
+  "text": "Could you give me the recipe of valley bowl?",
+  "language": "en",
+  "language_probability": 0.7,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 7.64,
+  "segments": [
+    {
+      "start": 3.31,
+      "end": 7.31,
+      "text": "Could you give me the recipe of valley bowl?",
+      "avg_logprob": -0.439,
+      "no_speech_prob": 0.188,
+      "compression_ratio": 0.85
+    }
+  ]
+}

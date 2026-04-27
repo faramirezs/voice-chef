@@ -1,0 +1,15 @@
+{
+  "text": "Bana en \u00fcnl\u00fc alman yiyece\u011finin tarifini verebilir misin?",
+  "language": "tr",
+  "language_probability": 0.98,
+  "confidence": "high",
+  "retry_suggested": false,
+  "duration": 4.34,
+  "segments": [
+    {
+      "start": 0.05,
+      "end": 4.05,
+      "text": "Bana en \u00fcnl\u00fc alman yiyece\u011finin tarifini verebilir misin?"
+    }
+  ]
+}

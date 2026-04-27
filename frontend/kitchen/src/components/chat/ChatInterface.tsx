@@ -3,9 +3,7 @@ import { useAgent } from "@/hooks/useAgent";
 import { KButton } from "@/components/ui/KButton";
 import { KInput } from "@/components/ui/KInput";
 import { MessageBubble } from "./MessageBubble";
-import { VoiceInput } from "./VoiceInput";
-import type { ToolActivity } from "@/hooks/useAgent";
-import type { Message } from "@ag-ui/client";
+import { VoiceInput, type SttResult } from "./VoiceInput";
 
 function StreamingDots() {
   return (
@@ -17,113 +15,46 @@ function StreamingDots() {
   );
 }
 
-function ToolCallActivityRow({ activity }: { activity: ToolActivity }) {
-  const statusConfig = {
-    running: {
-      icon: (
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
-      ),
-      label: "Running",
-      badgeClass: "bg-primary/20 text-primary border border-primary/30",
-    },
-    done: {
-      icon: <span className="inline-block h-2.5 w-2.5 rounded-full bg-success" />,
-      label: "Done",
-      badgeClass: "bg-success/15 text-success border border-success/30",
-    },
-    failed: {
-      icon: <span className="inline-block h-2.5 w-2.5 rounded-full bg-error" />,
-      label: "Failed",
-      badgeClass: "bg-error/15 text-error border border-error/30",
-    },
-  }[activity.status];
-
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/65 bg-surface-alt/65 px-3 py-2 text-sm">
-      <div className="flex items-center gap-2 min-w-0">
-        {statusConfig.icon}
-        <span className="truncate text-text">{activity.toolName}</span>
-      </div>
-      <span
-        className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.badgeClass}`}
-      >
-        {statusConfig.label}
-      </span>
-    </div>
-  );
-}
-
-function isMeaninglessToolContent(content: unknown): boolean {
-  if (content == null) return true;
-
-  if (typeof content === "string") {
-    const normalized = content.trim();
-    return (
-      normalized === "" ||
-      normalized === '""' ||
-      normalized === "''" ||
-      normalized === "null" ||
-      normalized === "{}"
-    );
-  }
-
-  if (typeof content === "object") {
-    return Object.keys(content as Record<string, unknown>).length === 0;
-  }
-
-  return false;
-}
-
-function hasToolCalls(message: Message): boolean {
-  const maybeToolCalls = (message as Message & { toolCalls?: unknown }).toolCalls;
-  return Array.isArray(maybeToolCalls) && maybeToolCalls.length > 0;
-}
-
-function shouldHideAssistantNarration(messages: Message[], index: number): boolean {
-  const message = messages[index];
-  if (message.role !== "assistant") return false;
-
-  const text =
-    typeof message.content === "string"
-      ? message.content.trim()
-      : JSON.stringify(message.content ?? "").trim();
-
-  if (isMeaninglessToolContent(text)) return true;
-  if (hasToolCalls(message)) return false;
-
-  const previousMessage = messages[index - 1];
-  if (!previousMessage || previousMessage.role !== "tool") {
-    return false;
-  }
-
-  return !isMeaninglessToolContent(previousMessage.content);
-}
-
 export function ChatInterface() {
   const { messages, isStreaming, toolActivity, sendMessage, reset } =
     useAgent();
-  const visibleMessages = messages.filter(
-    (_msg, index) => !shouldHideAssistantNarration(messages, index),
-  );
   const [input, setInput] = useState("");
+  const [confidenceWarning, setConfidenceWarning] = useState("");
+  const sttResultRef = useRef<SttResult | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [visibleMessages, isStreaming, toolActivity]);
+  }, [messages, isStreaming, toolActivity]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || isStreaming) return;
+
+    // Augment voice input with STT metadata for the agent
+    const stt = sttResultRef.current;
+    let agentText = text;
+    if (stt && stt.confidence !== "high") {
+      agentText = `[voice, confidence: ${stt.confidence}, language: ${stt.language}]\n${text}`;
+    }
+
     setInput("");
-    sendMessage(text);
+    setConfidenceWarning("");
+    sttResultRef.current = null;
+    sendMessage(agentText);
   };
 
-  const handleVoiceTranscript = (text: string) => {
+  const handleVoiceTranscript = (text: string, sttResult?: SttResult) => {
     setInput(text);
+    sttResultRef.current = sttResult ?? null;
+    setConfidenceWarning("");
     inputRef.current?.focus();
+  };
+
+  const handleConfidenceWarning = (warning: string) => {
+    setConfidenceWarning(warning);
   };
 
   return (
@@ -144,7 +75,7 @@ export function ChatInterface() {
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-[#FCFFEF]">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center text-text-muted space-y-3">
             <p className="text-2xl text-text">Ask me anything about recipes</p>
@@ -155,18 +86,14 @@ export function ChatInterface() {
           </div>
         )}
 
-        {visibleMessages.map((msg) => (
+        {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
 
-        {toolActivity.length > 0 && (
-          <div className="space-y-2 px-2">
-            {toolActivity.map((activity) => (
-              <ToolCallActivityRow
-                key={activity.toolCallId || `${activity.toolName}-${activity.status}`}
-                activity={activity}
-              />
-            ))}
+        {isStreaming && toolActivity && !toolActivity.result && (
+          <div className="flex items-center gap-2 text-text-muted text-base px-2">
+            <span className="inline-block animate-spin text-lg">&#128269;</span>
+            <span>Looking up {toolActivity.toolName}...</span>
           </div>
         )}
 
@@ -182,18 +109,30 @@ export function ChatInterface() {
       >
         <VoiceInput
           onTranscript={handleVoiceTranscript}
+          onConfidenceWarning={handleConfidenceWarning}
           disabled={isStreaming}
         />
 
-        <KInput
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask the kitchen assistant..."
-          disabled={isStreaming}
-          className="flex-1"
-        />
+        <div className="flex-1 flex flex-col gap-1">
+          {confidenceWarning && (
+            <p className="text-warning text-sm px-2">
+              Low confidence — review before sending
+            </p>
+          )}
+          <KInput
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              sttResultRef.current = null;
+              setConfidenceWarning("");
+            }}
+            placeholder="Ask the kitchen assistant..."
+            disabled={isStreaming}
+            className="flex-1"
+          />
+        </div>
 
         <KButton
           type="submit"

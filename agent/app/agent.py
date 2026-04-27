@@ -1,37 +1,29 @@
 import os
 import httpx
-from typing import Any
 from pydantic_ai import Agent
+
 from pydantic_ai.models.openrouter import OpenRouterModel
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-FASTAPI_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
+_BACKEND_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
+FASTAPI_URL = f"{_BACKEND_URL}/api"
 
-# Read model/provider settings from environment variables.
 AGENT_MODEL = os.getenv("AGENT_MODEL")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# Fail fast with a clear message if the model name is missing.
-# This avoids starting a container with an ambiguous model config.
 if not AGENT_MODEL:
     raise RuntimeError(
         "Missing AGENT_MODEL. Set it to an OpenRouter model id, "
-        "for example: anthropic/claude-sonnet-4-5"
+        "for example: nvidia/nemotron-3-super-120b-a12b:free"
     )
 
-# Fail fast if the OpenRouter API key is missing.
-# This produces a direct startup error instead of a later runtime failure.
 if not OPENROUTER_API_KEY:
     raise RuntimeError(
         "Missing OPENROUTER_API_KEY. Set it in your environment before "
         "starting the agent service."
     )
 
-
-# Reuse a single HTTP client for all tool calls instead of opening a new
-# TCP connection on every request. Much faster under load.
 _http_client = httpx.AsyncClient()
-
 
 model = OpenRouterModel(
     AGENT_MODEL,
@@ -45,15 +37,15 @@ agent = Agent(
         "You have access to the recipe database. Answer questions about recipes, "
         "cooking steps, ingredients, storage, plating, and kitchen operations. "
         "When a chef asks about a recipe, always look it up from the database first. "
-        "Respond in a concise, action-oriented way suited for a busy kitchen environment. "
-        "UI rendering policy: when a tool returns a typed envelope like recipes.list or "
-        "recipe.detail, do not rewrite the tool data as markdown tables, long lists, or "
-        "full recipe text. The UI renders detailed tool output as cards. After a successful "
-        "typed tool result, do not send any additional assistant text. Return no follow-up "
-        "sentence; the card is the full response. "
-        "Do not call additional tools after a successful tool result unless the user "
-        "explicitly asks for another lookup. In particular, after get_recipe_detail "
-        "succeeds, do not call get_recipes_list again in the same run."
+        "Respond in a concise, action-oriented way suited for a busy kitchen environment.\n\n"
+        "VOICE INPUT HANDLING:\n"
+        "User messages may come from speech-to-text transcription. When a message "
+        "includes [voice] metadata, the transcription may contain errors — especially "
+        "for recipe names, ingredient names, and non-English words. Apply fuzzy matching: "
+        "interpret 'borsh' as 'borscht', 'julien' as 'julienne', etc. "
+        "When confidence is 'low' or 'medium', be more lenient with interpretation "
+        "and ask for confirmation if the intent is ambiguous. "
+        "When confidence is 'high', treat the input as reliable text."
     ),
 )
 
@@ -62,107 +54,30 @@ agent = Agent(
 # it just takes arguments and returns a value.
 
 @agent.tool_plain
-async def get_recipes_list(query: str = "", limit: int = 20, offset: int = 0) -> dict[str, Any]:
-    """Get recipes with pagination, optional filter by name.
-
-    Returns a typed UI envelope for card rendering. The assistant should not
-    restate returned fields as markdown tables or long recipe dumps.
-
-    Args:
-        query: Optional substring filter for recipe name.
-        limit: Page size. Clamped to [1, 100].
-        offset: Starting row index. Clamped to >= 0.
-    """
-    # Keep tool inputs aligned with backend contract.
-    limit = max(1, min(limit, 100))
-    offset = max(0, offset)
-
-    try:
-        resp = await _http_client.get(
-            f"{FASTAPI_URL}/api/recipes",
-            params={"limit": limit, "offset": offset},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        payload = resp.json()
-    except Exception as exc:
-        return {
-            "type": "error",
-            "version": "1",
-            "source": "get_recipes_list",
-            "message": str(exc),
-        }
-
-    # Backend returns a paginated envelope: {items: [...], meta: {...}}.
-    if isinstance(payload, dict):
-        items = payload.get("items", [])
-        meta = payload.get("meta", {})
-    elif isinstance(payload, list):
-        # Backward-safe fallback in case backend returns a raw list.
-        items = payload
-        meta = {"limit": limit, "offset": offset, "total": len(payload)}
-    else:
-        items = []
-        meta = {"limit": limit, "offset": offset, "total": 0}
-
-    if not isinstance(items, list):
-        items = []
-    if not isinstance(meta, dict):
-        meta = {"limit": limit, "offset": offset, "total": len(items)}
+async def get_recipes_list(query: str) -> list[dict]:
+    """Get a list of recipes in the db, optional filter by name."""
+    resp = await _http_client.get(f"{FASTAPI_URL}/recipes", timeout=10)
+    resp.raise_for_status()
+    recipes = resp.json()
 
     if not query:
-        return {
-            "type": "recipes.list",
-            "version": "1",
-            "items": items,
-            "meta": meta,
-        }
+        return recipes
 
     query_lower = query.lower()
     filtered = [
-        r for r in items
+        r for r in recipes
         if isinstance(r, dict)
         and query_lower in str(r.get("name", "")).lower()
     ]
 
-    result_items = filtered or items
-    result_meta = {
-        "limit": len(result_items),
-        "offset": 0,
-        "total": len(result_items),
-    }
-
-    return {
-        "type": "recipes.list",
-        "version": "1",
-        "items": result_items,
-        "meta": result_meta,
-        "query": query,
-    }
+    # With a test-limited endpoint, return available results if local filtering
+    # finds nothing to avoid false "no recipes" responses.
+    return filtered or recipes
 
 @agent.tool_plain
-async def get_recipe_detail(recipe_id: str) -> dict[str, Any]:
-    """Get full details of a recipe by its UUID.
-
-    Use this whenever the user wants to open, inspect, or edit a single recipe.
-    Do not guess fields yourself; always call this tool instead.
-    Returns a typed UI envelope for card rendering. The assistant should not
-    add any follow-up text after a successful typed tool result.
-    """
-    try:
-        resp = await _http_client.get(f"{FASTAPI_URL}/api/recipes/{recipe_id}", timeout=10)
+async def get_recipe_detail(recipe_id: str) -> dict:
+    """Get full details of a recipe by its UUID."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10)
         resp.raise_for_status()
-        payload = resp.json()
-    except Exception as exc:
-        return {
-            "type": "error",
-            "version": "1",
-            "source": "get_recipe_detail",
-            "message": str(exc),
-        }
-
-    return {
-        "type": "recipe.detail",
-        "version": "1",
-        "item": payload,
-    }
+        return resp.json()
