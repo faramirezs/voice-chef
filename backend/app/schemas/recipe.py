@@ -1,9 +1,11 @@
 from sqlmodel import SQLModel, Field
 from typing import List
+from typing import Annotated
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
 from pydantic import field_validator
+from pydantic import BaseModel
 from fastapi import Query
 from enum import Enum
 
@@ -48,6 +50,7 @@ class RecipeIngredientResponse(SQLModel):
 class RecipeSummaryResponse(SQLModel):
     id: UUID
     name: str
+    description: str | None
     status: str
     yield_mode: str
     portions_count_resolved: float | None
@@ -58,7 +61,6 @@ class RecipeSummaryResponse(SQLModel):
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):
-    description: str | None
     instructions: str | None
     preparation_time_minutes: int | None
     cooking_time_minutes: int | None
@@ -111,16 +113,28 @@ class RecipeSort(str, Enum):
     created_at_desc = "created_at_desc"
 
 
-class RecipeFilters(SQLModel):
-    # NOTE: mpeshko - ^ and $ are parts of RegEx (Regular Expressions).
-    # This is a special language for searching and checking text by pattern.
-    
-    status: str | None = Query(None, max_length=50, pattern="^(draft|active)$")
-    search: str | None = Query(
-        None, description="Broad search across name and description")
-    name: str | None = Query(
-        None, description="Filter for exact or partial match in name only")
-    sort_by: RecipeSort | None = Query(
-        RecipeSort.updated_at_desc,
-        description="List sorting. Format: field_direction",
-    )
+# NOTE: mpeshko - Here __init__ is for OpenAPI documentation. 
+# FastAPI documents only those query parameters that are declared in the 
+# function signature or in a dependency (__init__), not inside models.
+# __init__ is a special method in Python (also called a constructor)
+# self is a reference to the object itself, which is currently being created or used.
+class RecipeFilters:
+    def __init__(
+        self,
+        status: str | None = Query(None, max_length=50, pattern="^(draft|active)$"),
+        search: str | None = Query(
+            None, description="Broad search across name and description"
+        ),
+        name: str | None = Query(
+            None, description="Filter for exact or partial match in name only"
+        ),
+        sort_by: RecipeSort = Query(
+            RecipeSort.updated_at_desc,
+            description="List sorting. Format: field_direction",
+        ),
+    ):
+        self.status = status
+        self.search = search
+        self.name = name
+        self.sort_by = sort_by
+

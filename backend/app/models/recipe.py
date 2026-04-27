@@ -77,7 +77,12 @@ class Recipe(SQLModel, table=True):
     created_by_user: Optional['Users'] = Relationship(back_populates='recipes')
     tenant: 'Tenants' = Relationship(back_populates='recipes')
     tag: list['Tag'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
-    recipe_ingredients: list['RecipeIngredient'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredient.recipe_id]', 'passive_deletes': True})
+    recipe_ingredients: list['RecipeIngredient'] = Relationship(
+        back_populates='recipe', 
+        sa_relationship_kwargs={
+            'cascade': 'all, delete-orphan',
+            'foreign_keys': '[RecipeIngredient.recipe_id]', 
+            'passive_deletes': True})
     recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
 

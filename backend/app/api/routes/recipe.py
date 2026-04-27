@@ -3,23 +3,23 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from app.core.database import get_session, engine
 from uuid import UUID
+from typing import Annotated
 
+from app.core.database import get_session, engine
 from app.core.pagination import pagination_params, PaginationParams, paginate
-from app.schemas.pagination import PaginatedResponse
-
-from app.core.database import get_session
+from app.core.deps import get_current_user
+from app.utils.recipe_utils import to_recipe_detail, ensure_unique_recipe_name
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
-from app.schemas.ingredient import IngredientWrite
+from app.models.recipe_ingredients import RecipeIngredient
+from app.models.users import Users
 from app.schemas.pagination import PaginatedResponse
-from app.utils.recipe_utils import to_recipe_detail, ensure_unique_recipe_name
+from app.schemas.ingredient import IngredientWrite
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
     RecipeDetailResponse, RecipeFilters, RecipeSort
 )
-from app.models.recipe_ingredients import RecipeIngredient
 
 
 # -----------------------------------------------------------------------------
@@ -28,20 +28,23 @@ from app.models.recipe_ingredients import RecipeIngredient
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
-# TEMP DEV DEFAULT: remove once tenant is resolved from auth context.
-DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
 @router.get("", response_model=PaginatedResponse[RecipeSummaryResponse])
 def retrieve_recipes(
+    current_user: Annotated[Users, Depends(get_current_user)],
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
-    filters: RecipeFilters = Depends(),
+    filters: RecipeFilters = Depends()
 ):
+    """
+    List recipes for authenticated tenant
+    """
+    tenant_id = current_user.tenant_id
 
-    query = select(Recipe)
+    query = select(Recipe).where(Recipe.tenant_id == tenant_id)
     if filters.status:
         query = query.where(Recipe.status == filters.status.strip())
 
@@ -78,12 +81,13 @@ def retrieve_recipes(
 
 @router.get("/{id}", response_model=RecipeDetailResponse)
 def retrieve_recipe(
+    current_user: Annotated[Users, Depends(get_current_user)],
     id: UUID, 
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     statement = (
         select(Recipe)
-        .where(Recipe.id == id)
+        .where(Recipe.id == id, Recipe.tenant_id == current_user.tenant_id)
         .options(
             # Eagerly load the related RecipeIngredient objects in a separate query.
             selectinload(Recipe.recipe_ingredients) 
@@ -102,11 +106,12 @@ def retrieve_recipe(
 @router.post("", response_model=RecipeSummaryResponse, status_code=201)
 def create_recipe(
     recipe: RecipeWrite,
-    tenant_id: UUID = DEFAULT_TENANT_ID,
+    current_user: Annotated[Users, Depends(get_current_user)],
     session: Session = Depends(get_session),
 ):
+    tenant_id = current_user.tenant_id
+
     ensure_unique_recipe_name(session, recipe.name, tenant_id)
-    # Temporary dev-safe mode: fallback tenant_id until auth-based tenant resolution is implemented.
     payload = recipe.model_dump(exclude={"ingredients"})
     payload["tenant_id"] = tenant_id
     new_recipe = Recipe(**payload)
@@ -130,6 +135,7 @@ def create_recipe(
 
 @router.patch("/{id}", response_model=RecipeSummaryResponse)
 def update_recipe(
+    current_user: Annotated[Users, Depends(get_current_user)],
     id: UUID, 
     recipe_update: RecipeUpdate, 
     session: Session = Depends(get_session)
@@ -137,7 +143,9 @@ def update_recipe(
     """
     Update recipe fields with partial merge semantics
     """
-    query = select(Recipe).where(Recipe.id == id)
+    query = select(Recipe).where(
+        Recipe.id == id, 
+        Recipe.tenant_id == current_user.tenant_id)
     recipe = session.exec(query).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
@@ -166,16 +174,28 @@ def update_recipe(
 
 @router.delete("/{id}", response_model=RecipeSummaryResponse)
 def delete_recipe(
+    current_user: Annotated[Users, Depends(get_current_user)],
     id: UUID, 
     session: Session = Depends(get_session)
 ):
-    recipe = session.get(Recipe, id)
+    statement = select(Recipe).where(
+        Recipe.id == id,
+        Recipe.tenant_id == current_user.tenant_id
+    )
+    recipe = session.exec(statement).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
     session.refresh(recipe)
 
     result = to_recipe_detail(recipe)
+
+    # NOTE: mpeshko (tmp) - delete child recipe_ingredients first to avoid NOT NULL FK violation
+    # statement_ing = select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id)
+    # recipe_ingredient = session.exec(statement_ing).first()
+    # if recipe_ingredient:
+    #     session.delete(recipe_ingredient)
+    #     session.commit()
 
     session.delete(recipe)
     session.commit()
