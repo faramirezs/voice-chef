@@ -8,7 +8,10 @@ from fastapi.requests import Request
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic_ai.ui.ag_ui import AGUIAdapter
+from pydantic_ai.usage import UsageLimits
 from .agent import agent  # ← import the agent defined in agent.py
+from .state import KitchenState
+from pydantic_ai.ui import StateDeps
 
 
 logger = logging.getLogger("voice-chef.agent")
@@ -33,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.post("/")
 async def run_agent(request: Request) -> Response:
     started = time.perf_counter()
@@ -44,7 +48,12 @@ async def run_agent(request: Request) -> Response:
             request.headers.get("user-agent"),
         )
 
-    response = await AGUIAdapter.dispatch_request(request, agent=agent)
+    response = await AGUIAdapter.dispatch_request(
+        request,
+        agent=agent,
+        deps=StateDeps(state=KitchenState()),
+        usage_limits=UsageLimits(request_limit=25, tool_calls_limit=10),
+    )
 
     if DEBUG_STREAM:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
@@ -56,38 +65,3 @@ async def run_agent(request: Request) -> Response:
         )
 
     return response
-
-# @app.post("/")
-# async def run_agent(request: Request) -> Response:
-#     accept = request.headers.get("accept", SSE_CONTENT_TYPE)
-#     try:
-#         # Parse the raw request body into a typed RunAgentInput object.
-#         # Raises ValidationError if any required field (threadId, messages, etc.) is missing.
-#         run_input = AGUIAdapter.build_run_input(await request.body())
-#     except ValidationError as e:
-#         # Return a 422 with the list of field errors so the client knows what's wrong.
-#         return Response(
-#             content=json.dumps(e.errors()),
-#             media_type="application/json",
-#             status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-#         )
-#     adapter = AGUIAdapter(agent=agent, run_input=run_input, accept=accept)
-#     # adapter.stream() runs the agent and yields AG-UI events as an async generator.
-#     # streaming_response() wraps that generator into an SSE HTTP response.
-#     return adapter.streaming_response(adapter.run_stream())
-
-# @app.post("/agent")
-# async def run_agent(body: RunAgentInput):
-#     handler = AGUIHandler(agent=agent, input=body)
-#     return StreamingResponse(
-#         handler.stream(),
-#         media_type="text/event-stream",
-#     )
-
-# Build an AG-UI compatible ASGI app directly from the agent.
-# This is the recommended high-level integration for pydantic-ai 1.73.0.
-# ag_ui_app = agent.to_ag_ui()
-
-# Mount the AG-UI app at /agent.
-# Requests to /agent/* are handled by the mounted AG-UI application.
-# app.mount("/agent", ag_ui_app)

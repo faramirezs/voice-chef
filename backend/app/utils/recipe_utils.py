@@ -33,8 +33,8 @@ def to_recipe_detail(recipe):
         "portions_count_resolved": recipe.portions_count_resolved,
         "created_at": recipe.created_at,
         "updated_at": recipe.updated_at,
-        # "ingredients": [
-        #     to_recipe_ingredient_response(link)
-        #     for link in sorted(recipe.recipe_ingredients, key=lambda x: x.sort_order)
-        # ],
+        "ingredients": [
+            to_recipe_ingredient_response(link)
+            for link in sorted(recipe.recipe_ingredients, key=lambda x: x.sort_order)
+        ],
     }
