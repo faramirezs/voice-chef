@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
-    Numeric, PrimaryKeyConstraint, Text, text
+    Numeric, PrimaryKeyConstraint, Text, text, # UniqueConstraint
 )
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 class Recipe(SQLModel, table=True):
     __tablename__ = 'recipes'
     __table_args__ = (
+        # UniqueConstraint("tenant_id", "name", name="uq_recipe_tenant_name"),
         CheckConstraint("status IN ('draft', 'active', 'archived')", name='valid_status'),
         CheckConstraint('portion_size_grams IS NULL OR portion_size_grams > 0::numeric', name='positive_portion_size_grams'),
         CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', 

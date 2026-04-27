@@ -1,4 +1,7 @@
-import app.models
+from sqlmodel import Session, select
+from uuid import UUID
+from fastapi import HTTPException, status
+from app.models.recipe import Recipe
 
 
 def to_recipe_ingredient_response(link):
@@ -36,10 +39,30 @@ def to_recipe_detail(recipe):
                 "unit": link.unit,
                 "quantity_grams": link.quantity_grams,
                 
-                # Прибираємо зайві пробіли
                 "preparation": link.preparation.strip() if link.preparation else None,
                 "sort_order": link.sort_order
             })
     
     result["ingredients"] = ingredients_list
     return result
+
+def ensure_unique_recipe_name(
+        session: Session, 
+        name: str, 
+        tenant_id: UUID, 
+        exclude_id: UUID | None = None
+) -> None:
+
+    if not name:
+        return
+    q = select(Recipe).where(
+        Recipe.name == name.strip(), 
+        Recipe.tenant_id == tenant_id
+    )
+    if exclude_id:
+        q = q.where(Recipe.id != exclude_id)
+    if session.exec(q).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Recipe name already exists"
+        )

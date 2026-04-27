@@ -37,7 +37,7 @@ def retrieve_ingredient(
     return ingredients
 
 
-@router.post("", response_model=IngredientSummaryResponse)
+@router.post("", response_model=IngredientSummaryResponse, status_code=201)
 def create_ingredient(
     ingredient: IngredientWrite, 
     session: Session = Depends(get_session)

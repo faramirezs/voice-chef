@@ -23,11 +23,10 @@ class RecipeWrite(SQLModel):
     status: str = "draft"
     yield_mode: str = "count"
 
-    portion_size_grams: Decimal | None = None
-    total_raw_weight_grams: Decimal | None = None
-    total_cooked_weight_grams: Decimal | None = None
-
-    portions_count_resolved: Decimal | None = None
+    portion_size_grams: Decimal | None = Field(default=None, gt=0)
+    portions_count_resolved: Decimal | None = Field(default=None, gt=0)
+    total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
+    total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
 
     # ingredients: List[RecipeIngredientWrite] = []
 
@@ -52,6 +51,7 @@ class RecipeSummaryResponse(SQLModel):
     status: str
     yield_mode: str
     portions_count_resolved: float | None
+    portion_size_grams: float | None
     created_at: datetime | None
     updated_at: datetime | None
     photo_url: str | None
@@ -62,7 +62,6 @@ class RecipeDetailResponse(RecipeSummaryResponse):
     instructions: str | None
     preparation_time_minutes: int | None
     cooking_time_minutes: int | None
-    portion_size_grams: float | None
     total_raw_weight_grams: float | None
     total_cooked_weight_grams: float | None
     recipe_number: str | None

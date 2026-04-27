@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from app.core.database import get_session, engine
 from uuid import UUID
 
@@ -13,7 +14,7 @@ from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
-from app.utils.recipe_utils import to_recipe_detail
+from app.utils.recipe_utils import to_recipe_detail, ensure_unique_recipe_name
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
     RecipeDetailResponse, RecipeFilters, RecipeSort
@@ -98,21 +99,31 @@ def retrieve_recipe(
     return to_recipe_detail(recipe)
 
 
-@router.post("", response_model=RecipeSummaryResponse)
+@router.post("", response_model=RecipeSummaryResponse, status_code=201)
 def create_recipe(
     recipe: RecipeWrite,
     tenant_id: UUID = DEFAULT_TENANT_ID,
     session: Session = Depends(get_session),
 ):
+    ensure_unique_recipe_name(session, recipe.name, tenant_id)
     # Temporary dev-safe mode: fallback tenant_id until auth-based tenant resolution is implemented.
     payload = recipe.model_dump(exclude={"ingredients"})
     payload["tenant_id"] = tenant_id
     new_recipe = Recipe(**payload)
 
-    session.add(new_recipe)
-    session.flush()
-    session.commit()
-    session.refresh(new_recipe)
+    # NOTE: mpeshko - try-catch block guarantees integrity in the presence 
+    # of concurrent queries (race conditions).
+    try:
+        session.add(new_recipe)
+        session.flush()
+        session.commit()
+        session.refresh(new_recipe)
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Recipe name already exists")
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
 
     return to_recipe_detail(new_recipe)
 
@@ -134,12 +145,19 @@ def update_recipe(
     # NOTE: mpeshko - Convert the input to a dict, EXCLUDING fields not sent by the client
     updates = recipe_update.model_dump(exclude_unset=True)
 
+    # If name is being changed, validate uniqueness first
+    if "name" in updates and updates["name"] != recipe.name:
+        ensure_unique_recipe_name(session, updates["name"], recipe.tenant_id, exclude_id=id)
+
     for key, value in updates.items():
         setattr(recipe, key, value)
     try:
         session.add(recipe)
         session.commit()
         session.refresh(recipe)
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Recipe name already exists")
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
