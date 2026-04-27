@@ -15,8 +15,13 @@ $(ENV):
 
 # Main targets/commands to build, run and and stop + clean the application
 dev: $(ENV)
-	@echo "Building in dev_mode"
+	@echo "Building and starting in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
+	@echo "VOICE-CHEF is running in dev_mode"
+
+up: $(ENV)
+	@echo "Starting in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
 	@echo "VOICE-CHEF is running in dev_mode"
 
 prod: $(ENV)
@@ -111,8 +116,6 @@ stt-recreate: $(ENV)
 
 refresh-env-agent: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --no-deps --force-recreate backend agent
-
-up: dev
 
 start:
 	$(COMPOSE) start

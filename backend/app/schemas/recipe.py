@@ -57,7 +57,6 @@ class RecipeSummaryResponse(SQLModel):
     created_at: datetime | None
     updated_at: datetime | None
 
-
 class RecipeDetailResponse(RecipeSummaryResponse):
     ingredients: List[RecipeIngredientResponse]
 
