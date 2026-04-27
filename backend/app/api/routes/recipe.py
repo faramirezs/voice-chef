@@ -15,7 +15,7 @@ from app.models.ingredient import Ingredient
 from app.schemas.ingredient import IngredientWrite
 from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail
-from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeUpdate
+from app.schemas.recipe import RecipeWrite, RecipeSummaryResponse, RecipeDetailResponse, RecipeUpdate
 from app.models.recipe_ingredients import RecipeIngredient
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
@@ -89,7 +89,7 @@ def retrieve_recipes(
     return recipes
 
 
-@router.get("/{recipe_id}", response_model=RecipeSummaryResponse)
+@router.get("/{recipe_id}", response_model=RecipeDetailResponse)
 def retrieve_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     statement = (
         select(Recipe)
@@ -148,5 +148,3 @@ def delete_recipe(recipe_id: UUID, session: Session = Depends(get_session)):
     session.commit()
 
     return result
-
-

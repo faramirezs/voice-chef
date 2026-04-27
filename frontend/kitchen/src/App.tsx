@@ -1,5 +1,5 @@
-import { ChatInterface } from "@/components/chat/ChatInterface";
+import { HudCanvas } from "@/components/layout/HudCanvas";
 
 export default function App() {
-  return <ChatInterface />;
+  return <HudCanvas />;
 }
