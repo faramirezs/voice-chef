@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import UUID, Session, select
+from sqlmodel import Session, select
 from app.core.database import get_session, engine
 
 from app.core.pagination import pagination_params, PaginationParams, paginate
@@ -10,7 +10,7 @@ from app.models.ingredient import Ingredients
 from app.schemas.ingredient import IngredientWrite, IngredientSummaryResponse
 from app.schemas.pagination import PaginatedResponse
 
-router = APIRouter(prefix="/ingredient", tags=["Ingredients"])
+router = APIRouter(prefix="/ingredients", tags=["Ingredients"])
 
 
 @router.get("", response_model=PaginatedResponse[Ingredients])

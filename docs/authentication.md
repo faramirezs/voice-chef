@@ -4,7 +4,7 @@
 
 Notes:
 1. Login on signup will be implememnted later.
-2. `/api/user/me` is an example.
+2. `/api/users/me` is an example.
 
 ```
 Login form          Backend                   Database
@@ -18,7 +18,7 @@ Login form          Backend                   Database
       │   localStorage /       │                          │
       │   cookie)              │                          │
       │                        │                          │
-      │──GET /api/user/me─────>│                          │
+      │──GET /api/users/me─────>│                          │
       │  Authorization: Bearer │                          │
       │<──user data────────────│                          │
 ```

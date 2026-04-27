@@ -5,8 +5,8 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
-    Integer, Numeric, PrimaryKeyConstraint, String, Text, text
+    CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
+    Numeric, PrimaryKeyConstraint, Text, text
 )
 from sqlmodel import Field, Relationship, SQLModel
 

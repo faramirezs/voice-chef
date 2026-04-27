@@ -15,7 +15,7 @@ from app.core.deps import get_current_user
 # Constants and Global Instances
 # -----------------------------------------------------------------------------
 
-router = APIRouter(prefix="/user", tags=["Users"])
+router = APIRouter(prefix="/users", tags=["Users"])
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -23,7 +23,7 @@ ALGORITHM = "HS256"
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
-@router.get("/list_all/", response_model=list[UserSignupResponse])
+@router.get("", response_model=list[UserSignupResponse])
 async def read_users(session: Session = Depends(get_session)) -> list[UserSignupResponse]:
     """
     Retrieves a list of all users from the database.
@@ -32,7 +32,7 @@ async def read_users(session: Session = Depends(get_session)) -> list[UserSignup
     users = session.exec(select(Users)).all()
     return users
 
-@router.get("/list_all_tenents/", response_model=list[TenantsResponse])
+@router.get("/list_all_tenants/", response_model=list[TenantsResponse])
 async def read_users(session: Session = Depends(get_session)) -> list[TenantsResponse]:
     """
     Retrieves a list of all tenants from the database.
@@ -43,7 +43,7 @@ async def read_users(session: Session = Depends(get_session)) -> list[TenantsRes
 
 
 # NOTE: Mpeshko. Endpoint to test and learn how JWT token works.
-@router.get("/decode-token")
+@router.get("/decode_token")
 async def decode_token_for_testing(token: str):
     """
     Decodes a JWT provided as a query parameter to inspect its payload.

@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
-from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
 from app.core.database import get_session, engine
 from uuid import UUID
-from typing import Optional
 
 from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse

@@ -13,7 +13,7 @@ export function useIngredients(filters?: {
   return useQuery({
     queryKey: [INGREDIENTS_KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Ingredient>>('/ingredient', {
+      const { data } = await api.get<PaginatedResponse<Ingredient>>('/ingredients', {
         params: filters,
       });
       return data;

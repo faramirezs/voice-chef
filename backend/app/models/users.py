@@ -28,29 +28,22 @@ class Users(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='users_pkey'),
         UniqueConstraint('email', name='users_email_key'),
     )
+    # Primary key, Timestamps
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     email: str = Field(max_length=320, nullable=False)
-    password_hash: str = Field(max_length=255, nullable=False)
     created_at: datetime = Field(sa_column=Column(
-            'created_at', 
-            DateTime(True), 
-            nullable=False, 
-            server_default=text('now()'))
-    )
+            'created_at', DateTime(True), 
+            nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column(
-            'updated_at', 
-            DateTime(True), 
-            nullable=False, 
-            server_default=text('now()'))
-    )
+            'updated_at', DateTime(True), 
+            nullable=False, server_default=text('now()')))
+    # Core fields
+    password_hash: str = Field(max_length=255, nullable=False)
     role: str = Field(sa_column=Column(
-            'role', 
-            String(50),
-            nullable=False,
-            server_default=text("'editor'")
-        )
-    )
+            'role', String(50),
+            nullable=False, server_default=text("'editor'")))
     is_active: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("true")})
+    
     # Foreign keys
     tenant_id: UUID = Field(nullable=False)
 
@@ -67,21 +60,17 @@ class Tenants(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='tenants_pkey'),
         UniqueConstraint('slug', name='tenants_slug_key'),
     )
+    # Primary key, Timestamps
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    created_at: datetime = Field(sa_column=Column(
-            'created_at', 
-            DateTime(True), 
-            nullable=False, 
-            server_default=text('now()'))
-    )
-    updated_at: datetime = Field(sa_column=Column(
-            'updated_at', 
-            DateTime(True), 
-            nullable=False, 
-            server_default=text('now()'))
-        )
-    name: str = Field(max_length=255, nullable=False)
     slug: str = Field(max_length=100, nullable=False)
+    created_at: datetime = Field(sa_column=Column(
+            'created_at', DateTime(True), 
+            nullable=False, server_default=text('now()')))
+    updated_at: datetime = Field(sa_column=Column(
+            'updated_at', DateTime(True), 
+            nullable=False, server_default=text('now()')))
+    # Core fields
+    name: str = Field(max_length=255, nullable=False)
     is_active: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("true")})
     settings: dict | None = Field(default=None, sa_column=Column('settings', JSONB, server_default=text("'{}'")))
 
