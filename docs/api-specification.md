@@ -223,6 +223,7 @@ Note: `expires_in` is measured in seconds
   "total_raw_weight_grams": "8500.000",
   "total_cooked_weight_grams": "7900.000",
   "portions_count_resolved": "31.6",
+  "photo_url": "https://example.com/recipes/kartoffelsalat.jpg",
   "created_at": "2026-03-28T09:30:00Z",
   "updated_at": "2026-03-28T09:40:00Z"
 }
@@ -242,6 +243,10 @@ Note: `expires_in` is measured in seconds
   "total_raw_weight_grams": "8500.000",
   "total_cooked_weight_grams": "7900.000",
   "portions_count_resolved": "31.6",
+  "photo_url": "https://example.com/recipes/kartoffelsalat.jpg",
+  "preparation_time_minutes": 15,
+  "cooking_time_minutes": 30,
+  "is_component": false,
   "ingredients": [
     {
       "id": "ac85a727-bcc5-4623-a176-0f0f064f7691",
@@ -386,7 +391,7 @@ MVP intents:
 
 | Method | Path | Auth | Request Schema | Success Response | Success Status | Error Statuses |
 |---|---|---|---|---|---|---|
-| POST | `/auth/signup` | Public | `UserSignupLogin` | `UserSignupResponse` (later: Auto-Login on Signup: `AuthTokenResponse`) | `201` | `400, 409, 422, 503, 500` |
+| POST | `/auth/signup` | Public | `UserSignupLogin` | `UserSignupResponse` | `201` | `400, 409, 422, 503, 500` |
 | POST | `/auth/login` | Public | `UserSignupLogin` | `AuthTokenResponse` | `200` | `400, 401, 403, 422, 500` |
 | GET | `/recipes` | Bearer | Query: `limit`, `offset`, `status`, `search` | `{ items: RecipeSummaryResponse[], meta }` | `200` | `401, 422, 500` |
 | POST | `/recipes` | Bearer | `RecipeWrite` | `RecipeDetailResponse` | `201` | `400, 401, 404, 409, 422, 500` |
@@ -408,14 +413,13 @@ MVP intents:
 
 Purpose:
 - Create user account in the preconfigured default tenant
-- Return access token for immediate authenticated session
 
 Request:
 - Body: `UserSignupLogin`
 
 Success:
 - `201 Created`
-- Body: `AuthTokenResponse`
+- Body: `UserSignupResponse`
 
 Errors:
 - `400` weak password
@@ -471,6 +475,7 @@ Success:
       "total_raw_weight_grams": "8500.000",
       "total_cooked_weight_grams": "7900.000",
       "portions_count_resolved": "31.6",
+      "photo_url": "https://example.com/recipes/kartoffelsalat.jpg",
       "created_at": "2026-03-28T09:30:00Z",
       "updated_at": "2026-03-28T09:40:00Z"
     }

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
@@ -8,8 +9,12 @@ import os
 # import our files
 from app.core.database import get_session
 from app.models.users import Users, Tenants
-from app.schemas.users import UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse
-from app.utils.auth_utils import get_password_hash, validate_password, verify_password, create_access_token
+from app.schemas.users import (
+    UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse
+)
+from app.utils.auth_utils import (
+    get_password_hash, validate_password, verify_password, create_access_token
+)
 
 
 # -----------------------------------------------------------------------------
@@ -105,14 +110,10 @@ async def signup(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password is too weak. It must have a minimum of 8 characters, and include uppercase, lowercase, digits, and symbols."
         )
-
+    
     # 2. Check for unique email
-    query = select(Users).where(
-        (Users.email == user_data.email)
-    )
-    # sends query to database and deblocks
-    result = session.exec(query)
-    existing_user = result.first()
+    query = select(Users).where(Users.email == user_data.email)
+    existing_user = session.exec(query).first()
 
     if existing_user:
         if existing_user.email == user_data.email:
@@ -126,7 +127,7 @@ async def signup(
         password_hash=get_password_hash(user_data.password),
         tenant_id=DEFAULT_TENANT_ID
     )
-
+    
     # 4. Check if this tenant actually exists in your DB
     tenant_exists = session.get(Tenants, new_user.tenant_id)
     if not tenant_exists:
@@ -138,9 +139,19 @@ async def signup(
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while creating user"
+        )
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+    
     return new_user
 
 

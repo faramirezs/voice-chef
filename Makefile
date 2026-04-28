@@ -152,4 +152,4 @@ agent-terminal:
 
 .PHONY: all dev dev-back prod down re clean fclean status logs help % build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
-.PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal 
+.PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal

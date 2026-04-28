@@ -2,17 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from app.core.database import get_session, engine
 from uuid import UUID
+import os
 
 from app.core.pagination import pagination_params, PaginationParams, paginate
 from app.schemas.pagination import PaginatedResponse
 
-from app.core.database import get_session
+from app.core.database import get_session, engine
 from app.models.recipe import Recipe
-from app.models.ingredient import Ingredient
-from app.schemas.ingredient import IngredientWrite
-from app.schemas.pagination import PaginatedResponse
 from app.utils.recipe_utils import to_recipe_detail
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
@@ -27,8 +24,7 @@ from app.models.recipe_ingredients import RecipeIngredient
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
-# TEMP DEV DEFAULT: remove once tenant is resolved from auth context.
-DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
+DEFAULT_TENANT_ID = UUID(os.getenv("DEFAULT_TENANT_ID", "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0"))
 
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
@@ -93,7 +89,6 @@ def create_recipe(
     tenant_id: UUID = DEFAULT_TENANT_ID,
     session: Session = Depends(get_session),
 ):
-    # Temporary dev-safe mode: fallback tenant_id until auth-based tenant resolution is implemented.
     payload = recipe.model_dump(exclude={"ingredients"})
     payload["tenant_id"] = tenant_id
     new_recipe = Recipe(**payload)
