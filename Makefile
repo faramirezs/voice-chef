@@ -28,10 +28,6 @@ dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
 
-dev-back: $(ENV)
-	@echo "Building and running db and backend services in dev_mode"
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
-
 prod: $(ENV)
 	@echo "Building in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach

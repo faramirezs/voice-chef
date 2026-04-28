@@ -391,12 +391,12 @@ MVP intents:
 | GET | `/recipes` | Bearer | Query: `limit`, `offset`, `status`, `search` | `{ items: RecipeSummaryResponse[], meta }` | `200` | `401, 422, 500` |
 | POST | `/recipes` | Bearer | `RecipeWrite` | `RecipeDetailResponse` | `201` | `400, 401, 404, 409, 422, 500` |
 | GET | `/recipes/{id}` | Bearer | Path: `id` UUID | `RecipeDetailResponse` | `200` | `401, 404, 422, 500` |
-| PATCH | `/recipes/{id}` | Bearer | Path: `id` UUID, Body: `RecipeWrite` (partial merge) | `RecipeDetailResponse` | `200` | `400, 401, 404, 409, 422, 500` |
+| PATCH | `/recipes/{id}` | Bearer | Path: `id` UUID, Body: `RecipeUpdate` (partial merge) | `RecipeDetailResponse` | `200` | `400, 401, 404, 409, 422, 500` |
 | DELETE | `/recipes/{id}` | Bearer | Path: `id` UUID | none | `204` | `401, 404, 422, 500` |
 | GET | `/ingredients` | Bearer | Query: `limit`, `offset`, `ingredient_type`, `search`, `is_custom` | `{ items: IngredientResponse[], meta }` | `200` | `401, 422, 500` |
 | POST | `/ingredients` | Bearer | `IngredientWrite` | `IngredientResponse` | `201` | `400, 401, 409, 422, 500` |
 | GET | `/ingredients/{id}` | Bearer | Path: `id` UUID | `IngredientResponse` | `200` | `401, 404, 422, 500` |
-| PATCH | `/ingredients/{id}` | Bearer | Path: `id` UUID, Body: `IngredientWrite` (partial merge) | `IngredientResponse` | `200` | `400, 401, 404, 409, 422, 500` |
+| PATCH | `/ingredients/{id}` | Bearer | Path: `id` UUID, Body: `IngredientUpdate` (partial merge) | `IngredientResponse` | `200` | `400, 401, 404, 409, 422, 500` |
 | DELETE | `/ingredients/{id}` | Bearer | Path: `id` UUID | none | `204` | `401, 404, 422, 500` |
 | GET | `/units` | Bearer | Query: `limit`, `offset`, `unit_type`, `search` | `{ items: UnitResponse[], meta }` | `200` | `401, 422, 500` |
 | GET | `/ingredients/{id}/prices/latest` | Bearer | Path: `id` UUID | `IngredientLatestPriceResponse` | `200` | `401, 404, 422, 500` |
@@ -521,7 +521,7 @@ Purpose:
 - Update recipe fields with partial merge semantics
 
 Request:
-- Body: `RecipeWrite` (only provided fields are updated; all fields are optional)
+- Body: `RecipeUpdate` (only provided fields are updated; all fields are optional)
 
 Success:
 - `200 OK`
@@ -590,7 +590,7 @@ Purpose:
 - Update ingredient fields with partial merge semantics
 
 Request:
-- Body: `IngredientWrite` (only provided fields are updated; all fields are optional)
+- Body: `IngredientUpdate` (only provided fields are updated; all fields are optional)
 
 Success:
 - `200 OK`

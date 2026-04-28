@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.core.database import get_session, engine
 from uuid import UUID
 
@@ -124,13 +125,30 @@ def update_recipe(
 
     for key, value in updates.items():
         setattr(recipe, key, value)
+    
     try:
         session.add(recipe)
         session.commit()
         session.refresh(recipe)
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=409, 
+            detail="Update violates data constraints (e.g., duplicate name or invalid reference)"
+        )
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while updating recipe"
+        )
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error"
+        )
+    
     return recipe
 
 

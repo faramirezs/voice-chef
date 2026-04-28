@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
+import os
 
 # import our files
 from app.core.database import get_session
@@ -17,8 +18,7 @@ from app.utils.auth_utils import get_password_hash, validate_password, verify_pa
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
-# old tenant_id - f5504206-d0a6-48c0-8aa5-2ae8791be730
+DEFAULT_TENANT_ID = UUID(os.getenv("DEFAULT_TENANT_ID", "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0"))
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ async def signup(
     query = select(Users).where(
         (Users.email == user_data.email)
     )
-     # sends query to database and deblocks
+    # sends query to database and deblocks
     result = session.exec(query)
     existing_user = result.first()
 
@@ -120,22 +120,20 @@ async def signup(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="E-Mail already registered."
             )
-    # 3. Create a new User instance. DEFAULT_TENANT_ID is hardcoded for MVP
-    try:
-        target_id = DEFAULT_TENANT_ID
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid UUID format for tenant_id")
+    # 3. Create a new User instance
     new_user = Users(
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
-        tenant_id=target_id
+        tenant_id=DEFAULT_TENANT_ID
     )
 
     # 4. Check if this tenant actually exists in your DB
     tenant_exists = session.get(Tenants, new_user.tenant_id)
     if not tenant_exists:
-        raise HTTPException(status_code=503, detail="Default tenant not configured in the database.")
-    
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+            detail="Default tenant not configured in the database.")
+
     try:
         session.add(new_user)
         session.commit()
