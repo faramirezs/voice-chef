@@ -186,17 +186,6 @@ def delete_recipe(
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    session.refresh(recipe)
-
-    # result = to_recipe_detail(recipe)
-
-    # NOTE: mpeshko (tmp) - delete child recipe_ingredients first to avoid NOT NULL FK violation
-    # statement_ing = select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id)
-    # recipe_ingredient = session.exec(statement_ing).first()
-    # if recipe_ingredient:
-    #     session.delete(recipe_ingredient)
-    #     session.commit()
-    
     try:
         session.delete(recipe)
         session.commit()
