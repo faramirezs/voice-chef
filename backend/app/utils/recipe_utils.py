@@ -1,8 +1,16 @@
-import app.models
 
 
 def to_recipe_ingredient_response(link):
+
     ingredient = link.ingredient
+    if not ingredient:
+        return None
+
+    quantity_grams = getattr(link, "quantity_grams", None)
+    if quantity_grams is None:
+        quantity = link.quantity or 0
+        unit = (getattr(link, "unit", "") or "").strip().lower()
+        quantity_grams = quantity * 1000 if unit == "kg" else quantity
 
     return {
         "id": link.id,
@@ -11,35 +19,37 @@ def to_recipe_ingredient_response(link):
         "ingredient_default_unit": ingredient.default_unit,
         "quantity": link.quantity,
         "unit": link.unit,
-        "quantity_grams": (
-            link.quantity * 1000 if link.unit == "kg" else link.quantity
-        ),
-        "preparation": link.preparation,
+        "quantity_grams": quantity_grams,
+        "preparation": link.preparation.strip() if link.preparation else None,
         "sort_order": link.sort_order,
     }
 
 
-# NOTE: mpeshko - link is RecipeIngredient, link.ingredient is an Ingredient
 def to_recipe_detail(recipe):
-    result = recipe.model_dump()
-
-    ingredients_list = []
-    for link in sorted(recipe.recipe_ingredients, key=lambda x: x.sort_order or 0):
-        if link.ingredient:
-            ingredients_list.append({
-                "id": link.id,
-                "ingredient_id": link.ingredient.id,
-                "ingredient_name": link.ingredient.name,
-                "ingredient_default_unit": link.ingredient.default_unit,
-                
-                "quantity": link.quantity,
-                "unit": link.unit,
-                "quantity_grams": link.quantity_grams,
-                
-                # Прибираємо зайві пробіли
-                "preparation": link.preparation.strip() if link.preparation else None,
-                "sort_order": link.sort_order
-            })
-    
-    result["ingredients"] = ingredients_list
-    return result
+    return {
+        "id": recipe.id,
+        "name": recipe.name,
+        "description": recipe.description,
+        "instructions": recipe.instructions,
+        "status": recipe.status,
+        "yield_mode": recipe.yield_mode,
+        "portions_count_resolved": recipe.portions_count_resolved,
+        "portion_size_grams": recipe.portion_size_grams,
+        "total_raw_weight_grams": recipe.total_raw_weight_grams,
+        "total_cooked_weight_grams": recipe.total_cooked_weight_grams,
+        "created_at": recipe.created_at,
+        "updated_at": recipe.updated_at,
+        "photo_url": recipe.photo_url,
+        "preparation_time_minutes": recipe.preparation_time_minutes,
+        "cooking_time_minutes": recipe.cooking_time_minutes,
+        "is_component": recipe.is_component,
+        "ingredients": [
+            r for r in (
+                to_recipe_ingredient_response(link)
+                for link in sorted(
+                    recipe.recipe_ingredients, 
+                    key=lambda x: x.sort_order or 0
+                )
+            ) if r is not None
+        ],
+    }
