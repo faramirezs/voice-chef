@@ -53,6 +53,8 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SQL_ECHO: ${SQL_ECHO}
       SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - ./backend/uploads:/code/uploads
 
   agent:
     build:
@@ -66,8 +68,10 @@ services:
       - "8001:8001"
     environment:
       FASTAPI_INTERNAL_URL: http://backend:80
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      AGENT_MODEL: ${AGENT_MODEL}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-nvidia}
+      AGENT_BASE_URL: ${AGENT_BASE_URL}
+      AGENT_API_KEY: ${AGENT_API_KEY}
+      AGENT_MODEL: ${AGENT_MODEL:-deepseek-ai/deepseek-v4-flash}
       AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
 
   stt:

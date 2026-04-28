@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
@@ -103,7 +103,7 @@ def retrieve_recipe(
     return to_recipe_detail(recipe)
 
 
-@router.post("", response_model=RecipeSummaryResponse, status_code=201)
+@router.post("", response_model=RecipeDetailResponse, status_code=201)
 def create_recipe(
     recipe: RecipeWrite,
     current_user: Annotated[Users, Depends(get_current_user)],
@@ -172,7 +172,7 @@ def update_recipe(
     return recipe
 
 
-@router.delete("/{id}", response_model=RecipeSummaryResponse)
+@router.delete("/{id}", status_code=204)
 def delete_recipe(
     current_user: Annotated[Users, Depends(get_current_user)],
     id: UUID, 
@@ -188,7 +188,7 @@ def delete_recipe(
 
     session.refresh(recipe)
 
-    result = to_recipe_detail(recipe)
+    # result = to_recipe_detail(recipe)
 
     # NOTE: mpeshko (tmp) - delete child recipe_ingredients first to avoid NOT NULL FK violation
     # statement_ing = select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id)
@@ -196,7 +196,12 @@ def delete_recipe(
     # if recipe_ingredient:
     #     session.delete(recipe_ingredient)
     #     session.commit()
-
-    session.delete(recipe)
-    session.commit()
-    return result
+    
+    try:
+        session.delete(recipe)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+    
+    return Response(status_code=204)

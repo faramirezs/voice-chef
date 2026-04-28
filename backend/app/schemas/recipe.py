@@ -1,13 +1,12 @@
 from sqlmodel import SQLModel, Field
 from typing import List
-from typing import Annotated
 from uuid import UUID
 from decimal import Decimal
 from datetime import datetime
 from pydantic import field_validator
-from pydantic import BaseModel
 from fastapi import Query
 from enum import Enum
+
 
 class RecipeIngredientWrite(SQLModel):
     ingredient_id: UUID
@@ -30,7 +29,7 @@ class RecipeWrite(SQLModel):
     total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
     total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
 
-    # ingredients: List[RecipeIngredientWrite] = []
+    ingredients: List[RecipeIngredientWrite] = []
 
 
 class RecipeIngredientResponse(SQLModel):
@@ -66,7 +65,6 @@ class RecipeDetailResponse(RecipeSummaryResponse):
     cooking_time_minutes: int | None
     total_raw_weight_grams: float | None
     total_cooked_weight_grams: float | None
-    recipe_number: str | None
     is_component: bool | None
     ingredients: List[RecipeIngredientResponse]
 
@@ -137,4 +135,3 @@ class RecipeFilters:
         self.search = search
         self.name = name
         self.sort_by = sort_by
-
