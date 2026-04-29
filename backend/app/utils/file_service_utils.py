@@ -16,8 +16,8 @@ def save_file(file: UploadFile) -> str:
         filename += ".jpg"
     elif file.content_type == "image/png":
         filename += ".png"
-    elif file.content_type == "application/pdf":
-        filename += ".pdf"
+    # elif file.content_type == "application/pdf":
+    #     filename += ".pdf"
 
     new_url = os.path.join(UPLOAD_DIR, filename)
 
