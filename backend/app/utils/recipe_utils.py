@@ -1,20 +1,26 @@
-import app.models
 
 
 def to_recipe_ingredient_response(link):
+
     ingredient = link.ingredient
+    if not ingredient:
+        return None
+
+    quantity_grams = getattr(link, "quantity_grams", None)
+    if quantity_grams is None:
+        quantity = link.quantity or 0
+        unit = (getattr(link, "unit", "") or "").strip().lower()
+        quantity_grams = quantity * 1000 if unit == "kg" else quantity
 
     return {
         "id": link.id,
         "ingredient_id": ingredient.id,
         "ingredient_name": ingredient.name,
         "ingredient_default_unit": ingredient.default_unit,
-        "quantity": link.quantity,
+        "quantity": str(link.quantity) if link.quantity else None,
         "unit": link.unit,
-        "quantity_grams": (
-            link.quantity * 1000 if link.unit == "kg" else link.quantity
-        ),
-        "preparation": link.preparation,
+        "quantity_grams": str(quantity_grams),
+        "preparation": link.preparation.strip() if link.preparation else None,
         "sort_order": link.sort_order,
     }
 
@@ -27,14 +33,23 @@ def to_recipe_detail(recipe):
         "instructions": recipe.instructions,
         "status": recipe.status,
         "yield_mode": recipe.yield_mode,
-        "portion_size_grams": recipe.portion_size_grams,
-        "total_raw_weight_grams": recipe.total_raw_weight_grams,
-        "total_cooked_weight_grams": recipe.total_cooked_weight_grams,
-        "portions_count_resolved": recipe.portions_count_resolved,
+        "portions_count_resolved": str(recipe.portions_count_resolved) if recipe.portions_count_resolved else None,
+        "portion_size_grams": str(recipe.portion_size_grams) if recipe.portion_size_grams else None,
+        "total_raw_weight_grams": str(recipe.total_raw_weight_grams) if recipe.total_raw_weight_grams else None,
+        "total_cooked_weight_grams": str(recipe.total_cooked_weight_grams) if recipe.total_cooked_weight_grams else None,
         "created_at": recipe.created_at,
         "updated_at": recipe.updated_at,
+        "photo_url": recipe.photo_url,
+        "preparation_time_minutes": recipe.preparation_time_minutes,
+        "cooking_time_minutes": recipe.cooking_time_minutes,
+        "is_component": recipe.is_component,
         "ingredients": [
-            to_recipe_ingredient_response(link)
-            for link in sorted(recipe.recipe_ingredients, key=lambda x: x.sort_order)
+            r for r in (
+                to_recipe_ingredient_response(link)
+                for link in sorted(
+                    recipe.recipe_ingredients, 
+                    key=lambda x: x.sort_order or 0
+                )
+            ) if r is not None
         ],
     }

@@ -13,7 +13,16 @@ class IngredientWrite(SQLModel):
     parent_id: UUID | None = None
 
 
-class IngredientSummaryResponse(SQLModel):
+class IngredientUpdate(SQLModel):
+    name: str | None = Field(default=None, max_length=255)
+    default_unit: str | None = Field(default=None, max_length=50)
+    ingredient_type: str | None = Field(default=None, max_length=50)
+    bls_key: str | None = Field(default=None, max_length=100)
+    is_custom: bool | None = Field(default=None)
+    parent_id: UUID | None = Field(default=None)
+
+
+class IngredientResponse(SQLModel):
     id: UUID
     name: str
     default_unit: str | None
