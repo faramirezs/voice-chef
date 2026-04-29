@@ -7,7 +7,7 @@ from app.schemas.pagination import PaginatedResponse
 
 from app.core.database import get_session
 from app.models.ingredient import Ingredients
-from app.schemas.ingredient import IngredientWrite, IngredientSummaryResponse
+from app.schemas.ingredient import IngredientWrite, IngredientResponse
 from app.schemas.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/ingredients", tags=["Ingredients"])
@@ -37,12 +37,12 @@ def retrieve_ingredient(
     return ingredients
 
 
-@router.post("", response_model=IngredientSummaryResponse, status_code=201)
+@router.post("", response_model=IngredientResponse)
 def create_ingredient(
     ingredient: IngredientWrite, 
     session: Session = Depends(get_session)
 ):
-    
+
     new_ingredient = Ingredients(**ingredient.model_dump())
 
     session.add(new_ingredient)
@@ -53,7 +53,7 @@ def create_ingredient(
     return new_ingredient
 
 
-# @router.delete("/{ingredient_id}", response_model=IngredientSummaryResponse)
+# @router.delete("/{id}", response_model=IngredientResponse)
 # def delete_ingredient(ingredient_id: UUID, session: Session = Depends(get_session)):
 #     ingredient = session.get(Ingredient, ingredient_id)
 
@@ -66,3 +66,12 @@ def create_ingredient(
 #     session.commit()
 
 #     return ingredient
+
+
+# @router.patch("/{id}", response_model=IngredientResponse)
+# def update_ingredient(
+#     id: UUID,
+#     ingredient_update: IngredientUpdate,
+#     session: Session = Depends(get_session)
+# ):
+#     # implementation...

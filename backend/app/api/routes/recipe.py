@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from uuid import UUID
 from typing import Annotated
 
@@ -159,6 +159,7 @@ def update_recipe(
 
     for key, value in updates.items():
         setattr(recipe, key, value)
+    
     try:
         session.add(recipe)
         session.commit()
@@ -166,9 +167,19 @@ def update_recipe(
     except IntegrityError:
         session.rollback()
         raise HTTPException(status_code=409, detail="Recipe name already exists")
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while updating recipe"
+        )
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error"
+        )
+    
     return recipe
 
 

@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
+import os
 
 # import files
 from app.core.database import get_session
@@ -24,8 +25,7 @@ from app.api.openapi_responses import signup_responses, login_responses
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-DEFAULT_TENANT_ID = UUID("0b796544-6414-4d62-8f1f-cd2f9f0ac0a0")
-# old tenant_id - f5504206-d0a6-48c0-8aa5-2ae8791be730
+DEFAULT_TENANT_ID = UUID(os.getenv("DEFAULT_TENANT_ID", "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0"))
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
@@ -59,24 +59,33 @@ def signup(user_data: UserSignupLogin, session: Session = Depends(get_session)):
     new_user = Users(
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
-        tenant_id=target_id
+        tenant_id=DEFAULT_TENANT_ID
     )
-
+    
     # 4. Check if this tenant actually exists in your DB
     tenant_exists = session.get(Tenants, new_user.tenant_id)
     if not tenant_exists:
-        raise HTTPException(status_code=503, detail="Default tenant not configured in the database.")
-    
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+            detail="Default tenant not configured in the database.")
+
     try:
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
-    except IntegrityError:
+    except SQLAlchemyError as e:
         session.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="E-Mail already registered.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while creating user"
+        )
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+    
     return new_user
 
 

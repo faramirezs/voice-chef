@@ -38,9 +38,9 @@ class RecipeIngredientResponse(SQLModel):
     ingredient_name: str
     ingredient_default_unit: str
 
-    quantity: float
+    quantity: str
     unit: str
-    quantity_grams: float
+    quantity_grams: str
 
     preparation: str | None = None
     sort_order: int
@@ -52,20 +52,20 @@ class RecipeSummaryResponse(SQLModel):
     description: str | None
     status: str
     yield_mode: str
-    portions_count_resolved: float | None
-    portion_size_grams: float | None
+    portion_size_grams: str | None
+    total_raw_weight_grams: str | None
+    total_cooked_weight_grams: str | None
+    portions_count_resolved: str | None
+    photo_url: str | None
     created_at: datetime | None
     updated_at: datetime | None
     photo_url: str | None
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):
-    instructions: str | None
     preparation_time_minutes: int | None
     cooking_time_minutes: int | None
-    total_raw_weight_grams: float | None
-    total_cooked_weight_grams: float | None
-    is_component: bool | None
+    is_component: bool
     ingredients: List[RecipeIngredientResponse]
 
 
