@@ -53,7 +53,7 @@ def create_ingredient(
     return new_ingredient
 
 
-# @router.delete("/{ingredient_id}", response_model=IngredientResponse)
+# @router.delete("/{id}", response_model=IngredientResponse)
 # def delete_ingredient(ingredient_id: UUID, session: Session = Depends(get_session)):
 #     ingredient = session.get(Ingredient, ingredient_id)
 

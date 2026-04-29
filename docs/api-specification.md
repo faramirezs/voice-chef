@@ -505,7 +505,9 @@ Errors:
   - active + weight mode without valid `portion_size_grams`
   - negative totals where not allowed
 - `404` referenced ingredient not found
-- `409` duplicate ingredient line key (`recipe_id`, `ingredient_id`, `sort_order`)
+- `409`:
+  - Recipe name already exists
+  - duplicate ingredient line key (`recipe_id`, `ingredient_id`, `sort_order`)
 
 ### 5) GET `/recipes/{id}`
 
