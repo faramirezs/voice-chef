@@ -29,7 +29,7 @@ class RecipeWrite(SQLModel):
     total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
     total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
 
-    ingredients: List[RecipeIngredientWrite] = []
+    # ingredients: List[RecipeIngredientWrite] = []
 
 
 class RecipeIngredientResponse(SQLModel):
@@ -59,7 +59,6 @@ class RecipeSummaryResponse(SQLModel):
     photo_url: str | None
     created_at: datetime | None
     updated_at: datetime | None
-    photo_url: str | None
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):

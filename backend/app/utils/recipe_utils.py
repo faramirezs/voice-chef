@@ -6,7 +6,6 @@ from app.models.recipe import Recipe
 
 def to_recipe_ingredient_response(link):
 
-
     ingredient = link.ingredient
     if not ingredient:
         return None
@@ -30,21 +29,28 @@ def to_recipe_ingredient_response(link):
     }
 
 
-def to_recipe_detail(recipe):
+def to_recipe_summary(recipe):
+    """Convert Recipe ORM to RecipeSummaryResponse dict with Decimal to string conversion."""
     return {
         "id": recipe.id,
         "name": recipe.name,
         "description": recipe.description,
-        "instructions": recipe.instructions,
         "status": recipe.status,
         "yield_mode": recipe.yield_mode,
-        "portions_count_resolved": str(recipe.portions_count_resolved) if recipe.portions_count_resolved else None,
         "portion_size_grams": str(recipe.portion_size_grams) if recipe.portion_size_grams else None,
         "total_raw_weight_grams": str(recipe.total_raw_weight_grams) if recipe.total_raw_weight_grams else None,
         "total_cooked_weight_grams": str(recipe.total_cooked_weight_grams) if recipe.total_cooked_weight_grams else None,
+        "portions_count_resolved": str(recipe.portions_count_resolved) if recipe.portions_count_resolved else None,
+        "photo_url": recipe.photo_url,
         "created_at": recipe.created_at,
         "updated_at": recipe.updated_at,
-        "photo_url": recipe.photo_url,
+    }
+
+
+def to_recipe_detail(recipe):
+    """Convert Recipe ORM to RecipeDetailResponse dict with Decimal→string conversion and ingredients."""
+    summary = to_recipe_summary(recipe)
+    summary.update({
         "preparation_time_minutes": recipe.preparation_time_minutes,
         "cooking_time_minutes": recipe.cooking_time_minutes,
         "is_component": recipe.is_component,
@@ -57,7 +63,8 @@ def to_recipe_detail(recipe):
                 )
             ) if r is not None
         ],
-    }
+    })
+    return summary
 
 
 def ensure_unique_recipe_name(

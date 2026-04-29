@@ -7,9 +7,13 @@ from uuid import UUID
 from typing import Annotated
 
 from app.core.database import get_session, engine
-from app.core.pagination import pagination_params, PaginationParams, paginate
+from app.core.pagination import (
+    pagination_params, PaginationParams, paginate
+)
 from app.core.deps import get_current_user
-from app.utils.recipe_utils import to_recipe_detail, ensure_unique_recipe_name
+from app.utils.recipe_utils import (
+    to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name
+)
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
@@ -75,8 +79,12 @@ def retrieve_recipes(
     )
     query = query.order_by(*selected_sort)
 
-    recipes = paginate(query, session, pagination)
-    return recipes
+    paginated = paginate(query, session, pagination)
+    
+    # Convert recipes using helper function
+    paginated["items"] = [to_recipe_summary(r) for r in paginated["items"]]
+    
+    return paginated
 
 
 @router.get("/{id}", response_model=RecipeDetailResponse)
