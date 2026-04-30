@@ -21,21 +21,21 @@ import {
 import { useNavigate } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { UnfoldMoreIcon, CheckmarkBadgeIcon, NotificationIcon, LogoutIcon } from "@hugeicons/core-free-icons"
+import { useAuth } from "@/hooks/useAuth"
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
-}) {
+export function NavUser() {
   const { isMobile } = useSidebar()
   const navigate = useNavigate()
+  const { user } = useAuth()  // Get user from hook
+
+  if (!user) {
+    return null
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    localStorage.removeItem("token_expiry")
     navigate("/login", { replace: true })
   }
 
