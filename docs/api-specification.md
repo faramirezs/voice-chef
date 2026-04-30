@@ -399,6 +399,7 @@ MVP intents:
 | PATCH | `/recipes/{id}` | Bearer | Path: `id` UUID, Body: `RecipeUpdate` (partial merge) | `RecipeDetailResponse` | `200` | `400, 401, 404, 409, 422, 500` |
 | DELETE | `/recipes/{id}` | Bearer | Path: `id` UUID | none | `204` | `401, 404, 422, 500` |
 | GET | `/ingredients` | Bearer | Query: `limit`, `offset`, `ingredient_type`, `search`, `is_custom` | `{ items: IngredientResponse[], meta }` | `200` | `401, 422, 500` |
+| GET | `/ingredients/autocomplete` | Public | Query: `query`, `limit` | `[{ id, name }]` | `200` | `400, 422, 500` |
 | POST | `/ingredients` | Bearer | `IngredientWrite` | `IngredientResponse` | `201` | `400, 401, 409, 422, 500` |
 | GET | `/ingredients/{id}` | Bearer | Path: `id` UUID | `IngredientResponse` | `200` | `401, 404, 422, 500` |
 | PATCH | `/ingredients/{id}` | Bearer | Path: `id` UUID, Body: `IngredientUpdate` (partial merge) | `IngredientResponse` | `200` | `400, 401, 404, 409, 422, 500` |
@@ -562,6 +563,46 @@ Query Params:
 Success:
 - `200 OK`
 - Body: `{ items: IngredientResponse[], meta }`
+
+### 8b) GET `/ingredients/autocomplete`
+
+Purpose:
+- Fast typeahead/autocomplete suggestions for ingredient name search
+- Optimized for real-time UI input fields
+- Returns ingredients that **start with** the query term (word boundary matching)
+- No authentication required
+
+Query Params:
+- `query` optional string (min 1 char to return results, max 50)
+- `limit` optional int (default `10`, min `1`, max `10`)
+
+Success:
+- `200 OK`
+- Body: Array of suggestion objects
+
+```json
+[
+  {
+    "id": "1a6f300b-df96-49b7-a72d-f3004ce6dbf3",
+    "name": "Eier"
+  },
+  {
+    "id": "1a6f300b-df96-49b7-a72d-f3004ce6dbf4",
+    "name": "Eier Größe S"
+  }
+]
+```
+
+Behavior:
+- If `query` is empty or less than 1 character, returns `[]`
+- If `query` has results, returns up to `limit` items (capped at 10)
+- Results ordered alphabetically by ingredient name
+- Matches only ingredients where name **starts with** the query (case-insensitive)
+- Example: query `"eier"` matches `"Eier"`, `"Eier Größe S"`, but NOT `"Frischkäse mit Eiern"` (does not start with "eier")
+
+Errors:
+- `400` query longer than 50 characters
+- `422` invalid query parameters (non-integer limit)
 
 ### 9) POST `/ingredients`
 

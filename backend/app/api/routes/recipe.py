@@ -12,7 +12,8 @@ from app.core.pagination import (
 )
 from app.core.deps import get_current_user
 from app.utils.recipe_utils import (
-    to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name
+    to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name,
+    validate_recipe_business_rules
 )
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
@@ -111,6 +112,8 @@ def retrieve_recipe(
     return to_recipe_detail(recipe)
 
 
+# This function creates the many-to-many relationship between a recipe 
+# and its ingredients
 @router.post("", response_model=RecipeDetailResponse, status_code=201)
 def create_recipe(
     recipe: RecipeWrite,
@@ -118,25 +121,77 @@ def create_recipe(
     session: Session = Depends(get_session),
 ):
     tenant_id = current_user.tenant_id
-
     ensure_unique_recipe_name(session, recipe.name, tenant_id)
+    
+    # Validate business rules (Error 400 from api-spec)
+    validate_recipe_business_rules(recipe)
+    
     payload = recipe.model_dump(exclude={"ingredients"})
     payload["tenant_id"] = tenant_id
     new_recipe = Recipe(**payload)
+    ingredients_data = recipe.ingredients or []
 
-    # NOTE: mpeshko - try-catch block guarantees integrity in the presence 
-    # of concurrent queries (race conditions).
     try:
+        # Create and save recipe first
         session.add(new_recipe)
         session.flush()
+        
+        # Create ingredient links for each ingredient
+        # Loop through each ingredient
+        for ing_data in ingredients_data:
+            ingredient = session.get(Ingredient, ing_data.ingredient_id)
+            if not ingredient:
+                session.rollback()
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Ingredient {ing_data.ingredient_id} not found"
+                )
+            
+            # Create recipe_ingredient link
+            recipe_ingredient = RecipeIngredient(
+                recipe_id=new_recipe.id,
+                ingredient_id=ing_data.ingredient_id,
+                quantity=ing_data.quantity,
+                unit=ing_data.unit,
+                preparation=ing_data.preparation,
+                sort_order=ing_data.sort_order
+            )
+            session.add(recipe_ingredient)
+        
         session.commit()
         session.refresh(new_recipe)
-    except IntegrityError:
+        
+        # Eagerly load ingredients for response
+        statement = (
+            select(Recipe)
+            .where(Recipe.id == new_recipe.id)
+            .options(
+                selectinload(Recipe.recipe_ingredients)
+                .selectinload(RecipeIngredient.ingredient)
+            )
+        )
+        new_recipe = session.exec(statement).first()
+        
+    except IntegrityError as e:
         session.rollback()
-        raise HTTPException(status_code=409, detail="Recipe name already exists")
+        raise HTTPException(
+            status_code=409, 
+            detail="Recipe name already exists or constraint violation"
+        )
+    except HTTPException:
+        raise  # Re-raise HTTPException (ingredient not found, 404)
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while creating recipe"
+        )
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error"
+        )
 
     return to_recipe_detail(new_recipe)
 
@@ -167,6 +222,9 @@ def update_recipe(
 
     for key, value in updates.items():
         setattr(recipe, key, value)
+    
+    # Validate business rules after applying updates
+    # validate_recipe_business_rules(recipe)
     
     try:
         session.add(recipe)
