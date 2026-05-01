@@ -1,9 +1,11 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 
@@ -61,3 +63,70 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# --- Search ----------------------------------------------------------------
+# Tenant filtering note: a `tenant_id` parameter is accepted for forward
+# compatibility but is currently a no-op. Two upstream blockers (tracked in
+# docs/voiceNextSteps.md "Known issues"):
+#   1. Backend API does not yet expose tenant_id on /api/recipes responses,
+#      so the indexer can't tag vectors with tenant in their payloads.
+#   2. JWT-based auth on these endpoints requires the agent-auth fix on main.
+# Once both land: parse JWT → extract tenant_id → pass through Qdrant filter.
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(..., description="Natural-language search query")
+    k: int = Field(5, ge=1, le=50, description="Number of results to return")
+    tenant_id: str | None = Field(
+        None,
+        description="Reserved for future tenant filtering (no-op today).",
+    )
+
+
+class SearchHit(BaseModel):
+    id: str
+    score: float
+    payload: dict[str, Any]
+
+
+class SearchResponse(BaseModel):
+    query: str
+    items: list[SearchHit]
+
+
+async def _search(
+    request: Request, collection: str, req: SearchRequest
+) -> SearchResponse:
+    text = req.query.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="query must not be empty")
+
+    embedder: Embedder = request.app.state.embedder
+    qdrant: AsyncQdrantClient = request.app.state.qdrant
+
+    vector = await asyncio.to_thread(embedder.embed, text)
+    result = await qdrant.query_points(
+        collection_name=collection,
+        query=vector,
+        limit=req.k,
+    )
+    items = [
+        SearchHit(
+            id=str(p.id),
+            score=float(p.score) if p.score is not None else 0.0,
+            payload=dict(p.payload or {}),
+        )
+        for p in result.points
+    ]
+    return SearchResponse(query=text, items=items)
+
+
+@app.post("/search/recipes", response_model=SearchResponse)
+async def search_recipes(req: SearchRequest, request: Request) -> SearchResponse:
+    return await _search(request, "recipes", req)
+
+
+@app.post("/search/ingredients", response_model=SearchResponse)
+async def search_ingredients(req: SearchRequest, request: Request) -> SearchResponse:
+    return await _search(request, "ingredients", req)
