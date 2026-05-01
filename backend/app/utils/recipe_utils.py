@@ -4,6 +4,38 @@ from fastapi import HTTPException, status
 from app.models.recipe import Recipe
 
 
+def validate_recipe_business_rules(recipe) -> None:
+    """
+    Validate recipe business rules before creation/update.
+    
+    Raises HTTPException(400) if any rule is violated.
+    """
+    # Rule 1: active + weight mode requires portion_size_grams > 0
+    if recipe.status == "active" and recipe.yield_mode == "weight":
+        if not recipe.portion_size_grams or recipe.portion_size_grams <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="portion_size_grams is required and must be > 0 for active weight-mode recipes"
+            )
+    
+    # Rule 2: Negative totals not allowed
+    if recipe.total_raw_weight_grams and recipe.total_raw_weight_grams < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="total_raw_weight_grams must not be negative"
+        )
+    if recipe.total_cooked_weight_grams and recipe.total_cooked_weight_grams < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="total_cooked_weight_grams must not be negative"
+        )
+    if recipe.portions_count_resolved and recipe.portions_count_resolved <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="portions_count_resolved must be greater than 0"
+        )
+
+
 def to_recipe_ingredient_response(link):
 
     ingredient = link.ingredient
