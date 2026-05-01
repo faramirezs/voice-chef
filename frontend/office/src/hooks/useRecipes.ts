@@ -65,6 +65,11 @@ export function useRecipe(id: string) {
       return data;
     },
     enabled: !!id,
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 401; the interceptor is handling it
+      if (error.response?.status === 401) return false;
+      return failureCount < 3; // Otherwise, retry 3 times
+    }
   });
 }
 
