@@ -3,10 +3,10 @@ import httpx
 import logging
 from typing import Any
 from pydantic import BaseModel
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, ToolReturn
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.ui import StateDeps
-from ag_ui.core import EventType, StateSnapshotEvent, StateDeltaEvent
+from ag_ui.core import CustomEvent, EventType, StateSnapshotEvent, StateDeltaEvent
 from .state import KitchenState
 
 logger = logging.getLogger("voice-chef.agent")
@@ -216,7 +216,7 @@ async def get_recipes_list(
 
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if query:
-        params["query"] = query
+        params["search"] = query
 
     try:
         resp = await _http_client.get(
@@ -387,19 +387,24 @@ async def show_notification(
     message: str,
     level: str = "info",
     duration: int = 5000,
-) -> dict[str, Any]:
+) -> ToolReturn:
     """Show a transient toast notification.
 
     Levels: "info", "success", "warning", "error".
     Duration is in milliseconds (default 5000).
     """
-    return await render_component(
-        ctx,
-        component="notification",
-        slot="notifications",
-        message=message,
-        level=level,
-        duration=duration,
+    value = {
+        "type": "ui.render",
+        "version": "1",
+        "component": "notification",
+        "slot": "notifications",
+        "message": message,
+        "level": level,
+        "duration": duration,
+    }
+    return ToolReturn(
+        return_value={"status": "ok"},
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.render", value=value)],
     )
 
 
@@ -407,7 +412,7 @@ async def show_notification(
 async def show_chip(
     ctx: RunContext[StateDeps[KitchenState]],
     actions: list[dict[str, str]],
-) -> dict[str, Any]:
+) -> ToolReturn:
     """Show action confirmation buttons in the chips bar.
 
     Each action has: label (button text), message (sent to agent on click).
@@ -415,24 +420,36 @@ async def show_chip(
 
     Example: [{"label": "Apply", "message": "confirm apply scaling", "variant": "default"}]
     """
-    return await render_component(
-        ctx,
-        component="confirmation_chips",
-        slot="chips",
-        actions=actions,
+    value = {
+        "type": "ui.render",
+        "version": "1",
+        "component": "confirmation_chips",
+        "slot": "chips",
+        "actions": actions,
+    }
+    return ToolReturn(
+        return_value={"status": "ok"},
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.render", value=value)],
     )
 
 
 @agent.tool
-async def clear_slot(ctx: RunContext[StateDeps[KitchenState]], slot: str) -> dict[str, Any]:
+async def clear_slot(ctx: RunContext[StateDeps[KitchenState]], slot: str) -> ToolReturn:
     """Clear a UI slot, removing its rendered component.
 
     Use this to dismiss chips, notifications, or canvas content.
     Slots: "canvas", "sticky", "chips", "notifications", "overlay".
     """
     if slot not in VALID_SLOTS:
-        return {"type": "error", "version": "1", "message": f"Unknown slot: {slot}"}
-    return {"type": "ui.clear", "version": "1", "slot": slot}
+        return ToolReturn(
+            return_value={"status": "error", "message": f"Unknown slot: {slot}"},
+            metadata=[],
+        )
+    value = {"type": "ui.clear", "version": "1", "slot": slot}
+    return ToolReturn(
+        return_value={"status": "ok"},
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.clear", value=value)],
+    )
 
 
 class _PatchOp(BaseModel):

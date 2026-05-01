@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KCard } from "@/components/ui/KCard";
 import { KInput } from "@/components/ui/KInput";
 import { VoiceInput } from "@/components/chat/VoiceInput";
-import { getSendMessage, useEnvelope, useIsStreaming } from "@/hooks/useAgent";
+import { getSendMessage, useEnvelope, useIsStreaming, setSharedAgentState } from "@/hooks/useAgent";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
 import { cn } from "@/lib/utils";
 import { chefAgent } from "@/lib/agent";
+import { useRecipeScaling } from "@/hooks/useRecipeScaling";
 import { type KitchenState } from "@/types/agent-state";
 
 interface CommandPaletteProps {
@@ -21,10 +22,11 @@ interface CommandItem {
 }
 
 export function CommandPalette({ onClose }: CommandPaletteProps) {
-  const { dispatch } = useAgentSlots();
+  const { dispatch, clear } = useAgentSlots();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; name: string }>>([]);
   const [confidenceWarning, setConfidenceWarning] = useState("");
+  const { activateScaling } = useRecipeScaling();
   const submitVoice = useVoiceSubmit();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const isStreaming = useIsStreaming();
@@ -52,8 +54,15 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       {
         id: "/scale",
         label: "/scale — Scale current recipe",
-        action: () => {
-          getSendMessage()("scale current recipe");
+        action: async () => {
+          const result = await activateScaling();
+          if (!result.success) {
+            dispatch("notifications", "notification", {
+              message: result.error ?? "Cannot scale recipe",
+              level: "warning",
+              duration: 4000,
+            });
+          }
           onClose();
         },
       },
@@ -61,14 +70,20 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         id: "/clear",
         label: "/clear — Clear canvas",
         action: () => {
-          getSendMessage()("clear canvas");
+          clear("canvas");
+          setSharedAgentState(null);
+          chefAgent.setState({
+            view: "empty",
+            selected_recipe: null,
+            scaling: null,
+            last_action: { type: "clear", timestamp: Date.now() },
+          });
           onClose();
         },
       },
     ],
-    [dispatch, onClose]
+    [dispatch, clear, onClose, activateScaling]
   );
-
   const filteredCommands = useMemo(() => {
     if (!isCommandMode) return [];
     const term = query.slice(1).toLowerCase();
