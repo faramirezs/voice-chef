@@ -48,6 +48,8 @@ export interface Recipe {
   production_date: string | null;
   use_by_date: string | null;
   expiry_date: string | null;
+
+  ingredients?: Ingredient[];
 }
 
 export interface PaginatedResponse<T> {
