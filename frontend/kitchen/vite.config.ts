@@ -13,6 +13,11 @@ export default defineConfig({
         target: 'http://backend:80',
         changeOrigin: true,
       },
+      '/agent': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/agent/, ''),
+      },
     },
   },
   resolve: {

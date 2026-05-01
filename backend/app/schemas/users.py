@@ -32,6 +32,11 @@ class AuthTokenResponse(SQLModel):
     expires_in: int # Or timedelta, Pydantic will handle it
     user: UserLoginResponse
 
+class UserMeResponse(SQLModel):
+    id: UUID
+    email: str
+    role: str
+
 
 # ─── Pydantic models for tenants ─────────────────────────────────────────────────
 

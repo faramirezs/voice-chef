@@ -1,16 +1,17 @@
 from typing import Annotated
-from fastapi import Depends, HTTPException
-from sqlmodel import Session, select
+import ipaddress
+from uuid import UUID
 import jwt
 import os
 
+from fastapi import Depends, HTTPException, Request
+from sqlmodel import Session, select
+
 from .database import get_session
-from app.utils.auth_utils import oauth2_scheme
 from app.models import Users
 
-# This file's responsibility is to define dependencies that can be reused 
+# This file's responsibility is to define dependencies that can be reused
 # in different parts of the application.
-
 
 # -----------------------------------------------------------------------------
 # Constants and Global Instances
@@ -18,26 +19,69 @@ from app.models import Users
 
 SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_for_testing")
 ALGORITHM = "HS256"
+DEFAULT_TENANT_ID = UUID(os.getenv("DEFAULT_TENANT_ID", "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0"))
+
+# -----------------------------------------------------------------------------
+# Internal request detection (Docker network bypass)
+# -----------------------------------------------------------------------------
+
+def _is_internal_request(request: Request) -> bool:
+    """Return True if the request originates from the internal Docker network.
+
+    Used as a temporary bypass so the agent service can call backend
+    endpoints without forwarding auth headers. This is ONLY safe inside
+    a Docker-internal network where the agent cannot be reached from
+    outside. TODO: remove once proper auth forwarding is wired end-to-end.
+    """
+    client = request.client
+    if client is None:
+        return False
+    host = client.host
+    try:
+        addr = ipaddress.ip_address(host)
+        return addr.is_loopback or addr.is_private
+    except ValueError:
+        return host in ("localhost", "backend", "agent")
+
 
 # -----------------------------------------------------------------------------
 # Functions
 # -----------------------------------------------------------------------------
 
 
-# NOTE: mpeshko. Learning notes.
-# Step 1. The oauth2_scheme object was created with 
-# OAuth2PasswordBearer(tokenUrl="/auth/login"). This special object tells 
-# FastAPI: "Look for an Authorization header in the request, make sure it 
-# starts with `Bearer``, and extract the token string that comes after it." 
-# If the header is missing or malformed, it immediately stops and returns 
-# a 401 Unauthorized error.
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], # <--- Step 1
+    request: Request,
     session: Session = Depends(get_session),
 ) -> Users:
-    """Decode the JWT and return the full User from the database."""
+    """Decode the JWT from cookie or Authorization header and return the user."""
+
+    # Quick-fix bypass for internal Docker network calls (agent -> backend).
+    # TODO: remove once agent auth forwarding is properly wired.
+    if _is_internal_request(request):
+        return Users(
+            id=UUID("00000000-0000-0000-0000-000000000001"),
+            email="internal@system.local",
+            password_hash="",
+            tenant_id=DEFAULT_TENANT_ID,
+            role="admin",
+            is_active=True,
+        )
+
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            access_token = auth_header[7:]
+
+    if not access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")

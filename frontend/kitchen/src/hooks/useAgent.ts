@@ -7,6 +7,7 @@ import {
   EventType,
   type StateSnapshotEvent,
   type StateDeltaEvent,
+  type CustomEvent,
 } from "@ag-ui/client";
 import { chefAgent } from "@/lib/agent";
 import { DEFAULT_KITCHEN_STATE, type KitchenState } from "@/types/agent-state";
@@ -41,6 +42,11 @@ function _patchSharedAgentState(updater: (prev: unknown) => unknown) {
 function _clearSharedAgentState() {
   _agentState = null;
   _notifyAgentStateListeners();
+}
+
+/** Write the shared agent state from any component (e.g. native UI actions). */
+export function setSharedAgentState(state: unknown): void {
+  _setSharedAgentState(state);
 }
 
 function _subscribeAgentState(listener: () => void) {
@@ -125,13 +131,17 @@ export function getReset(): () => void {
   return _reset;
 }
 
-function emitEnvelope(raw: string): void {
+function emitEnvelope(raw: string | Record<string, unknown>): void {
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    console.warn("[emitEnvelope] JSON parse failed for:", raw.slice(0, 200));
-    return;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      console.warn("[emitEnvelope] JSON parse failed for:", raw.slice(0, 200));
+      return;
+    }
+  } else {
+    parsed = raw;
   }
   if (
     typeof parsed !== "object" ||
@@ -352,6 +362,14 @@ export function useAgent() {
           });
           return { stopPropagation: true };
         },
+        onCustomEvent({ event }: { event: CustomEvent }) {
+          if (debugStream) {
+            console.log("[agent-debug] CUSTOM", { name: event.name, value: event.value });
+          }
+          if (event.name === "ui.render" || event.name === "ui.clear") {
+            emitEnvelope(event.value as Record<string, unknown>);
+          }
+        },
         onEvent({ event }) {
           if (debugStream) {
             console.log("[agent-debug] event", {
@@ -419,8 +437,8 @@ export function useAgent() {
           }
           if (event.type === EventType.TOOL_CALL_RESULT) {
             const e = event as { toolCallId?: string; content?: string };
+            const toolCallId = e.toolCallId ?? "";
             setToolActivity((prev) => {
-              const toolCallId = e.toolCallId ?? "";
               return prev.map((item) =>
                 item.toolCallId === toolCallId
                   ? { ...item, status: "done", result: e.content ?? "" }
@@ -428,7 +446,6 @@ export function useAgent() {
               );
             });
             _setToolActivity((prev) => {
-              const toolCallId = e.toolCallId ?? "";
               return prev.map((item) =>
                 item.toolCallId === toolCallId
                   ? { ...item, status: "done", result: e.content ?? "" }
