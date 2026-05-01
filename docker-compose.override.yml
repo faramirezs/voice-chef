@@ -39,7 +39,8 @@ services:
   backend:
     ports:
       - "8000:80"
-    # volumes:
+    volumes:
+      - ./backend/app:/code/app
       # - ./backend/uploads:/code/uploads
 
   stt:

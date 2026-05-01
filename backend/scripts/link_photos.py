@@ -29,11 +29,15 @@ def link_images_to_db():
 
     with engine.begin() as conn:
         recipes = conn.execute(text("""
-            SELECT id, LOWER(name) AS name
+            SELECT id, LOWER(name) AS name,
+            photo_url
             FROM recipes
         """)).fetchall()
 
-        for recipe_id, name in recipes:
+        for recipe_id, name, photo_url in recipes:
+
+            if photo_url:
+                continue
 
             slug = slugify(name)
             filename_guess = f"{slug}.jpg"
@@ -42,12 +46,13 @@ def link_images_to_db():
             
             if not os.path.exists(src_path):
                 continue
-            
+
             file_uuid = str(uuid.uuid4())
             filename = f"{file_uuid}.jpg"
 
             dst_path = os.path.join(UPLOAD_DIR, filename)
-
+            
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
             shutil.copyfile(src_path, dst_path)
 
             photo_url = f"{UPLOAD_URL_PREFIX}/{filename}"

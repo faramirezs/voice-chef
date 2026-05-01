@@ -15,7 +15,7 @@ import unicodedata
 API_URL = "https://api.pexels.com/v1/search"
 API_KEY = ""
 
-DATABASE_URL = "postgresql://recipe_user:recipe_pass123@localhost:5432/recipe_db"
+DATABASE_URL = ""
 SAVE_DIR = "../../assets/recipe_seed_images"
 
 HEADERS = {

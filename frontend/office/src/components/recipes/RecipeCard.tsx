@@ -48,29 +48,6 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     STATUS_STYLES[recipe.status] ?? 'bg-gray-100 text-gray-600',
   );
 
-  // return (
-  //   <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-[1.02] hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
-  //     <ImagePlaceholder />
-  //     <CardHeader className="pb-2 h-full">
-  //       <div className="flex h-full items-start justify-between gap-2">
-  //         <CardTitle className="flex-1 text-base leading-snug break-words" title={recipe.name}>
-  //           {displayTitle}
-  //         </CardTitle>
-  //         <span className={badgeClass}>{recipe.status}</span>
-  //       </div>
-  //     </CardHeader>
-  //     {/* <CardContent className="text-sm text-muted-foreground space-y-1">
-  //       {yieldLabel && (
-  //         <p>
-  //           <span className="font-medium text-foreground">Yield:</span> {yieldLabel}
-  //         </p>
-  //       )}
-  //       {recipe.recipe_number && (
-  //         <p className="text-xs font-mono">#{recipe.recipe_number}</p>
-  //       )}
-  //     </CardContent> */}
-  //   </Card>
-  // );
   return (
     <div
       onClick={() => navigate(`/recipes/${recipe.id}`)}
