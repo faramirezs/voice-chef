@@ -55,7 +55,8 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID}
     volumes:
-      - ./backend/uploads:/code/uploads
+      # - ./backend/uploads:/code/uploads
+      - uploads:/code/uploads
 
   agent:
     build:
@@ -93,6 +94,7 @@ services:
 volumes:
   whisper_models:
   postgres_data:
+  uploads:
 
 networks:
   app-network:

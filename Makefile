@@ -14,6 +14,10 @@ $(ENV):
 	fi
 
 # Main targets/commands to build, run and and stop + clean the application
+build: $(ENV)
+	@echo "Building the images..."
+	$(COMPOSE) build --no-cache
+
 dev: $(ENV)
 	@echo "Building and starting in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
@@ -42,7 +46,7 @@ re: clean dev
 # Clean-up targets/commands
 clean:
 	@echo "Stopping the app and removing containers + images..."
-	$(COMPOSE) down --rmi all
+	$(COMPOSE) down --rmi local
 
 fclean:
 	@echo "Stopping the app and removing containers + images + volumes..."
@@ -57,6 +61,15 @@ status:
 	@printf '\n'
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
+		@( \
+			printf "IMAGE\tID\tSIZE\n"; \
+			docker images \
+				--filter "label=com.docker.compose.project=$(shell basename $(PWD))" \
+				--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+			docker images postgres \
+				--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+		) | column -t; \
+		printf '\n'
 
 logs:
 	$(COMPOSE) logs
@@ -98,9 +111,6 @@ define HELP_TEXT
 endef
 
 # Aux targets/commands
-build: $(ENV)
-	$(COMPOSE) build
-
 agent-build: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build agent
 

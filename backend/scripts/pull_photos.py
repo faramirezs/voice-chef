@@ -13,10 +13,10 @@ import unicodedata
 # Public picture service API key (replace with your own key)
 # An example is PEXELS API: https://api.pexels.com/v1/search
 API_URL = "https://api.pexels.com/v1/search"
-API_KEY = "5Vg6PS6HusunLHCPD8HT5NJmtu7MNjm4s5ijicQxy15Fte2y4z6QwJCd"
+API_KEY = ""
 
 DATABASE_URL = "postgresql://recipe_user:recipe_pass123@localhost:5432/recipe_db"
-SAVE_DIR = "../assets/recipe_seed_images"
+SAVE_DIR = "../../assets/recipe_seed_images"
 
 HEADERS = {
     "Authorization": API_KEY

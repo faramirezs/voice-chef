@@ -48,27 +48,59 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     STATUS_STYLES[recipe.status] ?? 'bg-gray-100 text-gray-600',
   );
 
+  // return (
+  //   <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-[1.02] hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
+  //     <ImagePlaceholder />
+  //     <CardHeader className="pb-2 h-full">
+  //       <div className="flex h-full items-start justify-between gap-2">
+  //         <CardTitle className="flex-1 text-base leading-snug break-words" title={recipe.name}>
+  //           {displayTitle}
+  //         </CardTitle>
+  //         <span className={badgeClass}>{recipe.status}</span>
+  //       </div>
+  //     </CardHeader>
+  //     {/* <CardContent className="text-sm text-muted-foreground space-y-1">
+  //       {yieldLabel && (
+  //         <p>
+  //           <span className="font-medium text-foreground">Yield:</span> {yieldLabel}
+  //         </p>
+  //       )}
+  //       {recipe.recipe_number && (
+  //         <p className="text-xs font-mono">#{recipe.recipe_number}</p>
+  //       )}
+  //     </CardContent> */}
+  //   </Card>
+  // );
   return (
-    <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-[1.02] hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
-      <ImagePlaceholder />
-      <CardHeader className="pb-2 h-full">
-        <div className="flex h-full items-start justify-between gap-2">
-          <CardTitle className="flex-1 text-base leading-snug break-words" title={recipe.name}>
-            {displayTitle}
-          </CardTitle>
-          <span className={badgeClass}>{recipe.status}</span>
+    <div
+      onClick={() => navigate(`/recipes/${recipe.id}`)}
+      className="rounded-lg border bg-card overflow-hidden cursor-pointer hover:shadow transition"
+    >
+      {/* IMAGE */}
+      {recipe.photo_url ? (
+        <img
+          src={recipe.photo_url}
+          alt={displayTitle}
+          className="w-full h-32 object-cover"
+        />
+      ) : (
+        <div className="w-full h-32 bg-muted flex items-center justify-center text-xs text-muted-foreground">
+          No Image
         </div>
-      </CardHeader>
-      {/* <CardContent className="text-sm text-muted-foreground space-y-1">
-        {yieldLabel && (
-          <p>
-            <span className="font-medium text-foreground">Yield:</span> {yieldLabel}
-          </p>
-        )}
-        {recipe.recipe_number && (
-          <p className="text-xs font-mono">#{recipe.recipe_number}</p>
-        )}
-      </CardContent> */}
-    </Card>
+      )}
+
+      {/* CONTENT */}
+      <div className="p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-medium text-sm leading-tight line-clamp-2">
+            {displayTitle}
+          </h3>
+
+          <span className={badgeClass}>
+            {recipe.status}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
