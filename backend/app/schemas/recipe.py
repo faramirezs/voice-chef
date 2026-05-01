@@ -29,8 +29,10 @@ class RecipeWrite(SQLModel):
     total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
     total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
 
-    # ingredients: List[RecipeIngredientWrite] = []
-
+    # `default_factory` - it's essential for avoiding mutable default errors, 
+    # such as sharing the same list across instances.
+    ingredients: List[RecipeIngredientWrite] = Field(default_factory=list)
+    #                                          ↑ HAS default: OPTIONAL
 
 class RecipeIngredientResponse(SQLModel):
     id: UUID
