@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { KInput } from "@/components/ui/KInput";
+import { redirectToOfficeLogin } from "@/lib/auth";
 import { KSelect } from "@/components/ui/KSelect";
 import { KButton } from "@/components/ui/KButton";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
@@ -91,8 +91,15 @@ export function RecipeListView(props: RecipeListViewProps) {
     if (status) params.set("status", status);
 
     fetch(`/api/recipes?${params}`, { signal: controller.signal })
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) {
+          redirectToOfficeLogin();
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
+        if (!data) return;
         setRecipes(data.items ?? []);
         setMeta(
           data.meta ?? { total: 0, limit: meta.limit, offset: meta.offset }
@@ -126,10 +133,17 @@ export function RecipeListView(props: RecipeListViewProps) {
       chefAgent.setState(ks);
 
       fetch(`/api/recipes/${recipe.id}`)
-        .then((r) => r.json())
-        .then((data) =>
-          dispatch("canvas", "recipe_detail", { recipe: data, from_list: true })
-        );
+        .then((r) => {
+          if (r.status === 401) {
+            redirectToOfficeLogin();
+            return null;
+          }
+          return r.json();
+        })
+        .then((data) => {
+          if (!data) return;
+          dispatch("canvas", "recipe_detail", { recipe: data, from_list: true });
+        });
     },
     [dispatch]
   );

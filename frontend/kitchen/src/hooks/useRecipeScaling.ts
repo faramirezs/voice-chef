@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { setSharedAgentState } from "@/hooks/useAgent";
+import { redirectToOfficeLogin } from "@/lib/auth";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
 import { chefAgent } from "@/lib/agent";
 import type { KitchenState } from "@/types/agent-state";
@@ -48,6 +48,10 @@ export function useRecipeScaling(): {
       let payload: RecipeDetailResponse;
       try {
         const resp = await fetch(`/api/recipes/${selectedRecipeId}`);
+        if (resp.status === 401) {
+          redirectToOfficeLogin();
+          return { success: false, error: "Unauthorized" };
+        }
         if (!resp.ok) {
           return {
             success: false,

@@ -100,6 +100,34 @@ Host: localhost:8000
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-(To be continued...)
+
+---
+
+## Shared Authentication (Office + Kitchen)
+
+Both frontends run on the same domain (different ports). Because `localStorage` is origin-scoped, the kitchen frontend cannot read the office frontend's JWT. Cookies are domain-scoped and naturally shared across ports.
+
+### Cookie Behavior
+
+- On login, the backend sets an `access_token` cookie (`httponly=True`, `samesite="lax"`, `secure=False` for local dev).
+- The cookie is sent automatically on every same-origin request to `/api/`.
+- The backend tries the cookie first, then falls back to the `Authorization: Bearer` header.
+- Both auth methods remain fully supported.
+
+### Kitchen Frontend
+
+- No login UI. Users must log in via the office frontend first.
+- On mount, the kitchen app calls `GET /api/auth/me`. If it receives 401, it redirects to the office login page.
+- All `fetch` calls to `/api/` are same-origin once the nginx `/api/` proxy is configured, so the browser auto-sends the cookie.
+
+### Logout
+
+- `POST /api/auth/logout` clears the `access_token` cookie.
+- After logout, the kitchen frontend will receive 401 and redirect to the office login page.
+
+### Security Notes
+
+- `secure=False` is only acceptable for local development. Production must use HTTPS and `secure=True`.
+- The agent service (`:8001`) remains unauthenticated and is out of scope for this change.
 
 ---
