@@ -99,9 +99,9 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
 
-  embedding-service:
+  rag:
     build:
-      context: ./embedding-service
+      context: ./rag
       dockerfile: Dockerfile
     depends_on:
       - backend

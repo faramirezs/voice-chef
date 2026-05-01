@@ -7,12 +7,21 @@ from typing import Any, AsyncIterator
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client.http.models import (
+    Distance,
+    Fusion,
+    FusionQuery,
+    Modifier,
+    Prefetch,
+    SparseVectorParams,
+    VectorParams,
+)
 
 from .embedder import Embedder
+from .sparse_embedder import SparseEmbedder
 from .sync import backfill_if_empty
 
-logger = logging.getLogger("voice-chef.embedding-service")
+logger = logging.getLogger("voice-chef.rag")
 logging.basicConfig(level=logging.INFO)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:80")
@@ -23,33 +32,61 @@ POLL_SECONDS = int(os.getenv("EMBEDDING_POLL_SECONDS", "30"))
 COLLECTIONS = ("recipes", "ingredients")
 
 
+async def _has_hybrid_schema(client: AsyncQdrantClient, name: str) -> bool:
+    """A collection is hybrid-ready if it has named 'dense' + 'sparse' vectors."""
+    info = await client.get_collection(collection_name=name)
+    vectors = info.config.params.vectors
+    sparse = info.config.params.sparse_vectors or {}
+    has_dense = isinstance(vectors, dict) and "dense" in vectors
+    has_sparse = isinstance(sparse, dict) and "sparse" in sparse
+    return has_dense and has_sparse
+
+
 async def ensure_collections(client: AsyncQdrantClient, dim: int) -> None:
     existing = {c.name for c in (await client.get_collections()).collections}
     for name in COLLECTIONS:
         if name in existing:
-            logger.info("collection already present: %s", name)
-            continue
+            if await _has_hybrid_schema(client, name):
+                logger.info("collection '%s' has hybrid schema; keeping", name)
+                continue
+            logger.warning(
+                "collection '%s' has legacy schema; dropping for re-creation "
+                "(backfill will re-embed)",
+                name,
+            )
+            await client.delete_collection(collection_name=name)
         await client.create_collection(
             collection_name=name,
-            vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+            vectors_config={
+                "dense": VectorParams(size=dim, distance=Distance.COSINE),
+            },
+            sparse_vectors_config={
+                "sparse": SparseVectorParams(modifier=Modifier.IDF),
+            },
         )
-        logger.info("created qdrant collection: %s (cosine, %s-dim)", name, dim)
+        logger.info(
+            "created qdrant collection: %s (dense %s-dim cosine + sparse BM25 IDF)",
+            name,
+            dim,
+        )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    logger.info("embedding-service starting")
+    logger.info("rag service starting")
     logger.info("BACKEND_URL=%s", BACKEND_URL)
     logger.info("QDRANT_URL=%s", QDRANT_URL)
     logger.info("EMBEDDING_MODEL=%s", EMBEDDING_MODEL)
     logger.info("POLL_SECONDS=%s", POLL_SECONDS)
 
     embedder = Embedder(EMBEDDING_MODEL)
+    sparse_embedder = SparseEmbedder()
     qdrant = AsyncQdrantClient(url=QDRANT_URL)
     await ensure_collections(qdrant, embedder.dim)
-    await backfill_if_empty(qdrant, embedder, BACKEND_URL)
+    await backfill_if_empty(qdrant, embedder, sparse_embedder, BACKEND_URL)
 
     app.state.embedder = embedder
+    app.state.sparse_embedder = sparse_embedder
     app.state.qdrant = qdrant
 
     yield
@@ -103,12 +140,21 @@ async def _search(
         raise HTTPException(status_code=400, detail="query must not be empty")
 
     embedder: Embedder = request.app.state.embedder
+    sparse_embedder: SparseEmbedder = request.app.state.sparse_embedder
     qdrant: AsyncQdrantClient = request.app.state.qdrant
 
-    vector = await asyncio.to_thread(embedder.embed, text)
+    dense_vec = await asyncio.to_thread(embedder.embed, text)
+    sparse_vec = await asyncio.to_thread(sparse_embedder.embed, text)
+
+    # Hybrid retrieval: dense (semantic) + sparse BM25 (keyword), fused via RRF.
+    prefetch_limit = max(req.k * 5, 25)
     result = await qdrant.query_points(
         collection_name=collection,
-        query=vector,
+        prefetch=[
+            Prefetch(query=dense_vec, using="dense", limit=prefetch_limit),
+            Prefetch(query=sparse_vec, using="sparse", limit=prefetch_limit),
+        ],
+        query=FusionQuery(fusion=Fusion.RRF),
         limit=req.k,
     )
     items = [

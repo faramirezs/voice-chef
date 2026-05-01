@@ -13,8 +13,9 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.models import PointStruct
 
 from .embedder import Embedder
+from .sparse_embedder import SparseEmbedder
 
-logger = logging.getLogger("voice-chef.embedding-service")
+logger = logging.getLogger("voice-chef.rag")
 
 PAGE_SIZE = 100
 EMBED_BATCH = 64
@@ -103,6 +104,7 @@ async def _fetch_paginated(http: httpx.AsyncClient, url: str) -> list[dict[str, 
 async def _embed_and_upsert(
     qdrant: AsyncQdrantClient,
     embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
     collection: str,
     items: list[dict[str, Any]],
     text_fn: Callable[[dict[str, Any]], str],
@@ -118,10 +120,15 @@ async def _embed_and_upsert(
             continue
         texts = [text_fn(c) for c in chunk]
         # Embedding is CPU-bound; offload from event loop.
-        vectors = await asyncio.to_thread(embedder.embed_batch, texts)
+        dense_vecs = await asyncio.to_thread(embedder.embed_batch, texts)
+        sparse_vecs = await asyncio.to_thread(sparse_embedder.embed_batch, texts)
         points = [
-            PointStruct(id=c["id"], vector=vec, payload=payload_fn(c))
-            for c, vec in zip(chunk, vectors)
+            PointStruct(
+                id=c["id"],
+                vector={"dense": dense, "sparse": sparse},
+                payload=payload_fn(c),
+            )
+            for c, dense, sparse in zip(chunk, dense_vecs, sparse_vecs)
         ]
         await qdrant.upsert(collection_name=collection, points=points)
         upserted += len(points)
@@ -154,13 +161,15 @@ async def _backfill_recipes(
     http: httpx.AsyncClient,
     qdrant: AsyncQdrantClient,
     embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
     backend_url: str,
 ) -> int:
     summaries = await _fetch_paginated(http, f"{backend_url}/api/recipes")
     logger.info("fetched %s recipe summaries; hydrating with detail", len(summaries))
     detailed = await _hydrate_recipes(http, backend_url, summaries)
     return await _embed_and_upsert(
-        qdrant, embedder, "recipes", detailed, _recipe_text, _recipe_payload
+        qdrant, embedder, sparse_embedder, "recipes", detailed,
+        _recipe_text, _recipe_payload,
     )
 
 
@@ -168,23 +177,34 @@ async def _backfill_ingredients(
     http: httpx.AsyncClient,
     qdrant: AsyncQdrantClient,
     embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
     backend_url: str,
 ) -> int:
     items = await _fetch_paginated(http, f"{backend_url}/api/ingredient")
     logger.info("fetched %s ingredients", len(items))
     return await _embed_and_upsert(
-        qdrant, embedder, "ingredients", items, _ingredient_text, _ingredient_payload
+        qdrant, embedder, sparse_embedder, "ingredients", items,
+        _ingredient_text, _ingredient_payload,
     )
 
 
-_BACKFILLERS: dict[str, Callable[[httpx.AsyncClient, AsyncQdrantClient, Embedder, str], Awaitable[int]]] = {
+_BACKFILLERS: dict[
+    str,
+    Callable[
+        [httpx.AsyncClient, AsyncQdrantClient, Embedder, SparseEmbedder, str],
+        Awaitable[int],
+    ],
+] = {
     "recipes": _backfill_recipes,
     "ingredients": _backfill_ingredients,
 }
 
 
 async def backfill_if_empty(
-    qdrant: AsyncQdrantClient, embedder: Embedder, backend_url: str
+    qdrant: AsyncQdrantClient,
+    embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
+    backend_url: str,
 ) -> None:
     """Backfill any collection that currently has zero points.
 
@@ -202,5 +222,5 @@ async def backfill_if_empty(
                 )
                 continue
             logger.info("starting backfill: %s (from %s)", name, backend_url)
-            count = await fn(http, qdrant, embedder, backend_url)
+            count = await fn(http, qdrant, embedder, sparse_embedder, backend_url)
             logger.info("backfill complete: %s — %s points upserted", name, count)

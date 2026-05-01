@@ -2,7 +2,7 @@ import logging
 
 from sentence_transformers import SentenceTransformer
 
-logger = logging.getLogger("voice-chef.embedding-service")
+logger = logging.getLogger("voice-chef.rag")
 
 
 class Embedder:
