@@ -34,7 +34,8 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
     localStorage.removeItem("token")
     navigate("/login", { replace: true })
   }
