@@ -3,7 +3,7 @@ import { useIngredients } from '@/hooks/useIngredients';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 100;
 
@@ -113,20 +113,20 @@ export function IngredientsList() {
                   <CardHeader className="pb-2 h-full">
                     <div className="flex h-full items-start justify-between gap-2">
                       <CardTitle className="flex-1 text-base leading-snug break-words">
-                        {ingredient.name}
+                        {ingredient.ingredient_name}
                       </CardTitle>
-                      <span
+                      {/* <span
                         className={cn(
                           'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize',
                           ingredient.is_custom ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800',
                         )}
                       >
                         {ingredient.is_custom ? 'custom' : ingredient.source ?? 'standard'}
-                      </span>
+                      </span> */}
                     </div>
-                    {ingredient.default_unit && (
+                    {/* {ingredient.default_unit && (
                       <p className="text-sm text-muted-foreground">Default unit: {ingredient.default_unit}</p>
-                    )}
+                    )} */}
                   </CardHeader>
                 </Card>
               ))}
@@ -138,15 +138,15 @@ export function IngredientsList() {
                   key={ingredient.id}
                   className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3"
                 >
-                  <span className="font-medium">{ingredient.name}</span>
-                  <span
+                  <span className="font-medium">{ingredient.ingredient_name}</span>
+                  {/* <span
                     className={cn(
                       'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize',
                       ingredient.is_custom ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800',
                     )}
                   >
                     {ingredient.is_custom ? 'custom' : ingredient.source ?? 'standard'}
-                  </span>
+                  </span> */}
                 </div>
               ))}
             </div>

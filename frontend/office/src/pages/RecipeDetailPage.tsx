@@ -182,22 +182,22 @@ function InlineEditableText({
   );
 }
 
-function TextBlock({ label, value }: { label: string; value: string | null | undefined }) {
-  return (
-    <div className="space-y-1">
-      {label && <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>}
-      {value
-        ? <p className="text-sm leading-relaxed whitespace-pre-line">{value}</p>
-        : <p className="text-sm text-muted-foreground/50 italic">empty</p>
-      }
-    </div>
-  );
-}
+// function TextBlock({ label, value }: { label: string; value: string | null | undefined }) {
+//   return (
+//     <div className="space-y-1">
+//       {label && <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>}
+//       {value
+//         ? <p className="text-sm leading-relaxed whitespace-pre-line">{value}</p>
+//         : <p className="text-sm text-muted-foreground/50 italic">empty</p>
+//       }
+//     </div>
+//   );
+// }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return null;
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
+// function formatDate(value: string | null | undefined) {
+//   if (!value) return null;
+//   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+// }
 
 function formatDatetime(value: string | null | undefined) {
   if (!value) return null;
@@ -319,20 +319,33 @@ export function RecipeDetailPage() {
             Delete recipe
           </Button>
         </div>
-        {recipe.description_short && (
-          <p className="text-muted-foreground">{recipe.description_short}</p>
-        )}
       </div>
 
       {/* ── Identity ───────────────────────────────────────── */}
       <Section title="Identity">
         <Grid>
           <DetailRow label="ID" value={recipe.id} />
-          <DetailRow label="Recipe number" value={recipe.recipe_number} />
-          <DetailRow label="Batch number" value={recipe.batch_number} />
           <DetailRow label="Is component" value={recipe.is_component} />
           <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
           <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
+        </Grid>
+      </Section>
+
+      {/* ── Ingredients ───────────────────────────────────────── */}
+      <Section title="Ingredients">
+        <Grid>
+          <div className="max-w-2xl">
+            <ul className="space-y-3">
+              {recipe.ingredients?.map((ing) => (
+                <li key={ing.id} className="flex justify-between border-b pb-1">
+                  <span className="flex-1 font-medium">{ing.ingredient_name}</span>
+                  <span className="text-muted-foreground ml-4 whitespace-nowrap">
+                    {ing.quantity} {ing.unit}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </Grid>
       </Section>
 
@@ -346,9 +359,21 @@ export function RecipeDetailPage() {
           multiline
         />
       </Section>
-      <Section title="Notes">
-        <TextBlock label="" value={recipe.notes} />
-      </Section>
+      {/* <Section title="yield_mode">
+        yield_mode
+      </Section> */}
+      {/* <Section title="total_raw_weight_grams">
+        total_raw_weight_grams
+      </Section> */}
+      {/* <Section title="portions_count_resolved">
+        portions_count_resolved
+      </Section> */}
+      {/* <Section title="photo_url">
+        photo_url
+      </Section> */}
+      {/* <Section title="preparation_time_minutes">
+        preparation_time_minutes
+      </Section> */}
       <Section title="Instructions">
         <InlineEditableText
           recipeId={recipe.id}
@@ -358,97 +383,16 @@ export function RecipeDetailPage() {
           multiline
         />
       </Section>
-      <Section title="Notes on Instructions">
-        <TextBlock label="" value={recipe.notes_instructions} />
-      </Section>
 
       {/* ── Yield & Weights ────────────────────────────────── */}
       <Section title="Yield & Weights">
           <Grid>
-            <DetailRow label="Yield" value={recipe.yield_amount != null ? `${recipe.yield_amount}${recipe.yield_unit ? ` ${recipe.yield_unit}` : ''}` : null} />
-            <DetailRow label="Reduction factor" value={recipe.reduction_factor} />
-            <DetailRow label="Eigene Menge" value={recipe.eigene_menge} />
-            <DetailRow label="Net weight (g)" value={recipe.net_weight} />
-            <DetailRow label="Fill weight (g)" value={recipe.fill_weight} />
-            <DetailRow label="Fill quantity" value={recipe.fill_quantity} />
-            <DetailRow label="Drained weight (g)" value={recipe.drained_weight} />
-            <DetailRow label="Total weight (g)" value={recipe.total_weight} />
-            <DetailRow label="Portion weight (g)" value={recipe.portion_weight} />
-            <DetailRow label="Portion by weight" value={recipe.portion_by_weight} />
-            <DetailRow label="Unit of measure" value={recipe.unit_measure} />
-            <DetailRow label="Serving unit" value={recipe.unit_serving} />
+            {/* <DetailRow label="Yield" value={recipe.yield_amount != null ? `${recipe.yield_amount}${recipe.yield_unit ? ` ${recipe.yield_unit}` : ''}` : null} /> */}
+            {/* <DetailRow label="Reduction factor" value={recipe.reduction_factor} /> */}
+            <DetailRow label="Total cooked weight (g)" value={recipe.total_cooked_weight_grams} />
+            <DetailRow label="Portion size (g)" value={recipe.portion_size_grams} />
           </Grid>
         </Section>
-
-      {/* ── Production & Dates ─────────────────────────────── */}
-      <Section title="Production & Dates">
-          <Grid>
-            <DetailRow label="Production date" value={formatDate(recipe.production_date)} />
-            <DetailRow label="Use-by date" value={formatDate(recipe.use_by_date)} />
-            <DetailRow label="Expiry date" value={formatDate(recipe.expiry_date)} />
-            <DetailRow label="Storage temperature" value={recipe.storage_temperature} />
-            <DetailRow label="Labor effort" value={recipe.labor_effort} />
-            <DetailRow label="Mise en place display" value={recipe.mise_en_place_display} />
-          </Grid>
-        </Section>
-
-      {/* ── Serving ────────────────────────────────────────── */}
-      <Section title="Serving">
-          <div className="space-y-3">
-            <TextBlock label="Serving recommendation" value={recipe.serving_recommendation} />
-            <TextBlock label="Side dishes" value={recipe.side_dishes} />
-          </div>
-        </Section>
-
-      {/* ── Packaging ──────────────────────────────────────── */}
-      <Section title="Packaging">
-          <Grid>
-            <DetailRow label="Packaging" value={recipe.packaging} />
-            <DetailRow label="Packaging material" value={recipe.packaging_material} />
-          </Grid>
-        </Section>
-
-      {/* ── Origin ─────────────────────────────────────────── */}
-      <Section title="Origin">
-          <Grid>
-            <DetailRow label="Fish origin" value={recipe.origin_fish} />
-            <DetailRow label="Location" value={recipe.origin_location} />
-          </Grid>
-        </Section>
-
-      {/* ── Equipment ──────────────────────────────────────── */}
-      <Section title="Equipment">
-          <div className="space-y-3">
-            <TextBlock label="Devices" value={recipe.devices} />
-            <TextBlock label="Utensils" value={recipe.utensils} />
-          </div>
-        </Section>
-
-      {/* ── Nutrition ──────────────────────────────────────── */}
-      <Section title="Nutrition & Margins">
-          <Grid>
-            <DetailRow label="Nutri-score category" value={recipe.nutri_score_category} />
-            <DetailRow label="Nutri-score veg/fruits (%)" value={recipe.nutri_score_veg_fruits} />
-            <DetailRow label="Preference nutri value" value={recipe.preference_nutri_value} />
-            <DetailRow label="Margin" value={recipe.margin} />
-          </Grid>
-        </Section>
-
-      {/* ── Allergens & Ingredients ────────────────────────── */}
-      <Section title="Allergens & Ingredients">
-          <div className="space-y-3">
-            <TextBlock label="Allergen source" value={recipe.allergene_source} />
-            <TextBlock label="Custom ingredient list" value={recipe.ingredient_list_custom} />
-          </div>
-        </Section>
-
-      {/* ── Storage ────────────────────────────────────────── */}
-      <Section title="Storage">
-        <TextBlock label="" value={recipe.storage_text} />
-      </Section>
-
-
-
     </div>
   );
 }
