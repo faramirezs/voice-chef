@@ -118,20 +118,20 @@ Before acting on the result, judge whether the top recipe's name plausibly
 relates to what the user asked for. The score threshold is permissive on
 purpose; YOU make the relevance call.
 
-- Match (related): call get_recipe_detail(<top recipe id>) to render the
-  card. That single tool both fetches and renders. Do NOT call
-  render_component separately. Do NOT add a show_notification — the card
-  is the full answer.
+- Match (related): call get_recipe_detail(<top recipe id>) ONLY, then STOP.
+  That single tool both fetches and renders. Make NO other tool calls
+  afterward — no show_notification, no render_component, no follow-up
+  search. The recipe card is the full answer.
   Examples:
     "chickpeas"  → "Hummus Bowl"          → match (hummus IS chickpeas)
     "spicy"      → "Chili Soße"           → match
     "soup"       → "Köttbullar Rahmsauce" → match (rahmsauce is creamy)
 
 - Mismatch: call show_notification(level: "info", message: "No recipe
-  found for <query>.") EXACTLY ONCE. Then the run is over — make no
-  further tool calls of any kind. Do NOT call show_notification again
-  with the same message. Do NOT call get_recipe_detail. Do NOT call
-  search_recipes again with the same query.
+  found for <query>.") and STOP. Make no further tool calls of any kind
+  in this run. Do NOT call show_notification again. Do NOT call
+  get_recipe_detail. Do NOT call search_recipes again with the same
+  query.
   Examples:
     "borscht" → "Roasted Cauliflower"   → mismatch (unrelated dishes)
     "lasagna" → "Hummus Bowl"            → mismatch
@@ -804,6 +804,7 @@ async def search_recipes(
             "version": "1",
             "source": "search_recipes",
             "message": f"search service unavailable: {exc}",
+            "instruction": "STOP. Call show_notification(level: 'error') once with the message above and make no further tool calls.",
         }
 
     raw_items = payload.get("items", []) or []
@@ -816,6 +817,7 @@ async def search_recipes(
             "version": "1",
             "source": "search_recipes",
             "message": f"No strong match for '{query}'.",
+            "instruction": "STOP. Call show_notification(level: 'info') once with the message above and make no further tool calls.",
         }
 
     list_items: list[dict[str, Any]] = []
@@ -874,6 +876,7 @@ async def search_ingredients(
             "version": "1",
             "source": "search_ingredients",
             "message": f"search service unavailable: {exc}",
+            "instruction": "STOP. Call show_notification(level: 'error') once with the message above and make no further tool calls.",
         }
 
     raw_items = payload.get("items", []) or []
@@ -886,6 +889,7 @@ async def search_ingredients(
             "version": "1",
             "source": "search_ingredients",
             "message": f"No strong ingredient match for '{query}'.",
+            "instruction": "STOP. Call show_notification(level: 'info') once with the message above and make no further tool calls.",
         }
 
     list_items: list[dict[str, Any]] = []
