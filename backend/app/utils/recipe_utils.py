@@ -1,3 +1,39 @@
+from sqlmodel import Session, select
+from uuid import UUID
+from fastapi import HTTPException, status
+from app.models.recipe import Recipe
+
+
+def validate_recipe_business_rules(recipe) -> None:
+    """
+    Validate recipe business rules before creation/update.
+    
+    Raises HTTPException(400) if any rule is violated.
+    """
+    # Rule 1: active + weight mode requires portion_size_grams > 0
+    if recipe.status == "active" and recipe.yield_mode == "weight":
+        if not recipe.portion_size_grams or recipe.portion_size_grams <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="portion_size_grams is required and must be > 0 for active weight-mode recipes"
+            )
+    
+    # Rule 2: Negative totals not allowed
+    if recipe.total_raw_weight_grams and recipe.total_raw_weight_grams < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="total_raw_weight_grams must not be negative"
+        )
+    if recipe.total_cooked_weight_grams and recipe.total_cooked_weight_grams < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="total_cooked_weight_grams must not be negative"
+        )
+    if recipe.portions_count_resolved and recipe.portions_count_resolved <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="portions_count_resolved must be greater than 0"
+        )
 
 
 def to_recipe_ingredient_response(link):
@@ -25,21 +61,28 @@ def to_recipe_ingredient_response(link):
     }
 
 
-def to_recipe_detail(recipe):
+def to_recipe_summary(recipe):
+    """Convert Recipe ORM to RecipeSummaryResponse dict with Decimal to string conversion."""
     return {
         "id": recipe.id,
         "name": recipe.name,
         "description": recipe.description,
-        "instructions": recipe.instructions,
         "status": recipe.status,
         "yield_mode": recipe.yield_mode,
-        "portions_count_resolved": str(recipe.portions_count_resolved) if recipe.portions_count_resolved else None,
         "portion_size_grams": str(recipe.portion_size_grams) if recipe.portion_size_grams else None,
         "total_raw_weight_grams": str(recipe.total_raw_weight_grams) if recipe.total_raw_weight_grams else None,
         "total_cooked_weight_grams": str(recipe.total_cooked_weight_grams) if recipe.total_cooked_weight_grams else None,
+        "portions_count_resolved": str(recipe.portions_count_resolved) if recipe.portions_count_resolved else None,
+        "photo_url": recipe.photo_url,
         "created_at": recipe.created_at,
         "updated_at": recipe.updated_at,
-        "photo_url": recipe.photo_url,
+    }
+
+
+def to_recipe_detail(recipe):
+    """Convert Recipe ORM to RecipeDetailResponse dict with Decimal→string conversion and ingredients."""
+    summary = to_recipe_summary(recipe)
+    summary.update({
         "preparation_time_minutes": recipe.preparation_time_minutes,
         "cooking_time_minutes": recipe.cooking_time_minutes,
         "is_component": recipe.is_component,
@@ -52,4 +95,27 @@ def to_recipe_detail(recipe):
                 )
             ) if r is not None
         ],
-    }
+    })
+    return summary
+
+
+def ensure_unique_recipe_name(
+        session: Session, 
+        name: str, 
+        tenant_id: UUID, 
+        exclude_id: UUID | None = None
+) -> None:
+
+    if not name:
+        return
+    q = select(Recipe).where(
+        Recipe.name == name.strip(), 
+        Recipe.tenant_id == tenant_id
+    )
+    if exclude_id:
+        q = q.where(Recipe.id != exclude_id)
+    if session.exec(q).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Recipe name already exists"
+        )

@@ -6,7 +6,7 @@ from typing import Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import (
     CheckConstraint, ForeignKeyConstraint, PrimaryKeyConstraint, 
-    UniqueConstraint, Index, Column, DateTime, text,
+    UniqueConstraint, Index, Column, DateTime, text, ForeignKey
 )
 
 if TYPE_CHECKING:
@@ -22,7 +22,6 @@ class RecipeIngredient(SQLModel, table=True):
         CheckConstraint('quantity_grams IS NULL OR quantity_grams >= 0::numeric', name='recipe_ingredients_quantity_grams_non_negative'),
         CheckConstraint('num_nonnulls(ingredient_id, sub_recipe_id) = 1', name='recipe_ingredients_exactly_one_item'),
         ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='CASCADE', name='recipe_ingredients_ingredient_id_fkey'),
-        ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_recipe_id_fkey'),
         ForeignKeyConstraint(['sub_recipe_id'], ['recipes.id'], ondelete='CASCADE', name='recipe_ingredients_sub_recipe_id_fkey'),
         PrimaryKeyConstraint('id', name='recipe_ingredients_pkey'),
         UniqueConstraint('recipe_id', 'ingredient_id', 'sort_order', name='uq_recipe_ingredient_order'),
@@ -47,7 +46,9 @@ class RecipeIngredient(SQLModel, table=True):
     is_organic: bool | None = Field(default=None, sa_column_kwargs={"server_default": text("false")})
 
     # Foreign keys
-    recipe_id: UUID = Field(nullable=False)
+    # recipe_id: UUID = Field(nullable=False)
+    recipe_id: UUID = Field(sa_column=Column(
+        ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False))
     ingredient_id: UUID | None = Field(default=None, nullable=True)
     sub_recipe_id: UUID | None = Field(default=None, nullable=True)
 
