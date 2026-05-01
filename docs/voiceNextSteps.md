@@ -203,6 +203,7 @@ Separate concern from auth. Pure UX trigger (Porcupine, OpenWakeWord, Snowboy). 
 
 - **Agent's `get_recipes_list` is broken on `main`** since the tenant-auth refactor. The tool calls `/api/recipes` without an `Authorization` header, but the endpoint now requires JWT. Agent received no auth update. Needs fix in `agent/app/agent.py` (use a service-account JWT or forward user JWT) before this lands in our `rag` branch via merge.
 - **API responses do not expose `tenant_id`.** Without that field on `/api/recipes` and `/api/ingredient` responses, the rag indexer can't tag vectors with tenant. Either expose it on these endpoints, or the indexer needs direct DB read access.
+- **Investigate change of agent model.** Llama 3.3 70B doesn't reliably honor "stop after one tool call" / "exactly once" instructions in the system prompt. Symptom (observed 2026-05-01 during Phase A.6 testing): on a no-match query like `borscht`, the LLM correctly identifies the semantic mismatch and calls `show_notification("No recipe found for borscht.")`, but then loops calling the same notification + repeating `search_recipes` with the same query until pydantic-ai's `tool_calls_limit=10` caps the run with `RUN_ERROR`. Worth A/B-ing: DeepSeek V4 Flash, Qwen 2.5 72B, and a local Ollama model once Topic 1 lands.
 
 ---
 
@@ -214,8 +215,9 @@ Separate concern from auth. Pure UX trigger (Porcupine, OpenWakeWord, Snowboy). 
 | 2 | Topic 1 (Ollama local model) | Small-Medium | Independence from rate limits |
 | 3 | Topics 3+4 (RAG + Valkey + microservices) | Large | Subject requirements, implement together |
 | 4 | Topic 5 (Auth: mixed pattern + kitchen-user scope) | Medium | Required before production-readiness for multi-tenant |
-| 5 | Topic 2 Tier 2 (office corrections) | Medium | Accuracy improvement over time |
-| 6 | Topic 2 Tier 3 (voice self-correction) | Medium-Large | Advanced, depends on Tier 2 |
-| 7 | Voice-ID service (attribution only, not auth) | Medium | UX nicety — personalization, audit trails |
+| 5 | Investigate alternative agent model (DeepSeek/Qwen/Ollama) | Small | Better prompt-following on negative-path scenarios |
+| 6 | Topic 2 Tier 2 (office corrections) | Medium | Accuracy improvement over time |
+| 7 | Topic 2 Tier 3 (voice self-correction) | Medium-Large | Advanced, depends on Tier 2 |
+| 8 | Voice-ID service (attribution only, not auth) | Medium | UX nicety — personalization, audit trails |
 
 Note: Topics 3 and 4 are intertwined — Valkey is needed for RAG incremental updates. Implement them together.

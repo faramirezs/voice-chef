@@ -14,6 +14,9 @@ logger = logging.getLogger("voice-chef.agent")
 _BACKEND_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
 FASTAPI_URL = f"{_BACKEND_URL}/api"
 
+_RAG_URL = os.getenv("RAG_SERVICE_URL", "http://rag:8003")
+SEARCH_MIN_SCORE = float(os.getenv("SEARCH_MIN_SCORE", "0.45"))
+
 AGENT_MODEL = os.getenv("AGENT_MODEL", "meta/llama-3.3-70b-instruct")
 
 AGENT_PROVIDER = os.getenv("AGENT_PROVIDER", "nvidia").lower()
@@ -84,6 +87,60 @@ Example: User: "show chimichurri"
 → get_recipes_list(query="chimichurri") → extract id
 → get_recipe_detail(recipe_id=<uuid>) → ui.render fires
 → NO TEXT RESPONSE. The card is the answer.
+
+SEMANTIC SEARCH RULES:
+For descriptive, fuzzy, or multilingual queries:
+- search_recipes(query, k=5): semantic recipe search. Returns a recipes.list
+  envelope; the card renders automatically. Stay silent after.
+- search_ingredients(query, k=10): ingredient knowledge. Returns plain data
+  for your reasoning — call show_notification(level: "info") with a brief
+  summary based on the items. Do NOT recommend recipes from ingredient
+  results; ingredients alone don't render as recipe cards.
+
+When to use which:
+- search_recipes: ANY question phrasing ("do you have", "show me",
+  "what's a"), fuzzy descriptions ("something with chickpeas", "creamy
+  soup", "spicy"), multilingual or transliterated queries ("vegane
+  Hauptspeise", "tajine recipe", "haehnchen recipe")
+- get_recipes_list: ONLY when the user gives a literal exact recipe
+  name verbatim (e.g., "Chimichurri")
+- get_recipe_detail: ONLY for known UUIDs
+When in doubt between search_recipes and get_recipes_list, prefer search_recipes.
+
+VERIFY SEMANTIC MATCH (after search_recipes returns a recipes.list):
+Before acting on the result, judge whether the top recipe's name plausibly
+relates to what the user asked for. The score threshold is permissive on
+purpose; YOU make the relevance call.
+
+- Match (related): call get_recipe_detail(<top recipe id>) to render the
+  card. That single tool both fetches and renders. Do NOT call
+  render_component separately. Do NOT add a show_notification — the card
+  is the full answer.
+  Examples:
+    "chickpeas"  → "Hummus Bowl"          → match (hummus IS chickpeas)
+    "spicy"      → "Chili Soße"           → match
+    "soup"       → "Köttbullar Rahmsauce" → match (rahmsauce is creamy)
+
+- Mismatch: call show_notification(level: "info", message: "No recipe
+  found for <query>.") EXACTLY ONCE. Then the run is over — make no
+  further tool calls of any kind. Do NOT call show_notification again
+  with the same message. Do NOT call get_recipe_detail. Do NOT call
+  search_recipes again with the same query.
+  Examples:
+    "borscht" → "Roasted Cauliflower"   → mismatch (unrelated dishes)
+    "lasagna" → "Hummus Bowl"            → mismatch
+    "cake"    → "Stir fried Five-Spices" → mismatch
+
+When unsure, prefer mismatch. An honest "no match" is better than
+confidently recommending the wrong recipe.
+
+If a search tool returns an error envelope (no strong match found):
+- DO NOT retry the same query — the search already failed for it.
+- DO NOT call get_recipes_list as a fallback.
+- Call show_notification(level: "info") explaining no match was found.
+- Then STOP. Do not call additional tools in this run.
+
+Do NOT invent recipes or recommend irrelevant items.
 
 SCALING RULE:
 When a chef asks to scale a recipe, edit portions, or adjust ingredient quantities:
@@ -658,3 +715,145 @@ async def suggest_recipe_improvements(ctx: RunContext[StateDeps[KitchenState]], 
             ).model_dump()
         ],
     )
+
+
+# --- Semantic search via the rag service -----------------------------------
+
+
+@agent.tool
+async def search_recipes(
+    ctx: RunContext[StateDeps[KitchenState]],
+    query: str,
+    k: int = 5,
+) -> dict[str, Any]:
+    """Semantic recipe search via the rag service.
+
+    Use for descriptive, fuzzy, or multilingual recipe queries that do not
+    match an existing recipe name (e.g., "something with chickpeas",
+    "creamy soup", "vegane Hauptspeise"). For exact-name lookups, prefer
+    get_recipes_list. For UUID lookups, use get_recipe_detail.
+
+    Returns a recipes.list envelope (renders as a card) or an error
+    envelope when no strong match is found.
+
+    Args:
+        query: Natural-language search query.
+        k: Number of results to return (1-10).
+    """
+    k = max(1, min(k, 10))
+    try:
+        resp = await _http_client.post(
+            f"{_RAG_URL}/search/recipes",
+            json={"query": query, "k": k},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_recipes",
+            "message": f"search service unavailable: {exc}",
+        }
+
+    raw_items = payload.get("items", []) or []
+    confident = [
+        it for it in raw_items if (it.get("score") or 0) >= SEARCH_MIN_SCORE
+    ]
+    if not confident:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_recipes",
+            "message": f"No strong match for '{query}'.",
+        }
+
+    list_items: list[dict[str, Any]] = []
+    for it in confident:
+        p = it.get("payload") or {}
+        list_items.append(
+            {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "status": p.get("status"),
+                "yield_unit": p.get("yield_unit"),
+                "preparation_time_minutes": p.get("preparation_time_minutes"),
+            }
+        )
+
+    return {
+        "type": "recipes.list",
+        "version": "1",
+        "items": list_items,
+        "meta": {"limit": k, "offset": 0, "total": len(list_items)},
+        "query": query,
+        "search": "semantic",
+    }
+
+
+@agent.tool
+async def search_ingredients(
+    ctx: RunContext[StateDeps[KitchenState]],
+    query: str,
+    k: int = 10,
+) -> dict[str, Any]:
+    """Semantic ingredient search via the rag service.
+
+    Use for ingredient knowledge questions ("what vegan proteins do you
+    have?", "alternatives to feta", "is paprika spicy?"). The result is
+    plain data for your reasoning — render the response by calling
+    show_notification with a brief summary. Do not invent ingredients
+    not in the result.
+
+    Args:
+        query: Natural-language ingredient query.
+        k: Number of results to return (1-20).
+    """
+    k = max(1, min(k, 20))
+    try:
+        resp = await _http_client.post(
+            f"{_RAG_URL}/search/ingredients",
+            json={"query": query, "k": k},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_ingredients",
+            "message": f"search service unavailable: {exc}",
+        }
+
+    raw_items = payload.get("items", []) or []
+    confident = [
+        it for it in raw_items if (it.get("score") or 0) >= SEARCH_MIN_SCORE
+    ]
+    if not confident:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_ingredients",
+            "message": f"No strong ingredient match for '{query}'.",
+        }
+
+    list_items: list[dict[str, Any]] = []
+    for it in confident:
+        p = it.get("payload") or {}
+        list_items.append(
+            {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "name_english": p.get("name_english"),
+                "bls_key": p.get("bls_key"),
+            }
+        )
+
+    return {
+        "type": "ingredients.search.result",
+        "version": "1",
+        "query": query,
+        "items": list_items,
+    }

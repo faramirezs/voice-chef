@@ -68,6 +68,8 @@ services:
       - "8001:8001"
     environment:
       FASTAPI_INTERNAL_URL: http://backend:80
+      RAG_SERVICE_URL: http://rag:8003
+      SEARCH_MIN_SCORE: ${SEARCH_MIN_SCORE:-0.45}
       AGENT_PROVIDER: ${AGENT_PROVIDER:-nvidia}
       AGENT_BASE_URL: ${AGENT_BASE_URL}
       AGENT_API_KEY: ${AGENT_API_KEY}
