@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from pydantic_ai.usage import UsageLimits
 from .agent import agent  # ← import the agent defined in agent.py
+from .context import set_auth_headers, init_notification_cache
 from .state import KitchenState
 from pydantic_ai.ui import StateDeps
 
@@ -42,11 +43,21 @@ async def run_agent(request: Request) -> Response:
     started = time.perf_counter()
     if DEBUG_STREAM:
         logger.warning(
-            "[agent-debug] request:start accept=%s content-type=%s user-agent=%s",
+            "[agent-debug] request:start accept=%s content-type=%s user-agent=%s cookie=%s",
             request.headers.get("accept"),
             request.headers.get("content-type"),
             request.headers.get("user-agent"),
+            request.headers.get("cookie"),
         )
+
+    # Forward auth headers from the frontend request to backend calls.
+    auth_headers = {}
+    if auth := request.headers.get("authorization"):
+        auth_headers["authorization"] = auth
+    if cookie := request.headers.get("cookie"):
+        auth_headers["cookie"] = cookie
+    set_auth_headers(auth_headers)
+    init_notification_cache()
 
     response = await AGUIAdapter.dispatch_request(
         request,

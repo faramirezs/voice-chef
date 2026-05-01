@@ -18,7 +18,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 export function redirectToOfficeLogin(): void {
-  window.location.href = "/";
+  const officeUrl = import.meta.env.VITE_OFFICE_URL || "http://localhost:8080";
+  window.location.href = officeUrl + "/login";
 }
 
 export async function logout(): Promise<void> {

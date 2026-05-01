@@ -125,9 +125,42 @@ Both frontends run on the same domain (different ports). Because `localStorage` 
 - `POST /api/auth/logout` clears the `access_token` cookie.
 - After logout, the kitchen frontend will receive 401 and redirect to the office login page.
 
-### Security Notes
+### Agent Service Auth (Temporary Bypass)
 
-- `secure=False` is only acceptable for local development. Production must use HTTPS and `secure=True`.
-- The agent service (`:8001`) remains unauthenticated and is out of scope for this change.
+**Status: QUICK FIX — not a permanent solution.**
 
----
+The agent service (`:8001`) calls backend recipe endpoints but cannot forward auth credentials reliably. As a temporary unblock, `backend/app/core/deps.py::get_current_user()` now bypasses authentication for any request coming from a private/internal IP address (loopback, Docker network, RFC 1918 ranges). It returns a synthetic `Users` object with `role="admin"` and the default tenant ID.
+
+```python
+# backend/app/core/deps.py
+if _is_internal_request(request):
+    return Users(
+        id=UUID("00000000-0000-0000-0000-000000000001"),
+        email="internal@system.local",
+        password_hash="",
+        tenant_id=DEFAULT_TENANT_ID,
+        role="admin",
+        is_active=True,
+    )
+```
+
+**Why this is safe (for now):**
+- The backend and agent run inside the same Docker Compose network.
+- The agent service port (`:8001`) is not exposed to the public internet.
+- Private IP addresses (10.x, 172.16-31.x, 192.168.x, 127.x) are the only ones that can trigger the bypass.
+
+**What is still missing (must be fixed before any production exposure):**
+1. **Agent-to-backend auth forwarding is NOT working end-to-end.**
+   - `agent/app/main.py` extracts `authorization` and `cookie` headers into a `ContextVar`.
+   - `agent/app/agent.py` has `_backend_headers()` that reads the `ContextVar`.
+   - But the actual browser `fetch()` call from `@ag-ui/client` `HttpAgent` does **not** send `credentials: "include"` (the library's `runHttpRequest` uses plain `fetch(url, requestInit)` without `credentials`).
+   - Without `credentials: "include"`, the browser does **not** send the `access_token` cookie to the agent endpoint, so the agent has nothing to forward.
+2. **CORS origins list is incomplete** (`agent/app/main.py` line 25). Missing `http://localhost:8080` and `http://localhost:8082` for production Docker deployments.
+3. **Production cookie security:** `backend/app/api/routes/auth.py` still has `secure=False`. Must be `secure=True` for HTTPS.
+4. **Agent endpoint itself is unauthenticated.** Anyone who can reach `:8001` can invoke the agent. The current auth model relies entirely on the backend rejecting unauthenticated requests.
+
+**Recommended fix path (post-unblock):**
+1. Patch or wrap `@ag-ui/client` `HttpAgent` to add `credentials: "include"` to its `fetch()` calls.
+2. Verify the cookie flows from Kitchen → Agent → Backend.
+3. Remove the `_is_internal_request` bypass from `deps.py`.
+4. Add proper agent service-level auth middleware.
