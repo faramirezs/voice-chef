@@ -63,7 +63,6 @@ id: UUID = Field(
 3.  **Level 3 (Use when necessary): Use `sa_column=Column()` to replace the column.**
     *   **When:** When you need to take full control and completely replace the column that SQLModel would generate.
     *   **Reason:** This is necessary when the features you need cannot be expressed with Level 1 or 2. For example, SQLModel's `max_length` (Level 1) is a shortcut for `String(length)`, but you cannot use it in combination with `sa_column_kwargs` (Level 2). If you need both a specific string length *and* a `server_default`, you must escalate to Level 3.
-    *   **Why avoid it if possible?** Using `sa_column=Column()` for everything defeats the purpose of SQLModel, which is to simplify ORM definitions by inferring columns from type hints. It makes the code more verbose and less "SQLModel-idiomatic". Reserve it for cases where it's truly needed.
 
     ```python
     # Correct: `sa_column=Column()` is required here because we need to 
@@ -78,6 +77,16 @@ id: UUID = Field(
         )
     )
     ```
+
+    * JSONB type: `sa_column=Column()` is also required here because SQLModel cannot infer the DB type `JSONB` from a `dict` hint.
+
+    ```python
+    settings: dict | None = Field(
+        default=None, 
+        sa_column=Column('settings', JSONB, server_default=text("'{}'"))
+    )
+    ```
+    *   **Why avoid it if possible?** Using `sa_column=Column()` for everything defeats the purpose of SQLModel, which is to simplify ORM definitions by inferring columns from type hints. It makes the code more verbose and less "SQLModel-idiomatic". Reserve it for cases where it's truly needed.
 
 ### 3. `Column` vs. `mapped_column`
 

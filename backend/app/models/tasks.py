@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import (
     CheckConstraint, ForeignKeyConstraint, PrimaryKeyConstraint, Index,
-    Column, Date, DateTime, String, text, Integer, Boolean
+    Column, Date, DateTime, String, text,
 )
 from datetime import datetime, date as date_type
 from uuid import UUID
@@ -51,7 +51,7 @@ class TaskItems(SQLModel, table=True):
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
 
     status: str = Field(sa_column=Column('status', String(50), nullable=False, server_default=text("'pending'")))
-    sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
+    sort_order: int = Field(nullable=False, sa_column_kwargs={"server_default": text("0")})
     
     # Foreign keys
     list_id: UUID = Field(nullable=False)
@@ -69,11 +69,13 @@ class ShoppingLists(SQLModel, table=True):
     )
     # Primary key, Core fields, Timestamps
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
-    name: str = Field(
-        sa_column=Column('name', String(255), nullable=False, server_default=text("'Shopping List'")))
+    name: str = Field(sa_column=Column(
+        'name', String(255), nullable=False, 
+        server_default=text("'Shopping List'")))
     is_active: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("true")})
-    created_at: datetime = Field(
-        sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
+    created_at: datetime = Field(sa_column=Column(
+        'created_at', DateTime(True), 
+        nullable=False, server_default=text('now()')))
     # Foreign keys
     tenant_id: UUID = Field(nullable=False)
     # Relationship attributes
@@ -94,9 +96,13 @@ class ShoppingListItems(SQLModel, table=True):
 
     id: UUID = Field(default=None, primary_key=True, sa_column_kwargs={"server_default": text("gen_random_uuid()")})
     name: str = Field(max_length=255, nullable=False)
-    is_checked: bool = Field(nullable=False, sa_column_kwargs={"server_default": text("false")})
-    sort_order: int = Field(sa_column=Column('sort_order', Integer, nullable=False, server_default=text('0')))
-    created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
+    is_checked: bool = Field(
+        nullable=False, sa_column_kwargs={"server_default": text("false")})
+    sort_order: int = Field(
+        nullable=False, sa_column_kwargs={"server_default": text("0")})
+    created_at: datetime = Field(sa_column=Column(
+        'created_at', DateTime(True), 
+        nullable=False, server_default=text('now()')))
     quantity: Decimal | None = Field(default=None)
     unit: str | None = Field(default=None, max_length=50)
     quantity_grams: Decimal | None = Field(default=None)

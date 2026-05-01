@@ -223,6 +223,7 @@ Note: `expires_in` is measured in seconds
   "total_raw_weight_grams": "8500.000",
   "total_cooked_weight_grams": "7900.000",
   "portions_count_resolved": "31.6",
+  "photo_url": "https://example.com/recipes/kartoffelsalat.jpg",
   "created_at": "2026-03-28T09:30:00Z",
   "updated_at": "2026-03-28T09:40:00Z"
 }
@@ -242,6 +243,10 @@ Note: `expires_in` is measured in seconds
   "total_raw_weight_grams": "8500.000",
   "total_cooked_weight_grams": "7900.000",
   "portions_count_resolved": "31.6",
+  "photo_url": "https://example.com/recipes/kartoffelsalat.jpg",
+  "preparation_time_minutes": 15,
+  "cooking_time_minutes": 30,
+  "is_component": false,
   "ingredients": [
     {
       "id": "ac85a727-bcc5-4623-a176-0f0f064f7691",
@@ -386,17 +391,18 @@ MVP intents:
 
 | Method | Path | Auth | Request Schema | Success Response | Success Status | Error Statuses |
 |---|---|---|---|---|---|---|
-| POST | `/auth/signup` | Public | `UserSignupLogin` | `UserSignupResponse` (later: Auto-Login on Signup: `AuthTokenResponse`) | `201` | `400, 409, 422, 503, 500` |
+| POST | `/auth/signup` | Public | `UserSignupLogin` | `UserSignupResponse` | `201` | `400, 409, 422, 503, 500` |
 | POST | `/auth/login` | Public | `UserSignupLogin` | `AuthTokenResponse` | `200` | `400, 401, 403, 422, 500` |
 | GET | `/recipes` | Bearer | Query: `limit`, `offset`, `status`, `search` | `{ items: RecipeSummaryResponse[], meta }` | `200` | `401, 422, 500` |
 | POST | `/recipes` | Bearer | `RecipeWrite` | `RecipeDetailResponse` | `201` | `400, 401, 404, 409, 422, 500` |
 | GET | `/recipes/{id}` | Bearer | Path: `id` UUID | `RecipeDetailResponse` | `200` | `401, 404, 422, 500` |
-| PUT | `/recipes/{id}` | Bearer | Path: `id` UUID, Body: `RecipeWrite` (partial merge) | `RecipeDetailResponse` | `200` | `400, 401, 404, 409, 422, 500` |
+| PATCH | `/recipes/{id}` | Bearer | Path: `id` UUID, Body: `RecipeUpdate` (partial merge) | `RecipeDetailResponse` | `200` | `400, 401, 404, 409, 422, 500` |
 | DELETE | `/recipes/{id}` | Bearer | Path: `id` UUID | none | `204` | `401, 404, 422, 500` |
 | GET | `/ingredients` | Bearer | Query: `limit`, `offset`, `ingredient_type`, `search`, `is_custom` | `{ items: IngredientResponse[], meta }` | `200` | `401, 422, 500` |
+| GET | `/ingredients/autocomplete` | Public | Query: `query`, `limit` | `[{ id, name }]` | `200` | `400, 422, 500` |
 | POST | `/ingredients` | Bearer | `IngredientWrite` | `IngredientResponse` | `201` | `400, 401, 409, 422, 500` |
 | GET | `/ingredients/{id}` | Bearer | Path: `id` UUID | `IngredientResponse` | `200` | `401, 404, 422, 500` |
-| PUT | `/ingredients/{id}` | Bearer | Path: `id` UUID, Body: `IngredientWrite` (partial merge) | `IngredientResponse` | `200` | `400, 401, 404, 409, 422, 500` |
+| PATCH | `/ingredients/{id}` | Bearer | Path: `id` UUID, Body: `IngredientUpdate` (partial merge) | `IngredientResponse` | `200` | `400, 401, 404, 409, 422, 500` |
 | DELETE | `/ingredients/{id}` | Bearer | Path: `id` UUID | none | `204` | `401, 404, 422, 500` |
 | GET | `/units` | Bearer | Query: `limit`, `offset`, `unit_type`, `search` | `{ items: UnitResponse[], meta }` | `200` | `401, 422, 500` |
 | GET | `/ingredients/{id}/prices/latest` | Bearer | Path: `id` UUID | `IngredientLatestPriceResponse` | `200` | `401, 404, 422, 500` |
@@ -408,14 +414,13 @@ MVP intents:
 
 Purpose:
 - Create user account in the preconfigured default tenant
-- Return access token for immediate authenticated session
 
 Request:
 - Body: `UserSignupLogin`
 
 Success:
 - `201 Created`
-- Body: `AuthTokenResponse`
+- Body: `UserSignupResponse`
 
 Errors:
 - `400` weak password
@@ -471,6 +476,7 @@ Success:
       "total_raw_weight_grams": "8500.000",
       "total_cooked_weight_grams": "7900.000",
       "portions_count_resolved": "31.6",
+      "photo_url": "https://example.com/recipes/kartoffelsalat.jpg",
       "created_at": "2026-03-28T09:30:00Z",
       "updated_at": "2026-03-28T09:40:00Z"
     }
@@ -500,7 +506,9 @@ Errors:
   - active + weight mode without valid `portion_size_grams`
   - negative totals where not allowed
 - `404` referenced ingredient not found
-- `409` duplicate ingredient line key (`recipe_id`, `ingredient_id`, `sort_order`)
+- `409`:
+  - Recipe name already exists
+  - duplicate ingredient line key (`recipe_id`, `ingredient_id`, `sort_order`)
 
 ### 5) GET `/recipes/{id}`
 
@@ -515,13 +523,13 @@ Success:
 Errors:
 - `404` recipe not found for tenant
 
-### 6) PUT `/recipes/{id}`
+### 6) PATCH `/recipes/{id}`
 
 Purpose:
 - Update recipe fields with partial merge semantics
 
 Request:
-- Body: `RecipeWrite` (only provided fields are updated)
+- Body: `RecipeUpdate` (only provided fields are updated; all fields are optional)
 
 Success:
 - `200 OK`
@@ -556,6 +564,46 @@ Success:
 - `200 OK`
 - Body: `{ items: IngredientResponse[], meta }`
 
+### 8b) GET `/ingredients/autocomplete`
+
+Purpose:
+- Fast typeahead/autocomplete suggestions for ingredient name search
+- Optimized for real-time UI input fields
+- Returns ingredients that **start with** the query term (word boundary matching)
+- No authentication required
+
+Query Params:
+- `query` optional string (min 1 char to return results, max 50)
+- `limit` optional int (default `10`, min `1`, max `10`)
+
+Success:
+- `200 OK`
+- Body: Array of suggestion objects
+
+```json
+[
+  {
+    "id": "1a6f300b-df96-49b7-a72d-f3004ce6dbf3",
+    "name": "Eier"
+  },
+  {
+    "id": "1a6f300b-df96-49b7-a72d-f3004ce6dbf4",
+    "name": "Eier Größe S"
+  }
+]
+```
+
+Behavior:
+- If `query` is empty or less than 1 character, returns `[]`
+- If `query` has results, returns up to `limit` items (capped at 10)
+- Results ordered alphabetically by ingredient name
+- Matches only ingredients where name **starts with** the query (case-insensitive)
+- Example: query `"eier"` matches `"Eier"`, `"Eier Größe S"`, but NOT `"Frischkäse mit Eiern"` (does not start with "eier")
+
+Errors:
+- `400` query longer than 50 characters
+- `422` invalid query parameters (non-integer limit)
+
 ### 9) POST `/ingredients`
 
 Purpose:
@@ -584,13 +632,13 @@ Success:
 Errors:
 - `404` ingredient not found
 
-### 11) PUT `/ingredients/{id}`
+### 11) PATCH `/ingredients/{id}`
 
 Purpose:
 - Update ingredient fields with partial merge semantics
 
 Request:
-- Body: `IngredientWrite` (only provided fields are updated)
+- Body: `IngredientUpdate` (only provided fields are updated; all fields are optional)
 
 Success:
 - `200 OK`

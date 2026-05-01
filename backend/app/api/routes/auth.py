@@ -1,14 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlmodel import Session, select
+from sqlalchemy.exc import SQLAlchemyError
 from uuid import UUID
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
+import os
 
-# import our files
+# import files
 from app.core.database import get_session
+from app.core.deps import get_current_user
 from app.models.users import Users, Tenants
-from app.schemas.users import UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse
-from app.utils.auth_utils import get_password_hash, validate_password, verify_password, create_access_token
+from app.schemas.users import (
+    UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse, UserMeResponse
+)
+from app.utils.auth_utils import (
+    get_password_hash, validate_password, verify_password, create_access_token,
+    ensure_unique_user_email
+)
+from app.api.openapi_responses import signup_responses, login_responses
 
 
 # -----------------------------------------------------------------------------
@@ -17,71 +26,19 @@ from app.utils.auth_utils import get_password_hash, validate_password, verify_pa
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+DEFAULT_TENANT_ID = UUID(os.getenv("DEFAULT_TENANT_ID", "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0"))
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
 # ─── SIGNUP ──────────────────────────────────────────────────────────────────
 
-# signup_responses are just documentation/override metadata for OpenAPI, 
-# not the actual runtime response shape.
-signup_responses = {
-    status.HTTP_201_CREATED: {
-        "description": "User created successfully",
-        "content": {
-            "application/json": {
-                "example": {
-                    "id": "c0a8012e-0000-0000-0000-000000000001",
-                    "email": "user@example.com",
-                }
-            }
-        },
-    },
-    status.HTTP_409_CONFLICT: {
-        "description": "Conflict: Email or Nickname already exists",
-        "content": {
-            "application/json": {
-                "examples": {
-                    "email_exists": {
-                        "summary": "Email already registered",
-                        "value": {"detail": "E-Mail already registered."},
-                    },
-                }
-            }
-        },
-    },
-    status.HTTP_400_BAD_REQUEST: {
-        "description": "Password is too weak",
-        "content": {
-            "application/json": {
-                "example": {
-                    "value": "Password is too weak. It must have a minimum of 8 characters, and include uppercase, lowercase, digits, and symbols.",
-                }
-            }
-        },
-    },
-    status.HTTP_503_SERVICE_UNAVAILABLE: {
-        "description": "Default tenant not configured",
-        "content": {
-            "application/json": {
-                "example": {
-                    "value": "Default tenant not configured.",
-                }
-            }
-        },
-    },
-}
-
 # mpreshko "tenant_id": "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0" is hard-coded
-@router.post(
-    "/signup", 
+@router.post("/signup", 
     status_code=status.HTTP_201_CREATED,
     response_model=UserSignupResponse,
     responses=signup_responses
-)
-async def signup(
-        user_data: UserSignupLogin, 
-        session: Session = Depends(get_session)
-    ):
+    )
+def signup(user_data: UserSignupLogin, session: Session = Depends(get_session)):
     """Handles new user registration."""
     
     # 1. Validate password strength FIRST
@@ -92,99 +49,60 @@ async def signup(
             detail="Password is too weak. It must have a minimum of 8 characters, and include uppercase, lowercase, digits, and symbols."
         )
 
-    # 2. Check for unique email
-    query = select(Users).where(
-        (Users.email == user_data.email)
-    )
-     # sends query to database and deblocks
-    result = session.exec(query)
-    existing_user = result.first()
+    # # 2. Check for unique email
+    ensure_unique_user_email(session, user_data.email)
 
-    if existing_user:
-        if existing_user.email == user_data.email:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="E-Mail already registered."
-            )
-    # 3. Create a new User instance. tenant_id 'f5504206-d0a6-48c0-8aa5-2ae8791be730' is hardcoded for MVP
+    # 3. Create a new User instance. DEFAULT_TENANT_ID is hardcoded for MVP
     try:
-        target_id = UUID("f5504206-d0a6-48c0-8aa5-2ae8791be730")
+        target_id = DEFAULT_TENANT_ID
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format for tenant_id")
     new_user = Users(
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
-        tenant_id=target_id
+        tenant_id=DEFAULT_TENANT_ID
     )
-
+    
     # 4. Check if this tenant actually exists in your DB
     tenant_exists = session.get(Tenants, new_user.tenant_id)
     if not tenant_exists:
         raise HTTPException(
-            status_code=503, 
-            detail="Default tenant not configured in the database."
-        )
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+            detail="Default tenant not configured in the database.")
 
-    session.add(new_user)
-    session.commit()
-    session.refresh(new_user)
+    try:
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while creating user"
+        )
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
+        )
+    
     return new_user
 
 
 # ─── LOGIN ──────────────────────────────────────────────────────────────────
 
-login_responses = {
-    status.HTTP_200_OK: {
-        "description": "User logged in successfully",
-        "content": {
-            "application/json": {
-                "example": {
-                    "access_token": "<jwt>",
-                    "token_type": "bearer",
-                    "expires_in": 3600,
-                    "user": {
-                        "id": "b4cce9a0-7a56-4687-9aab-16cdf55f6961",
-                        "tenant_id": "98aa2780-6ad4-4de0-8908-3fa799eb67db",
-                        "email": "chef-admin@kitchen.local",
-                        "role": "editor",
-                        "is_active": "true"
-                        }
-                    }
-                }
-            },
-        },
-    status.HTTP_401_UNAUTHORIZED: {
-        "description": "Unauthorized",
-        "content": {
-            "application/json": {
-                "example": {
-                    "detail": "Invalid email or password"
-                }
-            }
-        }
-    },
-    status.HTTP_403_FORBIDDEN: {
-        "description": "Forbidden",
-        "content": {
-            "application/json": {
-                "example": {
-                    "detail": "Account disabled. Please contact your administrator"
-                }
-            }
-        }
-    }
-}
 
-@router.post(
-    "/login",
+@router.post("/login",
     status_code=status.HTTP_200_OK,
     response_model=AuthTokenResponse,
     responses=login_responses,
     )
-async def login(
+def login(
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Session = Depends(get_session)
-) -> AuthTokenResponse:
+ ) -> AuthTokenResponse:
     """Handles user login and issues a JWT"""
 
     # 1. Fetch user from DB. form_data has 'username' (email in our case) and 'password' fields
@@ -210,12 +128,38 @@ async def login(
     access_token = create_access_token(
         data={"sub": user.email, "id": str(user.id)})
      
-    # 5. Create the user object for the response
+    # 5. Set cookie for shared auth across frontends
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+
+
+    # 6. Create the user object for the response
     user_response = UserLoginResponse.model_validate(user)
 
-    # 6. Return the full token response object
+    # 7. Return the full token response object
     return AuthTokenResponse(
         access_token=access_token,
         expires_in=3600,
         user=user_response
     )
+
+
+@router.get("/me", response_model=UserMeResponse)
+def me(current_user: Users = Depends(get_current_user)) -> UserMeResponse:
+    """Return the currently authenticated user."""
+    return UserMeResponse(
+        id=current_user.id,
+        email=current_user.email,
+        role=current_user.role,
+    )
+
+@router.post("/logout")
+def logout(response: Response) -> dict:
+    """Clear the auth cookie."""
+    response.delete_cookie("access_token")
+    return {"detail": "Logged out"}

@@ -5,8 +5,8 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
-    Integer, Numeric, PrimaryKeyConstraint, String, Text, text
+    CheckConstraint, Column, DateTime, ForeignKeyConstraint, Index, 
+    Numeric, PrimaryKeyConstraint, Text, text, # UniqueConstraint
 )
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -23,12 +23,17 @@ if TYPE_CHECKING:
 class Recipe(SQLModel, table=True):
     __tablename__ = 'recipes'
     __table_args__ = (
+        # UniqueConstraint("tenant_id", "name", name="uq_recipe_tenant_name"),
         CheckConstraint("status IN ('draft', 'active', 'archived')", name='valid_status'),
         CheckConstraint('portion_size_grams IS NULL OR portion_size_grams > 0::numeric', name='positive_portion_size_grams'),
-        CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', name='positive_portions_count_resolved'),
-        CheckConstraint("status::text <> 'active'::text OR yield_mode::text <> 'weight'::text OR portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric", name='weight_mode_requires_portion_size_when_active'),
-        CheckConstraint('total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric', name='positive_total_cooked_weight_grams'),
-        CheckConstraint('total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric', name='positive_total_raw_weight_grams'),
+        CheckConstraint('portions_count_resolved IS NULL OR portions_count_resolved > 0::numeric', 
+                        name='positive_portions_count_resolved'),
+        CheckConstraint("status::text <> 'active'::text OR yield_mode::text <> 'weight'::text OR portion_size_grams IS NOT NULL AND portion_size_grams > 0::numeric", 
+                        name='weight_mode_requires_portion_size_when_active'),
+        CheckConstraint('total_cooked_weight_grams IS NULL OR total_cooked_weight_grams >= 0::numeric', 
+                        name='positive_total_cooked_weight_grams'),
+        CheckConstraint('total_raw_weight_grams IS NULL OR total_raw_weight_grams >= 0::numeric', 
+                        name='positive_total_raw_weight_grams'),
         CheckConstraint("yield_mode::text = ANY (ARRAY['count', 'weight']::text[])", name='valid_yield_mode'),
         ForeignKeyConstraint(['created_by'], ['users.id'], name='recipes_created_by_fkey'),
         ForeignKeyConstraint(['tenant_id'], ['tenants.id'], name='recipes_tenant_id_fkey'),
@@ -58,9 +63,9 @@ class Recipe(SQLModel, table=True):
     photo_url: str | None = Field(default=None, sa_type=Text)
     yield_mode: str = Field(max_length=20, nullable=False, sa_column_kwargs={"server_default": text("'count'")})
     portion_size_grams: Decimal | None = Field(default=None)
+    portions_count_resolved: Decimal | None = Field(default=None)
     total_raw_weight_grams: Decimal | None = Field(default=None)
     total_cooked_weight_grams: Decimal | None = Field(default=None)
-    portions_count_resolved: Decimal | None = Field(default=None)
     created_at: datetime = Field(sa_column=Column('created_at', DateTime(True), nullable=False, server_default=text('now()')))
     updated_at: datetime = Field(sa_column=Column('updated_at', DateTime(True), nullable=False, server_default=text('now()')))
 
@@ -72,7 +77,12 @@ class Recipe(SQLModel, table=True):
     created_by_user: Optional['Users'] = Relationship(back_populates='recipes')
     tenant: 'Tenants' = Relationship(back_populates='recipes')
     tag: list['Tag'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'secondary': 'recipe_tags'})
-    recipe_ingredients: list['RecipeIngredient'] = Relationship(back_populates='recipe', sa_relationship_kwargs={'foreign_keys': '[RecipeIngredient.recipe_id]', 'passive_deletes': True})
+    recipe_ingredients: list['RecipeIngredient'] = Relationship(
+        back_populates='recipe', 
+        sa_relationship_kwargs={
+            'cascade': 'all, delete-orphan',
+            'foreign_keys': '[RecipeIngredient.recipe_id]', 
+            'passive_deletes': True})
     recipe_versions: list['RecipeVersions'] = Relationship(back_populates='recipe')
 
 

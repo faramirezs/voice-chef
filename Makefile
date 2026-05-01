@@ -24,6 +24,10 @@ up: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
 	@echo "VOICE-CHEF is running in dev_mode"
 
+dev-back: $(ENV)
+	@echo "Building and running db and backend services in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
+
 prod: $(ENV)
 	@echo "Building in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
@@ -68,6 +72,7 @@ help:
 define HELP_TEXT
 	"Available commands:\n" \
 	" make dev:	Build and start in development mode" \
+	" make dev-back:	Build and run db and backend in dev mode" \
 	" make prod:	Build and start in production mode" \
 	" make down:	Stop and remove containers" \
 	" make re:	Clean all then run in dev mode\n" \
@@ -145,6 +150,6 @@ db-connect:
 agent-terminal:
 	docker exec -it voice-chef-agent-1 bash
 
-.PHONY: all dev prod down re clean fclean status logs help % build up start stop
+.PHONY: all dev dev-back prod down re clean fclean status logs help % build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal
