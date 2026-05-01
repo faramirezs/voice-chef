@@ -21,15 +21,19 @@ api_router.include_router(recipe_photos_router)
 
 app.include_router(api_router)
 
+
 def lifespan(app: FastAPI):
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     yield
     # Cleanup code can be added here if needed
 
 
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+app.mount(
+    settings.UPLOAD_URL_PREFIX,
+    StaticFiles(directory=settings.UPLOAD_DIR),
+    name="files"
+)
 
-# ─── Routes ──────────────────────────────────────────────────────────────────
 
 @app.get("/")
 def hello():
