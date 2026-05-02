@@ -36,7 +36,7 @@ def link_images_to_db():
 
         for recipe_id, name, photo_url in recipes:
 
-            if photo_url:
+            if photo_url and photo_url.strip():
                 continue
 
             slug = slugify(name)
