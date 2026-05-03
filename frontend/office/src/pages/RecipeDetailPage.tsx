@@ -274,7 +274,7 @@ export function RecipeDetailPage() {
     <div className="space-y-5 max-w-10xl">
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
         <div className="h-72 w-full overflow-hidden rounded-xl border">
           {recipe.photo_url ? (
@@ -331,15 +331,6 @@ export function RecipeDetailPage() {
         </div>
       </div>
 
-      {/* ── Identity ───────────────────────────────────────── */}
-      <Section title="Identity">
-        <Grid>
-          <DetailRow label="ID" value={recipe.id} />
-          <DetailRow label="Is component" value={recipe.is_component} />
-          <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
-          <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
-        </Grid>
-      </Section>
       {/* ── Long-form text ─────────────────────────────────── */}
       <Section title="Description">
         <InlineEditableText
@@ -358,7 +349,7 @@ export function RecipeDetailPage() {
       {/* ── Ingredients ───────────────────────────────────────── */}
       <div className="lg:col-span-4">
        <Section title="Ingredients">
-        <div className="mt-4">
+        <div className="">
           <ul className="list-disc ml-5 space-y-1 text-black">
              {recipe.ingredients?.map(({ id, ingredient_name, quantity, unit }) => (
             <li key={id} className="border-b border-dashed pb-1.5 text-sm">
@@ -384,7 +375,7 @@ export function RecipeDetailPage() {
       {/* Right column */}
       <div className="lg:col-span-8">
        <Section title="Instructions">
-        <div className="mt-4 min-h-[200px]">
+        <div className="min-h-[200px]">
           <InlineEditableText
             recipeId={recipe.id}
             field="instructions"
@@ -396,6 +387,15 @@ export function RecipeDetailPage() {
        </Section>
      </div>
    </div>
+         {/* ── Identity ───────────────────────────────────────── */}
+      <Section title="Identity">
+        <Grid>
+          <DetailRow label="ID" value={recipe.id} />
+          <DetailRow label="Is component" value={recipe.is_component} />
+          <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
+          <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
+        </Grid>
+      </Section>
       {/* <Section title="yield_mode">
         yield_mode
       </Section> */}
