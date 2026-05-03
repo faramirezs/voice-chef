@@ -314,10 +314,10 @@ export function RecipeDetailPage() {
             Change status
           </Button>
           <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
-            Edit recipe
+            Edit
           </Button>
           <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
-            Duplicate recipe
+            Duplicate
           </Button>
           <Button
             size="lg"
@@ -340,25 +340,6 @@ export function RecipeDetailPage() {
           <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
         </Grid>
       </Section>
-
-      {/* ── Ingredients ───────────────────────────────────────── */}
-      <Section title="Ingredients">
-        <Grid>
-          <div className="max-w-2xl">
-            <ul className="space-y-3">
-              {recipe.ingredients?.map(({ id, ingredient_name, quantity, unit }) => (
-                <li key={id} className="flex justify-between border-b pb-1">
-                  <span className="flex-1 font-medium">{ingredient_name}</span>
-                  <span className="text-muted-foreground ml-4 whitespace-nowrap">
-                    {quantity} {unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Grid>
-      </Section>
-
       {/* ── Long-form text ─────────────────────────────────── */}
       <Section title="Description">
         <InlineEditableText
@@ -369,6 +350,43 @@ export function RecipeDetailPage() {
           multiline
         />
       </Section>
+
+      {/* ── Main Content: Ingredients & Instructions Column ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+      {/* Left column */}
+      {/* ── Ingredients ───────────────────────────────────────── */}
+      <Section title="Ingredients">
+        <ul className="space-y-1 mt-4">
+          {recipe.ingredients?.map(({ id, ingredient_name, quantity, unit }) => (
+            <li key={id} className="flex justify-between border-b border-dashed pb-1.5 text-sm">
+              <span className="flex-1 font-medium">
+                {ingredient_name}
+              </span>
+              <span className="text-muted-foreground ml-4 whitespace-nowrap">
+                {Math.round(Number(quantity))} {unit}
+              </span>
+            </li>
+          ))}
+          {(!recipe.ingredients || recipe.ingredients.length === 0) && (
+          <p className="text-sm text-muted-foreground italic">No ingredients added yet.</p>
+        )}
+        </ul>
+      </Section>
+
+      {/* Right column */}
+      <Section title="Instructions">
+        <div className="mt-4 min-h-[200px]">
+          <InlineEditableText
+            recipeId={recipe.id}
+            field="instructions"
+            value={recipe.instructions}
+            label=""
+            multiline
+          />
+        </div>
+      </Section>
+      </div>
       {/* <Section title="yield_mode">
         yield_mode
       </Section> */}
@@ -384,16 +402,6 @@ export function RecipeDetailPage() {
       {/* <Section title="preparation_time_minutes">
         preparation_time_minutes
       </Section> */}
-      <Section title="Instructions">
-        <InlineEditableText
-          recipeId={recipe.id}
-          field="instructions"
-          value={recipe.instructions}
-          label=""
-          multiline
-        />
-      </Section>
-
       {/* ── Yield & Weights ────────────────────────────────── */}
       <Section title="Yield & Weights">
           <Grid>
