@@ -32,7 +32,8 @@ export function NavUser() {
     return null
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
     localStorage.removeItem("token")
     localStorage.removeItem("user")
     localStorage.removeItem("token_expiry")

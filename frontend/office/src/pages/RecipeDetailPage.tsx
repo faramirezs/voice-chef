@@ -276,11 +276,21 @@ export function RecipeDetailPage() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-4">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
-        <div
-          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${recipeImage})` }}
-          aria-hidden="true"
-        />
+        <div className="h-72 w-full overflow-hidden rounded-xl border">
+          {recipe.photo_url ? (
+            <img
+              src={recipe.photo_url}
+              alt={recipe.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={recipeImage}
+              alt="fallback"
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
         <div className="flex items-center gap-3 flex-wrap">
           <InlineEditableText
             recipeId={recipe.id}

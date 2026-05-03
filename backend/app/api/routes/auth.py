@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlmodel import Session, select
 from sqlalchemy.exc import SQLAlchemyError
 from uuid import UUID
@@ -8,9 +8,10 @@ import os
 
 # import files
 from app.core.database import get_session
+from app.core.deps import get_current_user
 from app.models.users import Users, Tenants
 from app.schemas.users import (
-    UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse
+    UserSignupLogin, UserSignupResponse, UserLoginResponse, AuthTokenResponse, UserMeResponse
 )
 from app.utils.auth_utils import (
     get_password_hash, validate_password, verify_password, create_access_token,
@@ -98,9 +99,10 @@ def signup(user_data: UserSignupLogin, session: Session = Depends(get_session)):
     responses=login_responses,
     )
 def login(
+    response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: Session = Depends(get_session)
-) -> AuthTokenResponse:
+ ) -> AuthTokenResponse:
     """Handles user login and issues a JWT"""
 
     # 1. Fetch user from DB. form_data has 'username' (email in our case) and 'password' fields
@@ -126,12 +128,38 @@ def login(
     access_token = create_access_token(
         data={"sub": user.email, "id": str(user.id)})
      
-    # 5. Create the user object for the response
+    # 5. Set cookie for shared auth across frontends
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+    )
+
+
+    # 6. Create the user object for the response
     user_response = UserLoginResponse.model_validate(user)
 
-    # 6. Return the full token response object
+    # 7. Return the full token response object
     return AuthTokenResponse(
         access_token=access_token,
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=user_response
     )
+
+
+@router.get("/me", response_model=UserMeResponse)
+def me(current_user: Users = Depends(get_current_user)) -> UserMeResponse:
+    """Return the currently authenticated user."""
+    return UserMeResponse(
+        id=current_user.id,
+        email=current_user.email,
+        role=current_user.role,
+    )
+
+@router.post("/logout")
+def logout(response: Response) -> dict:
+    """Clear the auth cookie."""
+    response.delete_cookie("access_token")
+    return {"detail": "Logged out"}
