@@ -336,11 +336,11 @@ export function RecipeDetailPage() {
         <Grid>
           <div className="max-w-2xl">
             <ul className="space-y-3">
-              {recipe.ingredients?.map((ing) => (
-                <li key={ing.id} className="flex justify-between border-b pb-1">
-                  <span className="flex-1 font-medium">{ing.ingredient_name}</span>
+              {recipe.ingredients?.map(({ id, ingredient_name, quantity, unit }) => (
+                <li key={id} className="flex justify-between border-b pb-1">
+                  <span className="flex-1 font-medium">{ingredient_name}</span>
                   <span className="text-muted-foreground ml-4 whitespace-nowrap">
-                    {ing.quantity} {ing.unit}
+                    {quantity} {unit}
                   </span>
                 </li>
               ))}
@@ -349,7 +349,7 @@ export function RecipeDetailPage() {
         </Grid>
       </Section>
 
-              {/* ── Long-form text ─────────────────────────────────── */}
+      {/* ── Long-form text ─────────────────────────────────── */}
       <Section title="Description">
         <InlineEditableText
           recipeId={recipe.id}
