@@ -246,8 +246,7 @@ def update_recipe(
             status_code=500, 
             detail="Internal server error"
         )
-    
-    return recipe
+    return to_recipe_summary(recipe)
 
 
 @router.delete("/{id}", status_code=204)

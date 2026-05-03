@@ -4,27 +4,15 @@ import { useCreateRecipe } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Section } from '../components/Section';
 import { cn } from '@/lib/utils';
+import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
   active: 'bg-green-100 text-green-800',
 
 };
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground font-medium">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
-}
 
 
 export function CreateRecipePage() {
@@ -56,7 +44,7 @@ export function CreateRecipePage() {
       },
       {
         onSuccess: (recipe) => {
-          navigate(`/recipes/${recipe.id}`, { state: { isNewRecipe: true } });
+          navigate(`/recipes/${recipe.id}`);
         },
       },
     );
@@ -72,11 +60,11 @@ export function CreateRecipePage() {
       <div className="space-y-4">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
 
-        <div className="h-72 w-full overflow-hidden rounded-xl border bg-muted/30 flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <p className="text-sm">Recipe photo will appear here after saving</p>
-          </div>
-        </div>
+        <div
+          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${recipeImage})` }}
+          aria-hidden="true"
+        />
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="space-y-1 w-full sm:w-auto sm:min-w-[28rem]">

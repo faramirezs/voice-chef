@@ -5,7 +5,6 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/api/axios';
-import { getRecipePhoto, uploadRecipePhoto } from '@/api/recipePhotos';
 import type { PaginatedResponse, Recipe } from '@/types/recipe';
 
 const RECIPES_KEY = 'recipe';
@@ -66,26 +65,11 @@ export function useRecipe(id: string) {
       return data;
     },
     enabled: !!id,
-  });
-}
-
-export function useRecipePhoto(id: string) {
-  return useQuery({
-    queryKey: [RECIPES_KEY, 'photo', id],
-    queryFn: async () => {
-      try {
-        const data = await getRecipePhoto(id);
-        return data.photo_url;
-      } catch (error: any) {
-        // API returns 404 when recipe has no photo yet.
-        if (error?.response?.status === 404) {
-          return null;
-        }
-        throw error;
-      }
-    },
-    enabled: !!id,
-    retry: false,
+    retry: (failureCount, error: any) => {
+      // Don't retry if it's a 401; the interceptor is handling it
+      if (error.response?.status === 401) return false;
+      return failureCount < 3; // Otherwise, retry 3 times
+    }
   });
 }
 

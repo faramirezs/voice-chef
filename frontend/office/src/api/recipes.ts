@@ -7,4 +7,3 @@ export const getRecipes = (params?: { status?: string; offset?: number; limit?: 
   api.get<PaginatedResponse<Recipe>>('/recipes', { params });
 
 export const getRecipe = (id: string) => api.get<Recipe>(`/recipes/${id}`);
-zzz
