@@ -4,7 +4,7 @@ import { useCreateRecipe } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Section } from '../components/Section';
 import { cn } from '@/lib/utils';
 import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
@@ -13,20 +13,6 @@ const STATUS_STYLES: Record<string, string> = {
   active: 'bg-green-100 text-green-800',
 
 };
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm uppercase tracking-wide text-muted-foreground font-medium">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
-}
-
 
 
 export function CreateRecipePage() {

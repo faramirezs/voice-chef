@@ -31,6 +31,7 @@ export interface Recipe {
   // export interface RecipeDetail extends RecipeSummary
   instructions: string | null;
   preparation_time_minutes: number | null;
+  cooking_time_minutes: number | null;
   is_component: boolean;
   ingredients?: RecipeIngredientResponse[];
   
