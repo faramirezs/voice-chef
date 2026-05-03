@@ -2,7 +2,6 @@ name: Deploy to Hetzner VPS
 
 permissions:
   contents: read
-
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false  # never cancel an in-progress deploy.
@@ -53,8 +52,9 @@ jobs:
 
       - name: Pull latest code on VPS
         run: |
+          BRANCH="${{ github.event_name == 'push' && github.ref_name || 'main' }}"
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git pull origin main"
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git fetch origin && git checkout -B $BRANCH origin/$BRANCH"
 
       - name: Build and restart services (${{ steps.mode.outputs.mode }} mode)
         run: |
