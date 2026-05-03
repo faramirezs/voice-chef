@@ -42,7 +42,7 @@ export function RecipeList() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
-  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(10);
+  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(12);
   const [sortBy, setSortBy] = useState<SortOption>('updated_at_desc');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -213,7 +213,7 @@ export function RecipeList() {
                   }}
                 >
                   <SelectTrigger aria-label="Results per page" className="w-24">
-                    <SelectValue placeholder="10" />
+                    <SelectValue placeholder={String(RESULTS_PER_PAGE_OPTIONS[0])} />
                   </SelectTrigger>
                   <SelectContent>
                     {RESULTS_PER_PAGE_OPTIONS.map((option) => (
