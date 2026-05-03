@@ -5,7 +5,7 @@ permissions:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false  # never cancel an in-progress deploy
+  cancel-in-progress: false  # never cancel an in-progress deploy.
 
 on:
   push:
