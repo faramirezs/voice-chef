@@ -352,30 +352,38 @@ export function RecipeDetailPage() {
       </Section>
 
       {/* ── Main Content: Ingredients & Instructions Column ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
 
       {/* Left column */}
       {/* ── Ingredients ───────────────────────────────────────── */}
-      <Section title="Ingredients">
-        <ul className="space-y-1 mt-4">
-          {recipe.ingredients?.map(({ id, ingredient_name, quantity, unit }) => (
-            <li key={id} className="flex justify-between border-b border-dashed pb-1.5 text-sm">
-              <span className="flex-1 font-medium">
-                {ingredient_name}
-              </span>
-              <span className="text-muted-foreground ml-4 whitespace-nowrap">
-                {Math.round(Number(quantity))} {unit}
-              </span>
+      <div className="lg:col-span-4">
+       <Section title="Ingredients">
+        <div className="mt-4">
+          <ul className="list-disc ml-5 space-y-1 text-black">
+             {recipe.ingredients?.map(({ id, ingredient_name, quantity, unit }) => (
+            <li key={id} className="border-b border-dashed pb-1.5 text-sm">
+              <div className="flex justify-between w-full">
+                <span className="font-medium">
+                  {ingredient_name}
+                </span>
+                <span className="text-muted-foreground ml-4 whitespace-nowrap">
+                  {Math.round(Number(quantity))} {unit}
+                </span>
+              </div>
             </li>
           ))}
           {(!recipe.ingredients || recipe.ingredients.length === 0) && (
           <p className="text-sm text-muted-foreground italic">No ingredients added yet.</p>
-        )}
-        </ul>
-      </Section>
+         )}
+         </ul>
+        </div>
+       </Section>
+      </div>
+      
 
       {/* Right column */}
-      <Section title="Instructions">
+      <div className="lg:col-span-8">
+       <Section title="Instructions">
         <div className="mt-4 min-h-[200px]">
           <InlineEditableText
             recipeId={recipe.id}
@@ -385,8 +393,9 @@ export function RecipeDetailPage() {
             multiline
           />
         </div>
-      </Section>
-      </div>
+       </Section>
+     </div>
+   </div>
       {/* <Section title="yield_mode">
         yield_mode
       </Section> */}
