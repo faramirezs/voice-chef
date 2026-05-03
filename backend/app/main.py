@@ -15,9 +15,9 @@ async def lifespan(app: FastAPI):
     # Start-up phase:
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     
-    yield # FastAPI is fully running and serving requests
+    yield # Runtime phase: FastAPI is fully running and serving requests
     
-    # Shutdown Phase
+    # Shutdown Phase:
     # Cleanup code can be added here if needed
 
 
@@ -34,7 +34,7 @@ api_router.include_router(recipe_photos_router)
 app.include_router(api_router)
 
 # NOTE MK: To set FastAPI to serve files from /code/uploads (from container)
-# and map it to URL suc as http://localhost:8000/uploads/...
+# and map it to URL http://localhost:8000/uploads/...
 app.mount(
     settings.UPLOAD_URL_PREFIX,
     StaticFiles(directory=settings.UPLOAD_DIR),

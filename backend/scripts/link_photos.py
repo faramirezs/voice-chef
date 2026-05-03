@@ -5,6 +5,7 @@ import uuid
 import shutil
 from sqlalchemy import create_engine, text
 from app.core.config import settings
+from app.utils.file_service_utils import delete_file
 
 DATABASE_URL = settings.DATABASE_URL
 
@@ -35,6 +36,9 @@ def link_images_to_db():
         """)).fetchall()
 
         for recipe_id, name, photo_url in recipes:
+
+            if photo_url:
+                delete_file(photo_url)
 
             slug = slugify(name)
             filename_guess = f"{slug}.jpg"
