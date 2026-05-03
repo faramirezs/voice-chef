@@ -2,13 +2,12 @@ name: Deploy to Hetzner VPS
 
 permissions:
   contents: read
+
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false  # never cancel an in-progress deploy.
 
 on:
-  push:
-    branches: [184-feat-cd-VPS]
   workflow_run:
     workflows: ["Schema Drift Gate"]
     types: [completed]
@@ -29,7 +28,6 @@ jobs:
     name: Deploy (${{ github.event.inputs.mode || 'prod' }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: []   # add schema-drift job name here once workflows are in the same file or use workflow_run
 
     steps:
       - name: Check schema-drift result
@@ -37,6 +35,7 @@ jobs:
         run: |
           echo "Schema drift gate failed — aborting deploy"
           exit 1
+
       - name: Set deploy mode
         id: mode
         run: echo "mode=${{ github.event.inputs.mode || 'prod' }}" >> $GITHUB_OUTPUT
@@ -52,15 +51,15 @@ jobs:
 
       - name: Pull latest code on VPS
         run: |
-          BRANCH="${{ github.event_name == 'push' && github.ref_name || 'main' }}"
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git fetch origin && git checkout -B $BRANCH origin/$BRANCH"
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git fetch origin && git checkout -B main origin/main"
 
       - name: Build and restart services (${{ steps.mode.outputs.mode }} mode)
         run: |
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
             "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && make ${{ steps.mode.outputs.mode }}"
         timeout-minutes: 15
+
       - name: Run Alembic migrations
         run: |
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
