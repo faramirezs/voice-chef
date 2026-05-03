@@ -1,0 +1,71 @@
+name: Deploy to Hetzner VPS
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # never cancel an in-progress deploy
+
+on:
+  workflow_run:
+    workflows: ["Schema Drift Gate"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Deploy mode"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - prod
+          - dev
+
+jobs:
+  deploy:
+    name: Deploy (${{ github.event.inputs.mode || 'prod' }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: []   # add schema-drift job name here once workflows are in the same file or use workflow_run
+
+    steps:
+      - name: Check schema-drift result
+        if: ${{ github.event.workflow_run.conclusion != 'success' }}
+        run: |
+          echo "Schema drift gate failed — aborting deploy"
+          exit 1
+      - name: Set deploy mode
+        id: mode
+        run: echo "mode=${{ github.event.inputs.mode || 'prod' }}" >> $GITHUB_OUTPUT
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Pull latest code on VPS
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git pull origin main"
+
+      - name: Build and restart services (${{ steps.mode.outputs.mode }} mode)
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && make ${{ steps.mode.outputs.mode }}"
+
+      - name: Run Alembic migrations
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && \
+             docker compose exec -T backend alembic -c alembic.ini upgrade head"
+
+      - name: Verify services are healthy
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && make status"
