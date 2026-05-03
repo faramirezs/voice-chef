@@ -99,7 +99,6 @@ export function VoiceInput({
     }
   }, [recording, startRecording, stopRecording]);
 
-  const busy = recording || transcribing;
 
   return (
     <KButton

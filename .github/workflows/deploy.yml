@@ -19,7 +19,7 @@ on:
       mode:
         description: "Deploy mode"
         required: true
-        default: "dev"
+        default: "prod"
         type: choice
         options:
           - prod

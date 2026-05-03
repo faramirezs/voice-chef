@@ -15,7 +15,7 @@ export function HudCanvas() {
   );
 }
 
-function EmptyCanvas({ onOpenPalette }: { onOpenPalette: () => void }) {
+function EmptyCanvas() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
       <p className="text-2xl text-text">Voice Chef</p>
@@ -71,7 +71,7 @@ function HudCanvasInner() {
         {hasCanvas ? (
           <SlotOutlet slot="canvas" />
         ) : (
-          <EmptyCanvas onOpenPalette={() => setPaletteOpen(true)} />
+          <EmptyCanvas />
         )}
       </div>
 

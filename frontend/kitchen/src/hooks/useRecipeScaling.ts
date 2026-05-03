@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { redirectToOfficeLogin } from "@/lib/auth";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
 import { chefAgent } from "@/lib/agent";
+import { setSharedAgentState } from "@/hooks/useAgent";
 import type { KitchenState } from "@/types/agent-state";
 import type { RecipeScalingState } from "@/types/scaling";
 
