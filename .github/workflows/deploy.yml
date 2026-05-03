@@ -51,8 +51,9 @@ jobs:
 
       - name: Pull latest code on VPS
         run: |
+          DEPLOY_BRANCH="${{ github.event_name == 'workflow_run' && 'main' || github.ref_name }}"
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git fetch origin && git checkout -B main origin/main"
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && git fetch origin && git checkout -B $DEPLOY_BRANCH origin/$DEPLOY_BRANCH"
 
       - name: Build and restart services (${{ steps.mode.outputs.mode }} mode)
         run: |
