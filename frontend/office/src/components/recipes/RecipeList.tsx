@@ -42,7 +42,7 @@ export function RecipeList() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
-  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(10);
+  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(12);
   const [sortBy, setSortBy] = useState<SortOption>('updated_at_desc');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
