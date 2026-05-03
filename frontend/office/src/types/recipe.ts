@@ -2,6 +2,7 @@ export interface Recipe {
   id: string;
   name: string;
   status: string;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
   tenant_id: string | null;
