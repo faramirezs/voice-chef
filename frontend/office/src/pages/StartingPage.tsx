@@ -15,7 +15,7 @@ export function StartingPage() {
         <p className="text-muted-foreground">What would you like to do today?</p>
       </div>
 
-      <div className="grid flex-1 gap-4 md:grid-cols-2">
+      <div className="grid flex-1 gap-4 md:grid-cols-3">
         <NavLink
           to="/recipes"
           className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
@@ -44,8 +44,10 @@ export function StartingPage() {
           <p className="mt-2 text-lg text-white/90">Plan your weekly menu.</p>
           </div>
         </NavLink>
-        <NavLink
-          to="/ai-assistant"
+        <a
+          href={KITCHEN_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
         >
           <div
@@ -54,22 +56,8 @@ export function StartingPage() {
           />
           <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-100 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="relative z-10">
-          <h2 className="text-3xl font-semibold text-white">AI Assistant</h2>
-          <p className="mt-2 text-lg text-white/90">Get help with ideas and prep.</p>
-          </div>
-        </NavLink>
-        <a
-          href={KITCHEN_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
-        >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-800 transition-[filter] duration-300 ease-out" />
-          <div className="pointer-events-none absolute inset-0 bg-black/20 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
-          <div className="relative z-10 flex flex-col items-center">
-            <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} className="size-12 text-white/90 mb-3" />
-            <h2 className="text-3xl font-semibold text-white">Kitchen Display</h2>
-            <p className="mt-2 text-lg text-white/90">Open the kitchen screen.</p>
+          <h2 className="text-3xl font-semibold text-white">Ai Kitchen Display</h2>
+          <p className="mt-2 text-lg text-white/90">Open the kitchen screen.</p>
           </div>
         </a>
       </div>
