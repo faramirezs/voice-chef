@@ -15,7 +15,7 @@ from app.utils.recipe_utils import (
     to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name,
     validate_recipe_business_rules
 )
-from app.utils.file_service_utils import delete_file
+from app.utils.file_service_image_utils import delete_file
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient

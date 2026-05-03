@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -26,7 +25,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </Card>
   );
 }
-
 
 
 export function CreateRecipePage() {
@@ -58,7 +56,7 @@ export function CreateRecipePage() {
       },
       {
         onSuccess: (recipe) => {
-          navigate(`/recipes/${recipe.id}`);
+          navigate(`/recipes/${recipe.id}`, { state: { isNewRecipe: true } });
         },
       },
     );
@@ -74,11 +72,11 @@ export function CreateRecipePage() {
       <div className="space-y-4">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
 
-        <div
-          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${recipeImage})` }}
-          aria-hidden="true"
-        />
+        <div className="h-72 w-full overflow-hidden rounded-xl border bg-muted/30 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <p className="text-sm">Recipe photo will appear here after saving</p>
+          </div>
+        </div>
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="space-y-1 w-full sm:w-auto sm:min-w-[28rem]">

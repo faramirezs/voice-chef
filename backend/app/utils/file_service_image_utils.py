@@ -1,7 +1,7 @@
 import os
 import uuid
 import shutil
-# import io
+import io
 from PIL import Image
 from fastapi import UploadFile, HTTPException
 from app.core.config import settings
@@ -12,22 +12,11 @@ UPLOAD_URL_PREFIX = settings.UPLOAD_URL_PREFIX
 MAX_FILE_SIZE = 1 * 1024 * 1024  # 1MB
 ALLOWED_FORMATS = {"JPEG", "PNG"}
 
-
 def save_file(file: UploadFile) -> str:
     
     contents = file.file.read()
-
-    if len(contents) == 0:
-        raise HTTPException(400, "File is empty")
-    elif len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(400, "File size exceeds the limit of 1MB")
-
-    # allowed_types = {"image/jpeg", "image/png"}
-    # if contents 
-    # if file.content_type not in allowed_types:
-    #     raise HTTPException(400, "Only JPEG and PNG files are allowed")
-
-
+    
+    # Format validation
     try:
         image = Image.open(io.BytesIO(contents))
         image.verify()  # ensures it's a valid image
@@ -35,21 +24,27 @@ def save_file(file: UploadFile) -> str:
     except Exception:
         raise HTTPException(400, "Invalid image file")
     
+    # Image type validation
     if format not in ALLOWED_FORMATS:
-        raise HTTPException(400, "Only JPEG and PNG are allowed")
+        raise HTTPException(400, "Only JPEG and PNG images are allowed")
 
+    # Size validation
+    if len(contents) == 0:
+        raise HTTPException(400, "File is empty")
+    elif len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(400, "File size exceeds the limit of 1MB")
+
+    # File name and path generation
     filename = f"{uuid.uuid4()}"
-    if file.content_type == "image/jpeg":
+    if format == "JPEG":
         filename += ".jpg"
-    elif file.content_type == "image/png":
+    elif format == "png":
         filename += ".png"
-    # elif file.content_type == "application/pdf":
-    #     filename += ".pdf"
-
     new_url = os.path.join(UPLOAD_DIR, filename)
 
+    # Save/write file
     with open(new_url, "wb") as buffer:
-        buffer.write(file.file.read())
+        buffer.write(contents)
     
     return f"{UPLOAD_URL_PREFIX}/{filename}"
 
@@ -80,3 +75,4 @@ def save_file_from_path(src_path: str) -> str:
     shutil.copyfile(src_path, dst_path)
 
     return f"{UPLOAD_URL_PREFIX}/{filename}"
+

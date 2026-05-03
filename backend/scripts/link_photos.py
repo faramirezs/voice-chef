@@ -5,7 +5,7 @@ import uuid
 import shutil
 from sqlalchemy import create_engine, text
 from app.core.config import settings
-from app.utils.file_service_utils import delete_file
+from app.utils.file_service_image_utils import delete_file
 
 DATABASE_URL = settings.DATABASE_URL
 

@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useDeleteRecipe, useRecipe, useUpdateRecipe } from '@/hooks/useRecipes';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useDeleteRecipe, useRecipe, useRecipePhoto, useUpdateRecipe, useUploadRecipePhoto } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
 import type { Recipe } from '@/types/recipe';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -60,6 +59,7 @@ function InlineEditableText({
   multiline = false,
   className,
   displayClassName,
+  onEdit,
 }: {
   recipeId: string;
   field: EditableRecipeField;
@@ -68,6 +68,7 @@ function InlineEditableText({
   multiline?: boolean;
   className?: string;
   displayClassName?: string;
+  onEdit?: () => void;
 }) {
   const updateRecipe = useUpdateRecipe();
   const [isEditing, setIsEditing] = useState(false);
@@ -160,7 +161,10 @@ function InlineEditableText({
       ) : value ? (
         <button
           type="button"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            onEdit?.();
+            setIsEditing(true);
+          }}
           className="block w-full text-left rounded-lg border border-transparent px-2 py-1 -mx-2 -my-1 hover:border-border hover:bg-muted/40 transition-colors"
         >
           {multiline ? (
@@ -172,7 +176,10 @@ function InlineEditableText({
       ) : (
         <button
           type="button"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            onEdit?.();
+            setIsEditing(true);
+          }}
           className="w-full text-left rounded-lg border border-dashed border-border/70 px-2 py-1 text-sm text-muted-foreground/50 italic hover:bg-muted/30 transition-colors"
         >
           Click to add
@@ -204,13 +211,24 @@ function formatDatetime(value: string | null | undefined) {
   return new Date(value).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+type RecipeDetailLocationState = {
+  isNewRecipe?: boolean;
+};
+
 
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as RecipeDetailLocationState | null;
+  const isNewRecipeFlow = Boolean(locationState?.isNewRecipe);
   const { data: recipe, isLoading, isError } = useRecipe(id!);
+  const { data: recipePhotoUrl } = useRecipePhoto(id!);
   const moveToActive = useUpdateRecipe();
+  const uploadPhoto = useUploadRecipePhoto();
   const deleteRecipe = useDeleteRecipe();
+  const [hasChanges, setHasChanges] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleMoveToActive = () => {
     if (!recipe) {
@@ -241,6 +259,46 @@ export function RecipeDetailPage() {
         navigate('/recipes');
       },
     });
+  };
+
+  const handleBackClick = () => {
+    if (!recipe) {
+      navigate(-1);
+      return;
+    }
+
+    // Only auto-delete on back for brand-new recipes created in this flow.
+    if (isNewRecipeFlow && !hasChanges) {
+      deleteRecipe.mutate(recipe.id, {
+        onSuccess: () => {
+          navigate('/recipes');
+        },
+      });
+    } else {
+      // Changes were already saved by InlineEditableText, just navigate back
+      navigate(-1);
+    }
+  };
+
+  const handleImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !recipe) {
+      return;
+    }
+
+    const isAllowedType = file.type === 'image/jpeg' || file.type === 'image/png';
+    if (!isAllowedType) {
+      event.target.value = '';
+      return;
+    }
+
+    // Uploading/replacing an image is a meaningful recipe change.
+    setHasChanges(true);
+
+    uploadPhoto.mutate({ id: recipe.id, file });
+
+    // Allow selecting the same file again in a future upload.
+    event.target.value = '';
   };
 
   if (isLoading) {
@@ -275,22 +333,41 @@ export function RecipeDetailPage() {
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-4">
-        <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
-        <div className="h-72 w-full overflow-hidden rounded-xl border">
-          {recipe.photo_url ? (
+        <Button 
+          size="sm" 
+          onClick={handleBackClick}
+          disabled={deleteRecipe.isPending || uploadPhoto.isPending}
+          variant={isNewRecipeFlow && hasChanges ? 'default' : 'outline'}
+        >
+          {isNewRecipeFlow && hasChanges ? 'Save' : '<- Back'}
+        </Button>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          className="hidden"
+          onChange={handleImageSelect}
+        />
+        <button
+          type="button"
+          className="relative h-72 w-full overflow-hidden rounded-xl border text-left"
+          onClick={() => imageInputRef.current?.click()}
+          disabled={uploadPhoto.isPending}
+          aria-busy={uploadPhoto.isPending}
+        >
+          {recipePhotoUrl ? (
             <img
-              src={recipe.photo_url}
+              src={recipePhotoUrl}
               alt={recipe.name}
               className="w-full h-full object-cover"
             />
           ) : (
-            <img
-              src={recipeImage}
-              alt="fallback"
-              className="w-full h-full object-cover"
-            />
+            <div className="w-full h-full bg-muted/30" aria-hidden="true" />
           )}
-        </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-black/35 px-3 py-2 text-xs text-white">
+            {uploadPhoto.isPending ? 'Uploading image...' : recipePhotoUrl ? 'Click to replace image' : 'Click to upload image'}
+          </div>
+        </button>
         <div className="flex items-center gap-3 flex-wrap">
           <InlineEditableText
             recipeId={recipe.id}
@@ -299,6 +376,7 @@ export function RecipeDetailPage() {
             label=""
             className="w-full sm:w-auto sm:min-w-[28rem]"
             displayClassName="text-2xl font-semibold"
+            onEdit={() => setHasChanges(true)}
           />
           <span className={badgeClass}>{recipe.status}</span>
         </div>
@@ -354,6 +432,7 @@ export function RecipeDetailPage() {
           value={recipe.description}
           label=""
           multiline
+          onEdit={() => setHasChanges(true)}
         />
       </Section>
       <Section title="Notes">
@@ -366,6 +445,7 @@ export function RecipeDetailPage() {
           value={recipe.instructions}
           label=""
           multiline
+          onEdit={() => setHasChanges(true)}
         />
       </Section>
       <Section title="Notes on Instructions">

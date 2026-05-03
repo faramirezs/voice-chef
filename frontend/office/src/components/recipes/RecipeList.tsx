@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-const RESULTS_PER_PAGE_OPTIONS = [12, 24, 48] as const;
+const RESULTS_PER_PAGE_OPTIONS = [24, 48, 96] as const;
 
 const SORT_OPTIONS = [
   { value: 'name_asc', label: 'Name (A-Z)' },
@@ -42,7 +42,7 @@ export function RecipeList() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
-  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(10);
+  const [pageSize, setPageSize] = useState<(typeof RESULTS_PER_PAGE_OPTIONS)[number]>(24);
   const [sortBy, setSortBy] = useState<SortOption>('updated_at_desc');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

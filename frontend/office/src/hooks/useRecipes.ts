@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/api/axios';
+import { getRecipePhoto, uploadRecipePhoto } from '@/api/recipePhotos';
 import type { PaginatedResponse, Recipe } from '@/types/recipe';
 
 const RECIPES_KEY = 'recipe';
@@ -68,6 +69,26 @@ export function useRecipe(id: string) {
   });
 }
 
+export function useRecipePhoto(id: string) {
+  return useQuery({
+    queryKey: [RECIPES_KEY, 'photo', id],
+    queryFn: async () => {
+      try {
+        const data = await getRecipePhoto(id);
+        return data.photo_url;
+      } catch (error: any) {
+        // API returns 404 when recipe has no photo yet.
+        if (error?.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    enabled: !!id,
+    retry: false,
+  });
+}
+
 export function useCreateRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -85,7 +106,7 @@ export function useUpdateRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Recipe> & { id: string }) => {
-      const { data } = await api.put<Recipe>(`/recipes/${id}`, updates);
+      const { data } = await api.patch<Recipe>(`/recipes/${id}`, updates);
       return data;
     },
     onSuccess: (updatedRecipe) => {
@@ -107,6 +128,21 @@ export function useDeleteRecipe() {
     },
     onSuccess: (deletedRecipe) => {
       queryClient.removeQueries({ queryKey: [RECIPES_KEY, deletedRecipe.id] });
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
+    },
+  });
+}
+
+export function useUploadRecipePhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      const { data } = await uploadRecipePhoto(id, file);
+      return { id, photoUrl: data.photo_url as string };
+    },
+    onSuccess: ({ id, photoUrl }) => {
+      queryClient.setQueryData([RECIPES_KEY, 'photo', id], photoUrl);
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY, id] });
       queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
     },
   });
