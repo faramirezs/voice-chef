@@ -20,7 +20,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_for_testing")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 3600
 
-ph = PasswordHasher() 
+ph = PasswordHasher()
 
 # OAuth2 scheme dependency. 
 # It tells FastAPI which URL to use to get the token.

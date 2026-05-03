@@ -90,7 +90,7 @@ export function useUpdateRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Recipe> & { id: string }) => {
-      const { data } = await api.put<Recipe>(`/recipes/${id}`, updates);
+      const { data } = await api.patch<Recipe>(`/recipes/${id}`, updates);
       return data;
     },
     onSuccess: (updatedRecipe) => {

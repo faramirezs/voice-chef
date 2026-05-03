@@ -1,4 +1,5 @@
-import axios from "axios";
+import axios from "axios"
+import { getValidToken } from "@/hooks/useAuth"
 
 export const api = axios.create({
   baseURL: "/api",
@@ -11,10 +12,8 @@ export const api = axios.create({
 // 1. Reads the token from localStorage
 // 2. Adds: Authorization: Bearer <token>
 
-// Request Interceptor
-api.interceptors.request.use(
-  (config) => {
-  const token = localStorage.getItem("token");
+api.interceptors.request.use((config) => {
+  const token = getValidToken()
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

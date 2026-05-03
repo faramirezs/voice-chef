@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { login } from "@/api/auth"
+import { saveToken } from "@/hooks/useAuth"
 
 export function LoginForm({
   className,
@@ -38,7 +39,8 @@ export function LoginForm({
 
     try {
       const data = await login(email, password)
-      localStorage.setItem("token", data.access_token)
+      saveToken(data.access_token, data.expires_in)
+      localStorage.setItem("user", JSON.stringify(data.user))
       navigate("/", { replace: true })
     } catch (error) {
       if (isAxiosError<{ detail?: string }>(error)) {
