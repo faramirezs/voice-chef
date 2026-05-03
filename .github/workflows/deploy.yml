@@ -60,7 +60,7 @@ jobs:
         run: |
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
             "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && make ${{ steps.mode.outputs.mode }}"
-
+        timeout-minutes: 15
       - name: Run Alembic migrations
         run: |
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \

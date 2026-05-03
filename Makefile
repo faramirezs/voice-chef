@@ -33,7 +33,8 @@ dev-back: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
 
 prod: $(ENV)
-	@echo "Building in prod_mode"
+	@echo "Stopping existing containers and building in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
 	@echo "VOICE-CHEF is running in prod_mode"
 
