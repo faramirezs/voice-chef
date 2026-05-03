@@ -3,11 +3,12 @@ import httpx
 import logging
 from typing import Any
 from pydantic import BaseModel
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, ToolReturn
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.ui import StateDeps
-from ag_ui.core import EventType, StateSnapshotEvent, StateDeltaEvent
+from ag_ui.core import CustomEvent, EventType, StateSnapshotEvent, StateDeltaEvent
 from .state import KitchenState
+from .context import get_auth_headers, mark_notification_shown
 
 logger = logging.getLogger("voice-chef.agent")
 
@@ -51,6 +52,16 @@ os.environ["OPENAI_BASE_URL"] = AGENT_BASE_URL
 os.environ["OPENAI_API_KEY"] = AGENT_API_KEY
 
 model = OpenAIModel(AGENT_MODEL)
+
+_INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+
+def _backend_headers() -> dict[str, str]:
+    """Return headers with forwarded auth from the frontend request."""
+    headers = get_auth_headers()
+    if _INTERNAL_SECRET:
+        headers["X-Internal-Secret"] = _INTERNAL_SECRET
+    return headers
+
 
 _http_client = httpx.AsyncClient()
 SYSTEM_PROMPT = """\
@@ -143,15 +154,22 @@ Use show_notification for status updates (saved, errors, completion confirmation
 Use show_chip when you need explicit user confirmation before an action.
 
 ERROR & EMPTY STATE HANDLING:
-If get_recipes_list returns 0 results, call show_notification with level='warning'
-and suggest the user try a different search term or browse all recipes.
-If get_recipe_detail returns a 404 or other error, call show_notification with
-level='error' and clear_slot('canvas') to remove any stale content.
+If get_recipes_list returns 0 results → call show_notification(level='warning') and STOP.
+If get_recipes_list returns ANY error → call show_notification(level='error') and STOP.
+If get_recipe_detail returns ANY error → call show_notification(level='error'),
+  call clear_slot('canvas'), and STOP.
+Do not call any further tools after show_notification. Do not generate text. STOP means STOP.
 Never fall back to free-form text responses on errors.
+If a tool result contains the word STOP, obey it immediately. Do not reason about it. Just stop.
 
 LANGUAGE:
 Ingredient names in the database may be in German or other languages.
 Render them exactly as stored -- do not translate ingredient names.
+
+RESPONSE FORMAT:
+After any tool call completes, output NOTHING. No explanatory text, no summaries,
+no "I have done X". Silence is the correct response after a tool result.
+The only exception is if the user asks a direct question that no tool can answer.
 """
 
 agent = Agent(
@@ -216,12 +234,13 @@ async def get_recipes_list(
 
     params: dict[str, Any] = {"limit": limit, "offset": offset}
     if query:
-        params["query"] = query
+        params["search"] = query
 
     try:
         resp = await _http_client.get(
             f"{FASTAPI_URL}/recipes",
             params=params,
+            headers=_backend_headers(),
             timeout=10,
         )
         resp.raise_for_status()
@@ -306,7 +325,7 @@ async def get_recipe_detail(
             "message": "No recipe_id provided and no recipe selected",
         }
     try:
-        resp = await _http_client.get(f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10)
+        resp = await _http_client.get(f"{FASTAPI_URL}/recipes/{recipe_id}", headers=_backend_headers(), timeout=10)
         resp.raise_for_status()
         payload = resp.json()
     except Exception as exc:
@@ -387,19 +406,39 @@ async def show_notification(
     message: str,
     level: str = "info",
     duration: int = 5000,
-) -> dict[str, Any]:
+) -> ToolReturn:
     """Show a transient toast notification.
 
     Levels: "info", "success", "warning", "error".
     Duration is in milliseconds (default 5000).
     """
-    return await render_component(
-        ctx,
-        component="notification",
-        slot="notifications",
-        message=message,
-        level=level,
-        duration=duration,
+    # Deduplicate: if this exact notification was already shown in the
+    # current request, return early so the LLM does not loop.
+    cache_key = f"{level}:{message}"
+    if mark_notification_shown(cache_key):
+        return ToolReturn(
+            return_value={
+                "status": "already_shown",
+                "instruction": "STOP. This notification was already displayed. Do not call show_notification again. Output no text.",
+            },
+            metadata=[],
+        )
+
+    value = {
+        "type": "ui.render",
+        "version": "1",
+        "component": "notification",
+        "slot": "notifications",
+        "message": message,
+        "level": level,
+        "duration": duration,
+    }
+    return ToolReturn(
+        return_value={
+            "status": "ok",
+            "instruction": "STOP. Notification displayed. Do not call any more tools. Output no text.",
+        },
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.render", value=value)],
     )
 
 
@@ -407,7 +446,7 @@ async def show_notification(
 async def show_chip(
     ctx: RunContext[StateDeps[KitchenState]],
     actions: list[dict[str, str]],
-) -> dict[str, Any]:
+) -> ToolReturn:
     """Show action confirmation buttons in the chips bar.
 
     Each action has: label (button text), message (sent to agent on click).
@@ -415,25 +454,39 @@ async def show_chip(
 
     Example: [{"label": "Apply", "message": "confirm apply scaling", "variant": "default"}]
     """
-    return await render_component(
-        ctx,
-        component="confirmation_chips",
-        slot="chips",
-        actions=actions,
+    value = {
+        "type": "ui.render",
+        "version": "1",
+        "component": "confirmation_chips",
+        "slot": "chips",
+        "actions": actions,
+    }
+    return ToolReturn(
+        return_value={"status": "ok"},
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.render", value=value)],
     )
 
 
 @agent.tool
-async def clear_slot(ctx: RunContext[StateDeps[KitchenState]], slot: str) -> dict[str, Any]:
+async def clear_slot(ctx: RunContext[StateDeps[KitchenState]], slot: str) -> ToolReturn:
     """Clear a UI slot, removing its rendered component.
 
     Use this to dismiss chips, notifications, or canvas content.
     Slots: "canvas", "sticky", "chips", "notifications", "overlay".
     """
     if slot not in VALID_SLOTS:
-        return {"type": "error", "version": "1", "message": f"Unknown slot: {slot}"}
-    return {"type": "ui.clear", "version": "1", "slot": slot}
-
+        return ToolReturn(
+            return_value={"status": "error", "message": f"Unknown slot: {slot}"},
+            metadata=[],
+        )
+    value = {"type": "ui.clear", "version": "1", "slot": slot}
+    return ToolReturn(
+        return_value={
+            "status": "ok",
+            "instruction": "STOP. Slot cleared. Do not call any more tools. Output no text.",
+        },
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.clear", value=value)],
+    )
 
 class _PatchOp(BaseModel):
     op: str
@@ -475,7 +528,7 @@ async def scale_recipe(
 
     try:
         resp = await _http_client.get(
-            f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10
+            f"{FASTAPI_URL}/recipes/{recipe_id}", headers=_backend_headers(), timeout=10
         )
         resp.raise_for_status()
         payload = resp.json()
@@ -567,6 +620,7 @@ async def apply_recipe_changes(
         resp = await _http_client.put(
             f"{FASTAPI_URL}/recipes/{recipe_id}",
             json=updates,
+            headers=_backend_headers(),
             timeout=10,
         )
         resp.raise_for_status()
@@ -622,7 +676,7 @@ async def suggest_recipe_improvements(ctx: RunContext[StateDeps[KitchenState]], 
     """
     try:
         resp = await _http_client.get(
-            f"{FASTAPI_URL}/recipes/{recipe_id}", timeout=10
+            f"{FASTAPI_URL}/recipes/{recipe_id}", headers=_backend_headers(), timeout=10
         )
         resp.raise_for_status()
         payload = resp.json()

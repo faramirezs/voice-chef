@@ -54,8 +54,10 @@ services:
       SQL_ECHO: ${SQL_ECHO}
       SECRET_KEY: ${SECRET_KEY}
       DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
-      - ./backend/uploads:/code/uploads
+      # - ./backend/uploads:/code/uploads
+      - uploads:/code/uploads
 
   agent:
     build:
@@ -74,6 +76,7 @@ services:
       AGENT_API_KEY: ${AGENT_API_KEY}
       AGENT_MODEL: ${AGENT_MODEL:-deepseek-ai/deepseek-v4-flash}
       AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
 
   stt:
     build:
@@ -93,6 +96,7 @@ services:
 volumes:
   whisper_models:
   postgres_data:
+  uploads:
 
 networks:
   app-network:
