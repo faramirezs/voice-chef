@@ -8,6 +8,8 @@ concurrency:
   cancel-in-progress: false  # never cancel an in-progress deploy
 
 on:
+  push:
+    branches: [184-feat-cd-VPS]
   workflow_run:
     workflows: ["Schema Drift Gate"]
     types: [completed]
