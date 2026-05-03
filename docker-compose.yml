@@ -2,6 +2,7 @@ services:
   office-frontend:
     build:
       context: ./frontend/office/
+      target: runtime
       args:
         - VITE_KITCHEN_URL=${VITE_KITCHEN_URL:-http://localhost:8082}
     ports:
@@ -14,6 +15,7 @@ services:
   kitchen-frontend:
     build:
       context: ./frontend/kitchen/
+      target: runtime
     ports:
       - "8082:80"
     networks:
