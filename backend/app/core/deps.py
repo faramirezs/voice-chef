@@ -1,11 +1,11 @@
 from typing import Annotated
-import ipaddress
 from uuid import UUID
 import jwt
 import os
 
 from fastapi import Depends, HTTPException, Request
 from sqlmodel import Session, select
+from fastapi.security import OAuth2PasswordBearer
 
 from .database import get_session
 from app.models import Users
@@ -21,27 +21,27 @@ SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_for_testing")
 ALGORITHM = "HS256"
 DEFAULT_TENANT_ID = UUID(os.getenv("DEFAULT_TENANT_ID", "0b796544-6414-4d62-8f1f-cd2f9f0ac0a0"))
 
+# Security scheme for OpenAPI / Swagger UI.  auto_error=False so that cookie-based
+# auth still works at runtime, but the "Authorize" button is still rendered.
+_oauth2_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+
 # -----------------------------------------------------------------------------
-# Internal request detection (Docker network bypass)
+# Internal request detection (agent secret bypass)
 # -----------------------------------------------------------------------------
 
 def _is_internal_request(request: Request) -> bool:
-    """Return True if the request originates from the internal Docker network.
+    """Return True if the request carries the shared internal secret header.
 
     Used as a temporary bypass so the agent service can call backend
-    endpoints without forwarding auth headers. This is ONLY safe inside
-    a Docker-internal network where the agent cannot be reached from
-    outside. TODO: remove once proper auth forwarding is wired end-to-end.
+    endpoints without forwarding auth headers. Only the agent container
+    knows this secret. Browser-proxied requests through nginx never
+    carry this header, so normal cookie/auth flow still applies.
+    TODO: remove once proper auth forwarding is wired end-to-end.
     """
-    client = request.client
-    if client is None:
+    if not INTERNAL_SECRET:
         return False
-    host = client.host
-    try:
-        addr = ipaddress.ip_address(host)
-        return addr.is_loopback or addr.is_private
-    except ValueError:
-        return host in ("localhost", "backend", "agent")
+    return request.headers.get("X-Internal-Secret") == INTERNAL_SECRET
 
 
 # -----------------------------------------------------------------------------
@@ -51,6 +51,7 @@ def _is_internal_request(request: Request) -> bool:
 
 def get_current_user(
     request: Request,
+    _token: Annotated[str | None, Depends(_oauth2_optional)],
     session: Session = Depends(get_session),
 ) -> Users:
     """Decode the JWT from cookie or Authorization header and return the user."""

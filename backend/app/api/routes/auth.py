@@ -15,7 +15,7 @@ from app.schemas.users import (
 )
 from app.utils.auth_utils import (
     get_password_hash, validate_password, verify_password, create_access_token,
-    ensure_unique_user_email
+    ensure_unique_user_email, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from app.api.openapi_responses import signup_responses, login_responses
 
@@ -144,7 +144,7 @@ def login(
     # 7. Return the full token response object
     return AuthTokenResponse(
         access_token=access_token,
-        expires_in=3600,
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=user_response
     )
 

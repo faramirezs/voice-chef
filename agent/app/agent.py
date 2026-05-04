@@ -56,9 +56,14 @@ os.environ["OPENAI_API_KEY"] = AGENT_API_KEY
 
 model = OpenAIModel(AGENT_MODEL)
 
+_INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+
 def _backend_headers() -> dict[str, str]:
     """Return headers with forwarded auth from the frontend request."""
-    return get_auth_headers()
+    headers = get_auth_headers()
+    if _INTERNAL_SECRET:
+        headers["X-Internal-Secret"] = _INTERNAL_SECRET
+    return headers
 
 
 _http_client = httpx.AsyncClient()
