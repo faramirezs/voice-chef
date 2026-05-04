@@ -9,8 +9,6 @@ export interface RecipeIngredientResponse {
   quantity_grams: string;
   preparation: string | null;
   sort_order: number;
-  // NOTE: mpeshko - Do we need it? TO DO
-  // [key: string]: unknown;
 }
 
 export interface Recipe {
@@ -53,6 +51,27 @@ export interface PaginatedResponse<T> {
   };
 }
 
+export interface RecipeIngredientWrite {
+  ingredient_id: string;
+  quantity: string;
+  unit: string;
+  preparation: string | null;
+  sort_order: number;
+}
+
+export interface RecipeWrite {
+  name: string;  // Required
+  description?: string | null;
+  instructions?: string | null;
+  status?: string; // Optional (has backend default)
+  yield_mode?: string; // Optional (has backend default)
+  portion_size_grams?: string | null;
+  portions_count_resolved?: string | null;
+  total_raw_weight_grams?: string | null;
+  total_cooked_weight_grams?: string | null;
+  ingredients?: RecipeIngredientWrite[];
+}
+
 // RecipeIngredientResponse
 export interface Ingredient {
   id: string;
@@ -70,7 +89,4 @@ export interface Ingredient {
   // is_custom?: boolean;
   // created_at?: string;
   // updated_at?: string;
-
-  // NOTE: mpeshko - Do we need it? TO DO
-  // [key: string]: unknown;
 }

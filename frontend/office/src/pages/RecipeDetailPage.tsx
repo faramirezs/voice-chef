@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDeleteRecipe, useRecipe, useUpdateRecipe } from '@/hooks/useRecipes';
+import { useDeleteRecipe, useRecipe, useUpdateRecipe, useUploadRecipePhoto, useDeleteRecipePhoto } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { InlineEditableRecipeText } from '../components/recipes/InlineEditableRecipeText';
 import { Section } from '../components/Section';
@@ -7,7 +7,7 @@ import { formatDatetime } from '../components/Format-Datetime.tsx';
 import { DetailRow } from '../components/Detail-row';
 import { Grid } from '../components/Grid';
 import { cn } from '@/lib/utils';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import { useRef } from 'react';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -40,6 +40,9 @@ export function RecipeDetailPage() {
   const { data: recipe, isLoading, isError } = useRecipe(id!);
   const moveToActive = useUpdateRecipe();
   const deleteRecipe = useDeleteRecipe();
+  const uploadPhoto = useUploadRecipePhoto();
+  const deletePhoto = useDeleteRecipePhoto();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleMoveToActive = () => {
     if (!recipe) {
@@ -72,6 +75,34 @@ export function RecipeDetailPage() {
     });
   };
 
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && recipe) {
+      uploadPhoto.mutate({ id: recipe.id, file });
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeletePhoto = () => {
+    if (!recipe?.photo_url) {
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this recipe picture?');
+    if (!confirmed) {
+      return;
+    }
+
+    deletePhoto.mutate(recipe.id);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse max-w-3xl">
@@ -86,7 +117,7 @@ export function RecipeDetailPage() {
   if (isError || !recipe) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => navigate(-1)}>← Back to recipes</Button>
+        <Button variant="outline" onClick={() => navigate('/recipes')}>← Back to recipes</Button>
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-destructive">
           Recipe not found.
         </div>
@@ -104,8 +135,16 @@ export function RecipeDetailPage() {
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-3">
-        <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
-        <div className="h-72 w-full overflow-hidden rounded-xl border">
+        <Button size="sm" onClick={() => navigate('/recipes')}>← Back</Button>
+        <div
+          className="h-72 w-full overflow-hidden rounded-xl border cursor-pointer relative hover:opacity-80 transition-opacity bg-muted flex items-center justify-center"
+          onClick={handlePhotoClick}
+        >
+          {uploadPhoto.isPending && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+              <div className="text-white text-sm">Uploading...</div>
+            </div>
+          )}
           {recipe.photo_url ? (
             <img
               src={recipe.photo_url}
@@ -113,13 +152,19 @@ export function RecipeDetailPage() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <img
-              src={recipeImage}
-              alt="fallback"
-              className="w-full h-full object-cover"
-            />
+            <div className="text-center text-muted-foreground">
+              <p className="text-lg font-medium">Click here to upload a picture</p>
+            </div>
           )}
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploadPhoto.isPending}
+        />
         <div className="flex items-center gap-3 flex-wrap">
           <InlineEditableRecipeText
             recipeId={recipe.id}
@@ -131,32 +176,47 @@ export function RecipeDetailPage() {
           />
           <span className={badgeClass}>{recipe.status}</span>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button
-            size="lg"
-            type="button"
-            className="min-w-40"
-            onClick={handleMoveToActive}
-            disabled={moveToActive.isPending}
-            aria-busy={moveToActive.isPending}
-          >
-            Change status
-          </Button>
-          <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
-            Edit
-          </Button>
-          <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
-            Duplicate
-          </Button>
-          <Button
-            size="lg"
-            variant="destructive"
-            onClick={handleDeleteRecipe}
-            disabled={deleteRecipe.isPending}
-            aria-busy={deleteRecipe.isPending}
-          >
-            Delete recipe
-          </Button>
+        <div className="flex flex-wrap gap-3 justify-between">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              size="lg"
+              type="button"
+              className="min-w-40"
+              onClick={handleMoveToActive}
+              disabled={moveToActive.isPending}
+              aria-busy={moveToActive.isPending}
+            >
+              Change status
+            </Button>
+            <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
+              Edit
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
+              Duplicate
+            </Button>
+            <Button
+              size="lg"
+              variant="destructive"
+              onClick={handleDeleteRecipe}
+              disabled={deleteRecipe.isPending}
+              aria-busy={deleteRecipe.isPending}
+            >
+              Delete recipe
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {recipe.photo_url && (
+              <Button
+                size="lg"
+                variant="destructive"
+                onClick={handleDeletePhoto}
+                disabled={deletePhoto.isPending}
+                aria-busy={deletePhoto.isPending}
+              >
+                {deletePhoto.isPending ? 'Deleting...' : 'Delete picture'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

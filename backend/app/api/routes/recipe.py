@@ -15,6 +15,7 @@ from app.utils.recipe_utils import (
     to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name,
     validate_recipe_business_rules
 )
+from app.utils.file_service_image_utils import delete_file
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
@@ -263,8 +264,11 @@ def delete_recipe(
         raise HTTPException(status_code=404, detail="Recipe not found")
 
     try:
+        photo_url = recipe.photo_url
         session.delete(recipe)
         session.commit()
+        if photo_url:
+            delete_file(photo_url)
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")

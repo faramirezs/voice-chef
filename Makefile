@@ -32,6 +32,10 @@ dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
 
+dev-back-office: $(ENV)
+	@echo "Building and running db, backend and office-frontend services in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+
 prod: $(ENV)
 	@echo "Building in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
@@ -160,6 +164,6 @@ db-connect:
 agent-terminal:
 	docker exec -it voice-chef-agent-1 bash
 
-.PHONY: all dev dev-back prod down re clean fclean status logs help % build up start stop
+.PHONY: all dev dev-back dev-back-office prod down re clean fclean status logs help % build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal

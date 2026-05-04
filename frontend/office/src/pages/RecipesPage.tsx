@@ -1,12 +1,11 @@
 import { RecipeList } from '@/components/recipes/RecipeList';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-// import { Popover } from 'radix-ui';
 
 export function RecipesPage() {
   const navigate = useNavigate();
 
-  const handleCreateDraft = () => {
+  const handleCreateRecipe = () => {
     navigate('/recipes/new');
   };
 
@@ -17,7 +16,9 @@ export function RecipesPage() {
           <h1 className="text-2xl font-semibold">Recipes</h1>
           <p className="text-muted-foreground">Browse and manage your recipe collection.</p>
         </div>
-        <Button onClick={handleCreateDraft}>Create new recipe</Button>
+        <Button onClick={handleCreateRecipe}>
+          Create new recipe
+        </Button>
       </div>
       <RecipeList />
     </div>
