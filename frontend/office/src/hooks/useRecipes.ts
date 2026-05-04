@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/api/axios';
-import { uploadRecipePhoto } from '@/api/recipePhotos';
+import { uploadRecipePhoto, deleteRecipePhoto } from '@/api/recipePhotos';
 import type { PaginatedResponse, Recipe } from '@/types/recipe';
 
 const RECIPES_KEY = 'recipe';
@@ -127,6 +127,20 @@ export function useUploadRecipePhoto() {
     },
     onSuccess: ({ id, photoUrl }) => {
       queryClient.setQueryData([RECIPES_KEY, 'photo', id], photoUrl);
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY, id] });
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
+    },
+  });
+}
+
+export function useDeleteRecipePhoto() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await deleteRecipePhoto(id);
+      return id;
+    },
+    onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: [RECIPES_KEY, id] });
       queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
     },

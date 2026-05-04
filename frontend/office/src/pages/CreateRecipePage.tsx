@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCreateRecipe } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Section } from '../components/Section';
 import { cn } from '@/lib/utils';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -20,8 +17,6 @@ export function CreateRecipePage() {
   const createRecipe = useCreateRecipe();
 
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [instructions, setInstructions] = useState('');
   const [error, setError] = useState<string | null>(null);
   const draftStatus = 'draft';
 
@@ -38,8 +33,6 @@ export function CreateRecipePage() {
     createRecipe.mutate(
       {
         name: trimmedName,
-        description: description.trim() || null,
-        instructions: instructions.trim() || null,
         status: 'draft',
       },
       {
@@ -60,13 +53,7 @@ export function CreateRecipePage() {
       <div className="space-y-4">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
 
-        <div
-          className="h-72 w-full overflow-hidden rounded-xl border bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${recipeImage})` }}
-          aria-hidden="true"
-        />
-
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap mt-6">
           <div className="space-y-1 w-full sm:w-auto sm:min-w-[28rem]">
             <Input
               id="recipe-name"
@@ -95,38 +82,10 @@ export function CreateRecipePage() {
             disabled={createRecipe.isPending}
             aria-busy={createRecipe.isPending}
           >
-            {createRecipe.isPending ? 'Saving...' : 'Save recipe'}
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            type="button"
-            onClick={() => navigate('/recipes')}
-            disabled={createRecipe.isPending}
-          >
-            Cancel
+            {createRecipe.isPending ? 'Saving...' : 'Save recipe name & Proceed to details'}
           </Button>
         </div>
       </div>
-
-      <Section title="Description">
-        <Textarea
-          id="recipe-description"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          placeholder="Click to add description"
-        />
-      </Section>
-
-      <Section title="Instructions">
-        <Textarea
-          id="recipe-instructions"
-          value={instructions}
-          onChange={(event) => setInstructions(event.target.value)}
-          placeholder="Click to add instructions"
-          className="min-h-40"
-        />
-      </Section>
     </div>
   );
 }

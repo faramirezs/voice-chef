@@ -19,3 +19,7 @@ export const uploadRecipePhoto = (recipeId: string, file: File) => {
     },
   });
 };
+
+export const deleteRecipePhoto = (recipeId: string) => {
+  return api.delete(`/recipe_image/${recipeId}`);
+};
