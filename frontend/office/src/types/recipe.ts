@@ -11,8 +11,7 @@ export interface RecipeIngredientResponse {
   sort_order: number;
 }
 
-export interface Recipe {
-  // RecipeSummary
+export interface RecipeSummary { // old Recipe
   id: string;
   name: string;
   description: string | null;
@@ -25,14 +24,15 @@ export interface Recipe {
   photo_url: string | null;
   created_at: string;
   updated_at: string;
-  
-  // export interface RecipeDetail extends RecipeSummary
+}
+
+export interface RecipeDetail extends RecipeSummary {
   instructions: string | null;
   preparation_time_minutes: number | null;
   cooking_time_minutes: number | null;
   is_component: boolean;
   ingredients?: RecipeIngredientResponse[];
-  
+
   // below: present in DB Shema, but not used
   // created_by: string | null;
   // yield_amount: number | null;
@@ -41,6 +41,7 @@ export interface Recipe {
   // recipe_number: string | null;
   // storage_temperature: string | null;
 }
+  
 
 export interface PaginatedResponse<T> {
   items: T[];

@@ -1,5 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDeleteRecipe, useRecipe, useUpdateRecipe, useUploadRecipePhoto, useDeleteRecipePhoto } from '@/hooks/useRecipes';
+import { 
+  useDeleteRecipe, 
+  useRecipe, 
+  useUpdateRecipe, 
+  useUploadRecipePhoto, 
+  useDeleteRecipePhoto } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { InlineEditableRecipeText } from '../components/recipes/InlineEditableRecipeText';
 import { Section } from '../components/Section';
@@ -16,38 +21,23 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 
-// function TextBlock({ label, value }: { label: string; value: string | null | undefined }) {
-//   return (
-//     <div className="space-y-1">
-//       {label && <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>}
-//       {value
-//         ? <p className="text-sm leading-relaxed whitespace-pre-line">{value}</p>
-//         : <p className="text-sm text-muted-foreground/50 italic">empty</p>
-//       }
-//     </div>
-//   );
-// }
-
-// function formatDate(value: string | null | undefined) {
-//   if (!value) return null;
-//   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-// }
-
-
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: recipe, isLoading, isError } = useRecipe(id!);
-  const moveToActive = useUpdateRecipe();
   const deleteRecipe = useDeleteRecipe();
+  // TanStack Query is very sensitive to the enabled flag. As soon as you click 
+  // the "Delete" button and the backend returns 204, the deleteMutation.isSuccess 
+  // status instantly becomes true.
+  const { data: recipe, isLoading, isError } = useRecipe(id!, {
+    enabled: !deleteRecipe.isSuccess
+  });
+  const moveToActive = useUpdateRecipe();
   const uploadPhoto = useUploadRecipePhoto();
   const deletePhoto = useDeleteRecipePhoto();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleMoveToActive = () => {
-    if (!recipe) {
-      return;
-    }
+    if (!recipe) { return; }
 
     moveToActive.mutate({
       id: recipe.id,
@@ -56,17 +46,13 @@ export function RecipeDetailPage() {
   };
 
   const handleDeleteRecipe = () => {
-    if (!recipe) {
-      return;
-    }
+    if (!recipe) return;
 
     const confirmed = window.confirm(
       `Delete recipe "${recipe.name}"? This cannot be undone.`,
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     deleteRecipe.mutate(recipe.id, {
       onSuccess: () => {
@@ -91,14 +77,10 @@ export function RecipeDetailPage() {
   };
 
   const handleDeletePhoto = () => {
-    if (!recipe?.photo_url) {
-      return;
-    }
+    if (!recipe?.photo_url) { return; }
 
     const confirmed = window.confirm('Delete this recipe picture?');
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) { return; }
 
     deletePhoto.mutate(recipe.id);
   };
