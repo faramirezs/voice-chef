@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/api/axios';
+import { uploadRecipePhoto } from '@/api/recipePhotos';
 import type { PaginatedResponse, Recipe } from '@/types/recipe';
 
 const RECIPES_KEY = 'recipe';

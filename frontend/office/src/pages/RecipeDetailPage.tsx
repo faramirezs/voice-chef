@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDeleteRecipe, useRecipe, useUpdateRecipe } from '@/hooks/useRecipes';
+import { useDeleteRecipe, useRecipe, useUpdateRecipe, useUploadRecipePhoto } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { InlineEditableRecipeText } from '../components/recipes/InlineEditableRecipeText';
 import { Section } from '../components/Section';
@@ -7,7 +7,7 @@ import { formatDatetime } from '../components/Format-Datetime.tsx';
 import { DetailRow } from '../components/Detail-row';
 import { Grid } from '../components/Grid';
 import { cn } from '@/lib/utils';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import { useRef } from 'react';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -40,6 +40,8 @@ export function RecipeDetailPage() {
   const { data: recipe, isLoading, isError } = useRecipe(id!);
   const moveToActive = useUpdateRecipe();
   const deleteRecipe = useDeleteRecipe();
+  const uploadPhoto = useUploadRecipePhoto();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleMoveToActive = () => {
     if (!recipe) {
@@ -70,6 +72,21 @@ export function RecipeDetailPage() {
         navigate('/recipes');
       },
     });
+  };
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && recipe) {
+      uploadPhoto.mutate({ id: recipe.id, file });
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   if (isLoading) {
@@ -105,7 +122,15 @@ export function RecipeDetailPage() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-3">
         <Button size="sm" onClick={() => navigate(-1)}>← Back</Button>
-        <div className="h-72 w-full overflow-hidden rounded-xl border">
+        <div
+          className="h-72 w-full overflow-hidden rounded-xl border cursor-pointer relative hover:opacity-80 transition-opacity bg-muted flex items-center justify-center"
+          onClick={handlePhotoClick}
+        >
+          {uploadPhoto.isPending && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+              <div className="text-white text-sm">Uploading...</div>
+            </div>
+          )}
           {recipe.photo_url ? (
             <img
               src={recipe.photo_url}
@@ -113,13 +138,19 @@ export function RecipeDetailPage() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <img
-              src={recipeImage}
-              alt="fallback"
-              className="w-full h-full object-cover"
-            />
+            <div className="text-center text-muted-foreground">
+              <p className="text-lg font-medium">Click here to upload a picture</p>
+            </div>
           )}
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={uploadPhoto.isPending}
+        />
         <div className="flex items-center gap-3 flex-wrap">
           <InlineEditableRecipeText
             recipeId={recipe.id}
