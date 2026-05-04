@@ -5,8 +5,13 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api } from '@/api/axios';
+import { 
+  getRecipes, 
+  getRecipe, 
+  createRecipe, 
+  deleteRecipe } from '@/api/recipes';
 import { uploadRecipePhoto, deleteRecipePhoto } from '@/api/recipePhotos';
-import type { PaginatedResponse, Recipe } from '@/types/recipe';
+import type { Recipe, RecipeWrite } from '@/types/recipe';
 
 const RECIPES_KEY = 'recipe';
 
@@ -22,9 +27,7 @@ export function useRecipes(filters?: {
     queryKey: [RECIPES_KEY, filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Recipe>>('/recipes', {
-        params: filters,
-      });
+      const { data } = await getRecipes(filters);
       return data;
     },
   });
@@ -40,9 +43,7 @@ export function useAllRecipes(pageSize = 100) {
       let total = 0;
 
       do {
-        const { data } = await api.get<PaginatedResponse<Recipe>>('/recipes', {
-          params: { offset, limit: safePageSize },
-        });
+        const { data } = await getRecipes({ offset, limit: safePageSize });
 
         allRecipes.push(...data.items);
         total = data.meta.total;
@@ -62,7 +63,7 @@ export function useRecipe(id: string) {
   return useQuery({
     queryKey: [RECIPES_KEY, id],
     queryFn: async () => {
-      const { data } = await api.get<Recipe>(`/recipes/${id}`);
+      const { data } = await getRecipe(id);
       return data;
     },
     enabled: !!id,
@@ -77,8 +78,8 @@ export function useRecipe(id: string) {
 export function useCreateRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (recipe: Partial<Recipe>) => {
-      const { data } = await api.post<Recipe>('/recipes', recipe);
+    mutationFn: async (recipe: RecipeWrite) => {
+      const { data } = await createRecipe(recipe);
       return data;
     },
     onSuccess: () => {
@@ -108,7 +109,7 @@ export function useDeleteRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await api.delete<Recipe>(`/recipes/${id}`);
+      const { data } = await deleteRecipe(id);
       return data;
     },
     onSuccess: (deletedRecipe) => {

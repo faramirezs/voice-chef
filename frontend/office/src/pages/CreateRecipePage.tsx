@@ -32,8 +32,7 @@ export function CreateRecipePage() {
 
     createRecipe.mutate(
       {
-        name: trimmedName,
-        status: 'draft',
+        name: trimmedName, status: 'draft',
       },
       {
         onSuccess: (recipe) => {
