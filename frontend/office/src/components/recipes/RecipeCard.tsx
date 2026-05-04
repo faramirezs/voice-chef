@@ -45,7 +45,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       {/* IMAGE */}
       {recipe.photo_url ? (
         <img
-          src={`/api/recipe_images/${recipe.id}`}
+          key={recipe.photo_url}
+          src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
           alt={displayTitle}
           className="w-full h-32 object-cover"
         />

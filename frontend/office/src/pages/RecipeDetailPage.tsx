@@ -147,7 +147,8 @@ export function RecipeDetailPage() {
           )}
           {recipe.photo_url ? (
             <img
-              src={`/api/recipe_images/${recipe.id}`}
+              key={recipe.photo_url}
+              src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
               alt={recipe.name}
               className="w-full h-full object-cover"
             />

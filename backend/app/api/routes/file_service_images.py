@@ -35,7 +35,6 @@ def upload_recipe_photo(
 
     try:
         recipe.photo_url = new_url
-
         db.add(recipe)
         db.commit()
         db.refresh(recipe)
@@ -78,7 +77,11 @@ def get_recipe_photo(
     if not os.path.exists(full_path):
         raise HTTPException(status_code=404, detail="Photo file not found on disk")
     
-    return FileResponse(full_path, media_type="image/jpeg")
+    return FileResponse(
+        full_path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 
 @router.delete("/{recipe_id}")
