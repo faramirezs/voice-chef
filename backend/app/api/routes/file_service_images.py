@@ -5,9 +5,9 @@ from uuid import UUID
 
 from app.core.database import get_session
 from app.models.recipe import Recipe
-from app.utils.file_service_utils import save_file, delete_file
+from app.utils.file_service_image_utils import save_file, delete_file
 
-router = APIRouter(prefix="/recipe_photos", tags=["File Service"])
+router = APIRouter(prefix="/recipe_image", tags=["File Service"])
 
 
 @router.put("/")
@@ -33,9 +33,7 @@ def upload_recipe_photo(
 
     except Exception:
         db.rollback()
-
         delete_file(new_url)
-
         raise
 
     if old_url:
@@ -60,7 +58,7 @@ def get_recipe_photo(recipe_id: UUID, db: Session = Depends(get_session)):
     return {"photo_url": recipe.photo_url}
 
 
-@router.delete("/{recipe_id}/photo")
+@router.delete("/{recipe_id}")
 def delete_recipe_photo(
     recipe_id: UUID,
     db: Session = Depends(get_session),

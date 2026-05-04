@@ -18,7 +18,7 @@ from app.models.users import Users
 # JWT signing key, algorithm, and token lifetime (for access tokens).
 SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_for_testing")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+ACCESS_TOKEN_EXPIRE_MINUTES = 3600
 
 ph = PasswordHasher()
 
