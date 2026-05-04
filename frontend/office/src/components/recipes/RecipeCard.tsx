@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Recipe } from '@/types/recipe';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
 
 const RECIPE_CARD_TITLE_MAX_LENGTH = 64;
 
@@ -20,15 +18,6 @@ const STATUS_STYLES: Record<string, string> = {
   archived: 'bg-gray-100 text-gray-600',
 };
 
-function ImagePlaceholder() {
-  return (
-    <div
-      className="relative flex h-36 w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${recipeImage})` }}
-      aria-hidden="true"
-    />
-  );
-}
 
 interface RecipeCardProps {
   recipe: Recipe;

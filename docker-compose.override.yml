@@ -7,7 +7,8 @@ services:
       - /app/node_modules
     ports:
       - "5173:5173"
-
+    environment:
+      VITE_KITCHEN_URL: http://localhost:5174
   kitchen-frontend:
     build:
       target: dev

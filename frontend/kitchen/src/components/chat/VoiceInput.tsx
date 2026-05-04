@@ -14,7 +14,7 @@ interface VoiceInputProps {
   disabled?: boolean;
 }
 
-const STT_URL = import.meta.env.VITE_STT_URL ?? "http://localhost:8002";
+const STT_URL = import.meta.env.VITE_STT_URL ?? "/stt";
 
 export function VoiceInput({
   onTranscript,
@@ -99,7 +99,6 @@ export function VoiceInput({
     }
   }, [recording, startRecording, stopRecording]);
 
-  const busy = recording || transcribing;
 
   return (
     <KButton

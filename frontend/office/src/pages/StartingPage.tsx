@@ -1,6 +1,4 @@
 import { NavLink } from "react-router-dom"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { LayoutBottomIcon } from "@hugeicons/core-free-icons"
 import recipeImage from "@/assets/voice-chef-recipe.jpg"
 import personImage from "@/assets/voice-chef-person.jpg"
 import aiImage from "@/assets/voice-chef-ai.jpg"

@@ -17,6 +17,7 @@ CMD ["npm", "run", "dev", "--", "--host"]
 # ── Stage 3: build production assets ───────────────────────
 FROM deps AS builder
 COPY . .
+ARG VITE_KITCHEN_URL
 RUN npm run build
 
 # ── Stage 4: production runtime (tiny nginx image) ─────────
