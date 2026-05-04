@@ -213,7 +213,7 @@ export function RecipeList() {
                   }}
                 >
                   <SelectTrigger aria-label="Results per page" className="w-24">
-                    <SelectValue placeholder="10" />
+                    <SelectValue placeholder={String(RESULTS_PER_PAGE_OPTIONS[0])} />
                   </SelectTrigger>
                   <SelectContent>
                     {RESULTS_PER_PAGE_OPTIONS.map((option) => (
