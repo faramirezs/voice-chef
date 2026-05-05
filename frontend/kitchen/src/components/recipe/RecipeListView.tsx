@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { redirectToOfficeLogin } from "@/lib/auth";
+import { handleAuthFailure } from "@/lib/auth";
 import { KInput } from "@/components/ui/KInput";
 import { KSelect } from "@/components/ui/KSelect";
 import { KButton } from "@/components/ui/KButton";
@@ -94,7 +94,7 @@ export function RecipeListView(props: RecipeListViewProps) {
     fetch(`/api/recipes?${params}`, { signal: controller.signal })
       .then((r) => {
         if (r.status === 401) {
-          redirectToOfficeLogin();
+          void handleAuthFailure();
           return null;
         }
         return r.json();
@@ -136,7 +136,7 @@ export function RecipeListView(props: RecipeListViewProps) {
       fetch(`/api/recipes/${recipe.id}`)
         .then((r) => {
           if (r.status === 401) {
-            redirectToOfficeLogin();
+            void handleAuthFailure();
             return null;
           }
           return r.json();

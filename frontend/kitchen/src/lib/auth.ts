@@ -48,6 +48,33 @@ export async function tryKitchenLogin(): Promise<boolean> {
   }
 }
 
+/**
+ * Handle a 401 from any kitchen API call. Tries kitchen-device silent login
+ * first; if that succeeds the page is reloaded so the next render sees a
+ * fresh session. Falls back to the office redirect when no kitchen creds
+ * are configured or silent login fails.
+ *
+ * A simple sessionStorage timestamp guards against reload loops if the
+ * cookie keeps being rejected after a "successful" login.
+ */
+export async function handleAuthFailure(): Promise<void> {
+  const LOOP_GUARD_KEY = "kitchen-auth-loop-guard";
+  const last = Number(sessionStorage.getItem(LOOP_GUARD_KEY) || "0");
+  if (Date.now() - last < 5000) {
+    sessionStorage.removeItem(LOOP_GUARD_KEY);
+    redirectToOfficeLogin();
+    return;
+  }
+
+  if (await tryKitchenLogin()) {
+    sessionStorage.setItem(LOOP_GUARD_KEY, String(Date.now()));
+    window.location.reload();
+    return;
+  }
+
+  redirectToOfficeLogin();
+}
+
 export function redirectToOfficeLogin(): void {
   // Runtime > build-time > dev default. Runtime wins so the same image
   // can target different office hosts (Pi → Tailscale, server → localhost, etc.).

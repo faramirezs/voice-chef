@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { redirectToOfficeLogin } from "@/lib/auth";
+import { handleAuthFailure } from "@/lib/auth";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
 import { chefAgent } from "@/lib/agent";
 import { setSharedAgentState } from "@/hooks/useAgent";
@@ -50,7 +50,7 @@ export function useRecipeScaling(): {
       try {
         const resp = await fetch(`/api/recipes/${selectedRecipeId}`);
         if (resp.status === 401) {
-          redirectToOfficeLogin();
+          void handleAuthFailure();
           return { success: false, error: "Unauthorized" };
         }
         if (!resp.ok) {
