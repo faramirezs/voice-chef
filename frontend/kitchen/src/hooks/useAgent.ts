@@ -466,6 +466,25 @@ export function useAgent() {
                 item.status === "running" ? { ...item, status: "failed" } : item
               )
             );
+
+            // Surface the upstream error to the user. AG-UI's RUN_ERROR
+            // events typically arrive when the model returns 4xx/5xx
+            // (rate limit, auth, timeout, etc.). Without this, the SPA
+            // silently drops the error and the user sees nothing.
+            const errorDetail =
+              typeof (event as { message?: unknown }).message === "string"
+                ? ((event as { message: string }).message)
+                : "";
+            emitEnvelope({
+              type: "ui.render",
+              slot: "notifications",
+              component: "notification",
+              level: "error",
+              message: errorDetail
+                ? `Assistant unavailable: ${errorDetail.slice(0, 240)}`
+                : "Assistant unavailable. Please try again.",
+              duration: 8000,
+            });
           }
         },
       };
@@ -507,6 +526,17 @@ export function useAgent() {
             item.status === "running" ? { ...item, status: "failed" } : item,
           ),
         );
+        // Visible UX for transport-level failures (network, CORS, auth).
+        // AG-UI RUN_ERROR events are handled in the onEvent block above.
+        const errMsg = err instanceof Error ? err.message : String(err);
+        emitEnvelope({
+          type: "ui.render",
+          slot: "notifications",
+          component: "notification",
+          level: "error",
+          message: `Couldn't reach assistant: ${errMsg.slice(0, 240)}`,
+          duration: 8000,
+        });
       } finally {
         if (debugStream) {
           console.log("[agent-debug] run:end", {

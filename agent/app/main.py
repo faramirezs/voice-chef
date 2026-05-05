@@ -66,6 +66,23 @@ async def run_agent(request: Request) -> Response:
         usage_limits=UsageLimits(request_limit=25, tool_calls_limit=10),
     )
 
+    # Wrap the SSE body iterator so any exception during streaming gets logged
+    # with a full traceback. Without this, pydantic-ai/upstream errors only
+    # surface to the client as an AG-UI RUN_ERROR event with no detail in our
+    # server logs.
+    if hasattr(response, "body_iterator"):
+        original_iter = response.body_iterator
+
+        async def logged_iter():
+            try:
+                async for chunk in original_iter:
+                    yield chunk
+            except Exception:
+                logger.exception("[agent-debug] streaming exception")
+                raise
+
+        response.body_iterator = logged_iter()
+
     if DEBUG_STREAM:
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         logger.warning(

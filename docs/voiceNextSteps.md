@@ -155,6 +155,32 @@ Agent calls search_recipes(query)
 
 ---
 
+## Topic 5: HTTPS / TLS Across the Stack
+
+**Goal:** Move the whole stack off plain HTTP. Today every service runs on HTTP — fine for `localhost` dev, but unacceptable for any deployment beyond a single dev machine, and dangerous over Tailscale once non-trusted devices are on the tailnet.
+
+**Two distinct surfaces:**
+
+1. **Inbound — browser → service.** Kitchen-frontend (Pi `:80` and server `:8082`), office-frontend (`:8080`), backend (`:8000`), agent (`:8001`), STT (Pi `:8002`), RAG (`:8003`). The JWT cookie is currently set with `secure=False` (`backend/app/api/routes/auth.py:136`) — that needs to flip to `True` once HTTPS is everywhere, otherwise tokens are sniffable on the wire.
+
+2. **Outbound — agent → model providers.** The current NVIDIA NIM integration (`AGENT_PROVIDER=nvidia`) and OpenRouter both use HTTPS by default at the API level, but verify no `verify=False` / plain-HTTP base URL has crept into agent config. Same audit for any other outbound calls (image generation, telemetry).
+
+**Approach options to evaluate:**
+
+- **Tailscale Serve / Funnel** — automatic Let's Encrypt certs for `*.ts.net` hostnames. Easiest path for a Tailscale-only deployment. Doesn't help if you ever need to expose a service to a non-Tailscale device on a LAN.
+- **Caddy as a reverse proxy** — auto-issues Let's Encrypt certs, drop-in replacement for the docker-compose port mappings. Single TLS terminator in front of multiple services. Works for Tailscale and LAN.
+- **nginx + certbot** — more config but matches what's already in the kitchen-frontend image.
+
+**Cookie/security follow-ups (depend on TLS landing first):**
+- Flip `secure=True` on `access_token` cookie.
+- Re-evaluate `samesite="lax"` — may want `strict` once cross-origin auth flows are gone.
+- Add HSTS headers at the reverse proxy.
+- Audit the kitchen-pi `/config.js` payload — kitchen credentials in cleartext are tolerable on a private tailnet but not on the open internet.
+
+**Files (when implemented):** reverse-proxy config (new), `frontend/kitchen/nginx.conf.template`, `backend/app/api/routes/auth.py`, deployment docs.
+
+---
+
 ## Implementation Priority
 
 | Priority | Topic | Effort | Impact |
