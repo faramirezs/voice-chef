@@ -71,10 +71,15 @@ server {
     # the right inert behaviour.
     location /wake/ {
         resolver 127.0.0.11 valid=30s ipv6=off;
+        # `set` and `rewrite` are both rewrite-module directives. With the
+        # `break` flag on `rewrite`, all further rewrite-module directives
+        # in this location are skipped — so `set` MUST come before `rewrite`,
+        # or $wake_upstream stays uninitialized and proxy_pass errors with
+        # "invalid URL prefix in 'http://'".
+        set $wake_upstream "wake:8004";
         # Variable-form proxy_pass doesn't rewrite the URI for us, so strip
         # the /wake/ prefix explicitly. /wake/events -> /events.
         rewrite ^/wake/(.*)$ /$1 break;
-        set $wake_upstream "wake:8004";
         proxy_pass http://$wake_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
