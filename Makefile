@@ -14,6 +14,10 @@ $(ENV):
 	fi
 
 # Main targets/commands to build, run and and stop + clean the application
+build: $(ENV)
+	@echo "Building the images..."
+	$(COMPOSE) build --no-cache
+
 dev: $(ENV)
 	@echo "Building and starting in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
@@ -28,8 +32,13 @@ dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
 
+dev-back-office: $(ENV)
+	@echo "Building and running db, backend and office-frontend services in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+
 prod: $(ENV)
-	@echo "Building in prod_mode"
+	@echo "Stopping existing containers and building in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) up --build --detach
 	@echo "VOICE-CHEF is running in prod_mode"
 
@@ -42,7 +51,7 @@ re: clean dev
 # Clean-up targets/commands
 clean:
 	@echo "Stopping the app and removing containers + images..."
-	$(COMPOSE) down --rmi all
+	$(COMPOSE) down --rmi local
 
 fclean:
 	@echo "Stopping the app and removing containers + images + volumes..."
@@ -57,6 +66,15 @@ status:
 	@printf '\n'
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
+		@( \
+			printf "IMAGE\tID\tSIZE\n"; \
+			docker images \
+				--filter "label=com.docker.compose.project=$(shell basename $(PWD))" \
+				--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+			docker images postgres \
+				--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+		) | column -t; \
+		printf '\n'
 
 logs:
 	$(COMPOSE) logs
@@ -98,9 +116,6 @@ define HELP_TEXT
 endef
 
 # Aux targets/commands
-build: $(ENV)
-	$(COMPOSE) build
-
 agent-build: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build agent
 
@@ -150,6 +165,6 @@ db-connect:
 agent-terminal:
 	docker exec -it voice-chef-agent-1 bash
 
-.PHONY: all dev dev-back prod down re clean fclean status logs help % build up start stop
+.PHONY: all dev dev-back dev-back-office prod down re clean fclean status logs help % build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal

@@ -64,6 +64,7 @@ class RecipeSummaryResponse(SQLModel):
 
 
 class RecipeDetailResponse(RecipeSummaryResponse):
+    instructions: str | None
     preparation_time_minutes: int | None
     cooking_time_minutes: int | None
     is_component: bool

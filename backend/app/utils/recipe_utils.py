@@ -83,6 +83,7 @@ def to_recipe_detail(recipe):
     """Convert Recipe ORM to RecipeDetailResponse dict with Decimal→string conversion and ingredients."""
     summary = to_recipe_summary(recipe)
     summary.update({
+        "instructions": recipe.instructions,
         "preparation_time_minutes": recipe.preparation_time_minutes,
         "cooking_time_minutes": recipe.cooking_time_minutes,
         "is_component": recipe.is_component,
