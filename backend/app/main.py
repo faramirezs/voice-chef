@@ -26,16 +26,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    docs_url=None,
-    openapi_url=None,
+    docs_url="/docs",
+    openapi_url="/openapi.json",
 )
 
-from slowapi.middleware import SlowAPIMiddleware
+# from slowapi.middleware import SlowAPIMiddleware
 
-app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
-
-
+# app.state.limiter = limiter
+# app.add_middleware(SlowAPIMiddleware)
 
 
 api_router = APIRouter(prefix="/api")
