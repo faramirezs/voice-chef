@@ -1,4 +1,7 @@
-FROM python:3.12-slim
+# Python 3.11 (not 3.12) because openWakeWord pulls in tflite-runtime as a
+# hard Linux dependency, and tflite-runtime ships wheels for cp310/cp311
+# only on linux/arm64 (the Pi). cp312 wheels don't exist as of late 2025.
+FROM python:3.11-slim
 
 # libportaudio2 is needed by sounddevice; libsndfile1 by some openwakeword codepaths.
 RUN apt-get update \
