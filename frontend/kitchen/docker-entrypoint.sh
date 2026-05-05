@@ -17,21 +17,36 @@ set -e
 : "${AGENT_HOST:=agent}"
 : "${AGENT_PORT:=8001}"
 : "${OFFICE_URL:=http://localhost:8080}"
+: "${KITCHEN_EMAIL:=}"
+: "${KITCHEN_PASSWORD:=}"
 
 export BACKEND_HOST BACKEND_PORT AGENT_HOST AGENT_PORT
 
-echo "kitchen-frontend nginx: BACKEND=${BACKEND_HOST}:${BACKEND_PORT}  AGENT=${AGENT_HOST}:${AGENT_PORT}  OFFICE=${OFFICE_URL}"
+# Don't log password (KITCHEN_PASSWORD is intentionally omitted).
+if [ -n "$KITCHEN_EMAIL" ]; then
+    kitchen_login_status="enabled (email=${KITCHEN_EMAIL})"
+else
+    kitchen_login_status="disabled"
+fi
+echo "kitchen-frontend nginx: BACKEND=${BACKEND_HOST}:${BACKEND_PORT}  AGENT=${AGENT_HOST}:${AGENT_PORT}  OFFICE=${OFFICE_URL}  KITCHEN_LOGIN=${kitchen_login_status}"
 
 envsubst '${BACKEND_HOST} ${BACKEND_PORT} ${AGENT_HOST} ${AGENT_PORT}' \
     < /etc/nginx/conf.d/default.conf.template \
     > /etc/nginx/conf.d/default.conf
 
-# Runtime config consumed by index.html. JSON.stringify-style escaping for the
-# string value — OFFICE_URL is a plain URL so this is conservative-not-fancy.
-escaped_office_url=$(printf '%s' "$OFFICE_URL" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+# Runtime config consumed by index.html. Escape backslashes and double quotes so
+# arbitrary URL/password values don't break the JS string literal.
+js_escape() {
+    printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
+}
+escaped_office_url=$(js_escape "$OFFICE_URL")
+escaped_kitchen_email=$(js_escape "$KITCHEN_EMAIL")
+escaped_kitchen_password=$(js_escape "$KITCHEN_PASSWORD")
 cat > /usr/share/nginx/html/config.js <<EOF
 window.__APP_CONFIG__ = {
-  officeUrl: "${escaped_office_url}"
+  officeUrl: "${escaped_office_url}",
+  kitchenEmail: "${escaped_kitchen_email}",
+  kitchenPassword: "${escaped_kitchen_password}"
 };
 EOF
 

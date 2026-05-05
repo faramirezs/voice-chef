@@ -12,6 +12,8 @@ interface ImportMeta {
 
 interface AppRuntimeConfig {
   officeUrl?: string;
+  kitchenEmail?: string;
+  kitchenPassword?: string;
 }
 
 interface Window {

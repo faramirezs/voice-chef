@@ -22,6 +22,11 @@ services:
       # Where unauthenticated kitchen users get redirected to log in.
       # Points at the server's office-frontend over Tailscale.
       OFFICE_URL: http://${SERVER_HOST}:${SERVER_OFFICE_PORT:-8080}
+      # Kitchen-device auto-login: the SPA POSTs these creds to /api/auth/login
+      # on initial load if /api/auth/me returns 401, so the device authenticates
+      # as a "kitchen"-role user without human interaction. Set in pi/.env.
+      KITCHEN_EMAIL: ${KITCHEN_EMAIL}
+      KITCHEN_PASSWORD: ${KITCHEN_PASSWORD}
     extra_hosts:
       # Tailscale MagicDNS names aren't visible inside Docker bridge networks.
       # Pin the server's Tailscale IP into /etc/hosts so nginx upstream resolution

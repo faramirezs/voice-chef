@@ -22,6 +22,11 @@ services:
       # Where the kitchen SPA sends unauthenticated users for login.
       # Default points at the office-frontend on the same host (dev).
       OFFICE_URL: ${OFFICE_URL:-http://localhost:8080}
+      # Kitchen-device auto-login. Empty by default — only set on a kitchen-pi
+      # kiosk where the device authenticates as a "kitchen"-role user instead
+      # of a person. When unset, the SPA falls back to office-redirect on 401.
+      KITCHEN_EMAIL: ${KITCHEN_EMAIL:-}
+      KITCHEN_PASSWORD: ${KITCHEN_PASSWORD:-}
     networks:
       - app-network
     depends_on:

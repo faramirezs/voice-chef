@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
-import { getCurrentUser, redirectToOfficeLogin } from "@/lib/auth";
+import {
+  getCurrentUser,
+  redirectToOfficeLogin,
+  tryKitchenLogin,
+} from "@/lib/auth";
 import { HudCanvas } from "@/components/layout/HudCanvas";
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    getCurrentUser().then((user) => {
+    (async () => {
+      let user = await getCurrentUser();
+      if (!user && (await tryKitchenLogin())) {
+        user = await getCurrentUser();
+      }
       if (!user) {
         redirectToOfficeLogin();
-      } else {
-        setAuthed(true);
+        return;
       }
-    });
+      setAuthed(true);
+    })();
   }, []);
 
   if (authed === null) {
