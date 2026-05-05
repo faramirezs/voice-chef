@@ -27,7 +27,6 @@ export function KitchenRecordingOverlay() {
           flex items-center justify-center
           shadow-[0_20px_60px_rgba(0,0,0,0.5)]
           ring-8 ring-error/40
-          animate-pulse
           hover:scale-105 active:scale-95 transition-transform
           focus:outline-none focus-visible:ring-8 focus-visible:ring-white/60
         "
