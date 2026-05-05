@@ -199,6 +199,35 @@ Separate concern from auth. Pure UX trigger (Porcupine, OpenWakeWord, Snowboy). 
 
 ---
 
+## Topic 6: Pi WiFi onboarding (provisioning at first boot)
+
+**Goal:** Let a kitchen-pi connect to a new WiFi network without SSH or a keyboard. Required for any deployment scenario where the device moves between locations (school evaluation, demo, customer site) — currently the WiFi credentials are baked into the SD-card image at flash time, which means re-imaging to change networks.
+
+**Pattern (industry standard):**
+1. On boot, Pi tries to connect to the saved WiFi.
+2. If no saved network or all saved networks fail within a timeout, Pi switches to AP (access-point) mode and broadcasts its own SSID (e.g. `kitchen-pi-setup`).
+3. User joins that AP from a phone or laptop. A captive portal / web UI on the Pi shows nearby networks and accepts SSID + password.
+4. Pi saves credentials, drops AP mode, reconnects to the chosen network. AP comes back automatically if the connection fails again.
+
+**Recommended tool: [`comitup`](https://davesteele.github.io/comitup/)** — Debian package designed for exactly this. Headless-Pi friendly, integrates with NetworkManager/wpa_supplicant, has a built-in captive portal. Apache-2.0 licensed.
+
+Alternatives evaluated:
+- **`RaspAP`** — full router admin UI, overkill for "just join a WiFi."
+- **Custom `hostapd` + `wpa_supplicant` script** — works but a bunch of edge cases (network switching, race conditions on NetworkManager); reinventing comitup poorly.
+
+**Implementation outline:**
+1. `apt install comitup` on the Pi (one-time during image preparation).
+2. Configure `/etc/comitup.conf` — set the AP SSID prefix, captive-portal port, optional preshared password.
+3. Update `pi/README.md` provisioning checklist to remove the wpa_supplicant.conf step and add the AP-on-first-boot flow.
+4. Verify the kiosk auto-start (`kitchen-point.service`) doesn't fight comitup's network state — comitup typically pauses graphical services during AP-mode setup; we need to confirm the kitchen UI degrades gracefully (already does — silent re-login + error toast).
+5. Smoke test: flash a fresh SD card, boot, see the AP SSID, join it, configure WiFi, watch Pi connect.
+
+**Files (when implemented):** `pi/README.md` (provisioning section), possibly `pi/scripts/configure-wifi-onboarding.sh` (one-shot installer that runs `apt install comitup` + drops the config file in place), and a documentation note in `docs/kitchen-pi-design.md` about the boot-state machine.
+
+**Effort:** half-day for the integration + testing on a real Pi (most of which is verifying the kiosk service plays nicely with comitup's network-state transitions).
+
+---
+
 ## Known issues / coordinate with backend owner
 
 - ~~**Agent's `get_recipes_list` is broken on `main`** since the tenant-auth refactor.~~ **Resolved by PR #181** (merged into main 2026-05-01): `agent/app/agent.py` now forwards `Authorization` + cookie headers from the frontend to backend calls via a request-scoped `ContextVar` (`agent/app/context.py`). Backend's `get_current_user` also adds a Docker-internal-IP bypass returning a synthetic admin user — both ends of the auth chain are addressed.
@@ -211,13 +240,14 @@ Separate concern from auth. Pure UX trigger (Porcupine, OpenWakeWord, Snowboy). 
 
 | Priority | Topic | Effort | Impact |
 |----------|-------|--------|--------|
-| 1 | Topic 2 Tier 1 (vocabulary priming) | Small | Immediate transcription improvement |
-| 2 | Topic 1 (Ollama local model) | Small-Medium | Independence from rate limits |
-| 3 | Topics 3+4 (RAG + Valkey + microservices) | Large | Subject requirements, implement together |
-| 4 | Topic 5 (Auth: mixed pattern + kitchen-user scope) | Medium | Required before production-readiness for multi-tenant |
-| 5 | Investigate alternative agent model (DeepSeek/Qwen/Ollama) | Small | Better prompt-following on negative-path scenarios |
-| 6 | Topic 2 Tier 2 (office corrections) | Medium | Accuracy improvement over time |
-| 7 | Topic 2 Tier 3 (voice self-correction) | Medium-Large | Advanced, depends on Tier 2 |
-| 8 | Voice-ID service (attribution only, not auth) | Medium | UX nicety — personalization, audit trails |
+| 1 | Topic 6 (Pi WiFi onboarding via comitup) | Half-day | Unblocks deployments at any new location without re-imaging |
+| 2 | Topic 2 Tier 1 (vocabulary priming) | Small | Immediate transcription improvement |
+| 3 | Topic 1 (Ollama local model) | Small-Medium | Independence from rate limits |
+| 4 | Topics 3+4 (RAG + Valkey + microservices) | Large | Subject requirements, implement together |
+| 5 | Topic 5 (Auth: mixed pattern + kitchen-user scope) | Medium | Required before production-readiness for multi-tenant |
+| 6 | Investigate alternative agent model (DeepSeek/Qwen/Ollama) | Small | Better prompt-following on negative-path scenarios |
+| 7 | Topic 2 Tier 2 (office corrections) | Medium | Accuracy improvement over time |
+| 8 | Topic 2 Tier 3 (voice self-correction) | Medium-Large | Advanced, depends on Tier 2 |
+| 9 | Voice-ID service (attribution only, not auth) | Medium | UX nicety — personalization, audit trails |
 
 Note: Topics 3 and 4 are intertwined — Valkey is needed for RAG incremental updates. Implement them together.
