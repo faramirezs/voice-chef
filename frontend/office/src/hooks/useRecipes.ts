@@ -137,8 +137,12 @@ export function useUploadRecipePicture() {
       return { id, photoUrl: data.photo_url as string };
     },
     onSuccess: ({ id, photoUrl }) => {
-      queryClient.setQueryData([RECIPES_KEY, 'photo', id], photoUrl);
-      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY, id] });
+      queryClient.setQueryData([RECIPES_KEY, id], (oldData: any) => ({
+        ...oldData,
+        photo_url: photoUrl,
+      }));
+      // Immediately refetch to ensure fresh data
+      queryClient.refetchQueries({ queryKey: [RECIPES_KEY, id] });
       queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
     },
   });
