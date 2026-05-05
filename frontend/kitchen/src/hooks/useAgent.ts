@@ -131,6 +131,42 @@ export function getReset(): () => void {
   return _reset;
 }
 
+/**
+ * Translate verbose model/transport errors into a short, user-readable line.
+ * Pydantic-ai surfaces upstream LLM failures as text like
+ *   `status_code: 429, model_name: foo, body: {...}`.
+ * Show friendly text first; fall back to a truncated original if no pattern matches.
+ */
+function friendlyAgentError(detail: string): string {
+  if (!detail) return "The assistant is unavailable. Please try again.";
+
+  const statusMatch = detail.match(/status_code:\s*(\d{3})/i);
+  const code = statusMatch ? parseInt(statusMatch[1], 10) : null;
+
+  if (code === 429) {
+    return "The model is rate-limited. Please wait a moment and try again.";
+  }
+  if (code === 401 || code === 403) {
+    return "Model authentication failed. Check the API key in the agent configuration.";
+  }
+  if (code === 404) {
+    return "Model endpoint not found. Check the model name in the agent configuration.";
+  }
+  if (code === 408 || code === 504) {
+    return "The model timed out. Please try again or switch to a different model.";
+  }
+  if (code !== null && code >= 500) {
+    return "The model service is unavailable. Please try again or switch provider.";
+  }
+  if (code !== null && code >= 400) {
+    return "The model rejected the request. Please try again.";
+  }
+  if (/network|fetch|cors|failed to fetch/i.test(detail)) {
+    return "Couldn't reach the assistant. Check the network connection.";
+  }
+  return detail.slice(0, 200);
+}
+
 function emitEnvelope(raw: string | Record<string, unknown>): void {
   let parsed: unknown;
   if (typeof raw === "string") {
@@ -482,10 +518,8 @@ export function useAgent() {
               slot: "notifications",
               component: "notification",
               level: "error",
-              message: errorDetail
-                ? `Assistant unavailable: ${errorDetail.slice(0, 240)}`
-                : "Assistant unavailable. Please try again.",
-              duration: 8000,
+              message: friendlyAgentError(errorDetail),
+              duration: 12000,
             });
           }
         },
@@ -537,8 +571,8 @@ export function useAgent() {
           slot: "notifications",
           component: "notification",
           level: "error",
-          message: `Couldn't reach assistant: ${errMsg.slice(0, 240)}`,
-          duration: 8000,
+          message: friendlyAgentError(errMsg),
+          duration: 12000,
         });
       } finally {
         if (debugStream) {
