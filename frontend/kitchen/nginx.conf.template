@@ -13,7 +13,7 @@ server {
 
     # Proxy API traffic to FastAPI
     location /api/ {
-        proxy_pass http://backend:80/api/;
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -22,7 +22,7 @@ server {
 
     # Proxy agent traffic to Agent service
     location /agent/ {
-        proxy_pass http://agent:8001/;
+        proxy_pass http://${AGENT_HOST}:${AGENT_PORT}/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -33,6 +33,8 @@ server {
     }
 
     # Proxy STT traffic to STT service
+    # NOTE: stt is always local in both server-side and Pi-side compose
+    # networks, so no templating needed here.
     location /stt/ {
         proxy_pass http://stt:8002/;
         proxy_set_header Host $host;
@@ -43,7 +45,7 @@ server {
 
     # Proxy uploads to backend file storage
     location /uploads/ {
-        proxy_pass http://backend:80/uploads/;
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/uploads/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -52,7 +54,7 @@ server {
 
     # Proxy Swagger docs and OpenAPI schema
     location /docs {
-        proxy_pass http://backend:80/docs;
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/docs;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -60,12 +62,13 @@ server {
     }
 
     location /openapi.json {
-        proxy_pass http://backend:80/openapi.json;
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/openapi.json;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
     # Cache static assets aggressively
     location /assets/ {
         expires 1y;
