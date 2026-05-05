@@ -54,9 +54,9 @@ export interface PaginatedResponse<T> {
 
 export interface RecipeIngredientWrite {
   ingredient_id: string;
-  quantity: string;
-  unit: string;
-  preparation: string | null;
+  quantity?: string | null;
+  unit?: string | null;
+  preparation?: string | null;
   sort_order: number;
 }
 

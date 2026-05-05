@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from uuid import UUID
 from fastapi import HTTPException, status
 from app.models.recipe import Recipe
+from app.models.ingredient import Ingredient
 
 
 def validate_recipe_business_rules(recipe) -> None:
@@ -54,7 +55,7 @@ def to_recipe_ingredient_response(link):
         "ingredient_name": ingredient.name,
         "ingredient_default_unit": ingredient.default_unit,
         "quantity": str(link.quantity) if link.quantity else None,
-        "unit": link.unit,
+        "unit": link.unit if link.unit else None,
         "quantity_grams": str(quantity_grams),
         "preparation": link.preparation.strip() if link.preparation else None,
         "sort_order": link.sort_order,
@@ -119,4 +120,93 @@ def ensure_unique_recipe_name(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
             detail="Recipe name already exists"
+        )
+
+def validate_ingredient_sort_order(recipe) -> None:
+    """
+    Validate that sort_order values are sequential starting from 0 with no gaps.
+    
+    Expected sequence: 0, 1, 2, 3, ... (each value exactly +1 from previous)
+    
+    Raises:
+        HTTPException(409): If sort_order values are not sequential or have duplicates
+    """
+    if not recipe.ingredients:
+        return
+    
+    sort_orders = [ing.sort_order for ing in recipe.ingredients]
+    
+    # Check for duplicates
+    unique_sort_orders = set(sort_orders)
+    if len(sort_orders) != len(unique_sort_orders):
+        seen = set()
+        duplicates = set()
+        for sort_order in sort_orders:
+            if sort_order in seen:
+                duplicates.add(sort_order)
+            seen.add(sort_order)
+        
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Duplicate sort_order values found: {duplicates}"
+        )
+    
+    # Check for sequential order starting from 0
+    expected_sequence = set(range(len(sort_orders)))
+    actual_sequence = set(sort_orders)
+    
+    if actual_sequence != expected_sequence:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"sort_order must be sequential starting from 0. Expected: {sorted(expected_sequence)}, Got: {sorted(actual_sequence)}"
+        )
+
+
+def validate_all_ingredients_exist_no_duplicates(
+        session: Session,
+        recipe
+) -> None:
+    """
+    Validate that all ingredients exist in the database.
+    
+    Raises:
+        HTTPException(400): If any ingredient IDs don't exist in database
+        HTTPException(409): If there are duplicate ingredient_ids in the recipe
+    """
+    if not recipe.ingredients:
+        return
+    
+    # Check for duplicate ingredient_ids
+    ingredient_ids = []
+    for ing in recipe.ingredients:
+        ingredient_ids.append(ing.ingredient_id)
+    # Convert list to set: remove duplicates
+    unique_ids = set(ingredient_ids)
+    
+    if len(ingredient_ids) != len(unique_ids):
+        # Find duplicates
+        seen = set()
+        duplicates = set()
+        for ing_id in ingredient_ids:
+            if ing_id in seen:
+                duplicates.add(ing_id)
+            seen.add(ing_id)
+        
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Duplicate ingredient IDs found: {duplicates}"
+        )
+    
+    # Check that all ingredients exist in database
+    existing_ingredients = session.exec(
+        select(Ingredient).where(Ingredient.id.in_(unique_ids))
+    ).all()
+    
+    if len(existing_ingredients) != len(unique_ids):
+        # Check which id user sent that DB doesn't have
+        existing_ids = {ing.id for ing in existing_ingredients}
+        missing_ids = unique_ids - existing_ids
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid ingredient IDs: {missing_ids}"
         )
