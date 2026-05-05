@@ -8,6 +8,8 @@ from app.api.routes.recipe import router as recipe_router
 from app.api.routes.ingredient import router as ingredient_router
 from app.api.routes.file_service_images import router as images_router
 from app.api.routes.file_service_pdfs import router as pdfs_router
+from app.limiter import limiter
+from app.public_app import public_app
 from app.core.config import settings
 
 
@@ -22,14 +24,11 @@ async def lifespan(app: FastAPI):
     # Cleanup code can be added here if needed
 
 
-app = FastAPI(lifespan=lifespan)
-
-
-
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-limiter = Limiter(key_func=get_remote_address)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url=None,
+    openapi_url=None,
+)
 
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -48,6 +47,7 @@ api_router.include_router(images_router)
 api_router.include_router(pdfs_router)
 
 app.include_router(api_router)
+app.mount("/api/public", public_app)
 
 @app.get("/")
 def hello():
