@@ -155,16 +155,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink to="/files" className={({ isActive }) => isActive ? "bg-primary/10 text-primary" : ""}>
-                <HugeiconsIcon icon={BookOpen02Icon} strokeWidth={2} />
-                <span>Files</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
