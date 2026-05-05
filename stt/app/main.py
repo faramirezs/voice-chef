@@ -22,8 +22,8 @@ ALLOWED_CONTENT_TYPES = {
 
 
 @app.get("/health")
-async def health():
-    return {"status": "ok"}
+async def health() -> dict[str, str]:
+    return {"status": "ok", "service": "stt"}
 
 
 @app.post("/transcribe")

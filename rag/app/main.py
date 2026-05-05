@@ -98,8 +98,8 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, str]:
+    return {"status": "ok", "service": "rag"}
 
 
 # --- Search ----------------------------------------------------------------
