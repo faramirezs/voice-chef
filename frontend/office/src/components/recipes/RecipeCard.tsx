@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import type { Recipe } from '@/types/recipe';
+import type { RecipeSummary } from '@/types/recipe';
 
 const RECIPE_CARD_TITLE_MAX_LENGTH = 64;
 
@@ -20,7 +20,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 
 interface RecipeCardProps {
-  recipe: Recipe;
+  recipe: RecipeSummary;
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
