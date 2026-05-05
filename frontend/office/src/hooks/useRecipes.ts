@@ -10,7 +10,7 @@ import {
   createRecipe,
   updateRecipe,
   deleteRecipe } from '@/api/recipes';
-import { uploadRecipePhoto, deleteRecipePhoto } from '@/api/recipePhotos';
+import { uploadRecipePicture, deleteRecipePicture } from '@/api/recipePhotos';
 import type { 
   RecipeSummary,
   RecipeDetail, 
@@ -129,11 +129,11 @@ export function useDeleteRecipe() {
   });
 }
 
-export function useUploadRecipePhoto() {
+export function useUploadRecipePicture() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, file }: { id: string; file: File }) => {
-      const { data } = await uploadRecipePhoto(id, file);
+      const { data } = await uploadRecipePicture(id, file);
       return { id, photoUrl: data.photo_url as string };
     },
     onSuccess: ({ id, photoUrl }) => {
@@ -144,11 +144,11 @@ export function useUploadRecipePhoto() {
   });
 }
 
-export function useDeleteRecipePhoto() {
+export function useDeleteRecipePicture() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await deleteRecipePhoto(id);
+      await deleteRecipePicture(id);
       return id;
     },
     onSuccess: (id) => {

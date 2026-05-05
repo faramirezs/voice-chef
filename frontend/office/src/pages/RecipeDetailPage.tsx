@@ -5,8 +5,8 @@ import {
   useDeleteRecipe, 
   useRecipe, 
   useUpdateRecipe, 
-  useUploadRecipePhoto, 
-  useDeleteRecipePhoto } from '@/hooks/useRecipes';
+  useUploadRecipePicture, 
+  useDeleteRecipePicture } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { InlineEditableRecipeText } from '../components/recipes/InlineEditableRecipeText';
 import { Section } from '../components/Section';
@@ -35,8 +35,8 @@ export function RecipeDetailPage() {
     enabled: !deleteRecipe.isSuccess
   });
   const moveToActive = useUpdateRecipe();
-  const uploadPhoto = useUploadRecipePhoto();
-  const deletePhoto = useDeleteRecipePhoto();
+  const uploadPhoto = useUploadRecipePicture();
+  const deletePhoto = useDeleteRecipePicture();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Navigate away immediately after successful deletion
@@ -144,7 +144,7 @@ export function RecipeDetailPage() {
           )}
           {recipe.photo_url ? (
             <img
-              src={recipe.photo_url}
+              src={`/api/recipe_images/${recipe.id}`}
               alt={recipe.name}
               className="w-full h-full object-cover"
             />
