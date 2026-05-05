@@ -1,4 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   useDeleteRecipe, 
   useRecipe, 
@@ -24,6 +26,7 @@ const STATUS_STYLES: Record<string, string> = {
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const deleteRecipe = useDeleteRecipe();
   // TanStack Query is very sensitive to the enabled flag. As soon as you click 
   // the "Delete" button and the backend returns 204, the deleteMutation.isSuccess 
@@ -35,6 +38,16 @@ export function RecipeDetailPage() {
   const uploadPhoto = useUploadRecipePhoto();
   const deletePhoto = useDeleteRecipePhoto();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Navigate away immediately after successful deletion
+  useEffect(() => {
+    if (deleteRecipe.isSuccess) {
+      // Remove the recipe from cache immediately to prevent "not found" error
+      queryClient.removeQueries({ queryKey: ['recipe', id] });
+      // Navigate away
+      navigate('/recipes');
+    }
+  }, [deleteRecipe.isSuccess, navigate, queryClient, id]);
 
   const handleMoveToActive = () => {
     if (!recipe) { return; }
@@ -54,11 +67,7 @@ export function RecipeDetailPage() {
 
     if (!confirmed) return;
 
-    deleteRecipe.mutate(recipe.id, {
-      onSuccess: () => {
-        navigate('/recipes');
-      },
-    });
+    deleteRecipe.mutate(recipe.id);
   };
 
   const handlePhotoClick = () => {
@@ -96,7 +105,8 @@ export function RecipeDetailPage() {
     );
   }
 
-  if (isError || !recipe) {
+  // Show error only if recipe genuinely doesn't exist (not during deletion)
+  if (isError && !deleteRecipe.isPending && !deleteRecipe.isSuccess) {
     return (
       <div className="space-y-4">
         <Button variant="outline" onClick={() => navigate('/recipes')}>← Back to recipes</Button>
@@ -105,6 +115,11 @@ export function RecipeDetailPage() {
         </div>
       </div>
     );
+  }
+
+  // If recipe data is missing but we're not in an error state, don't render
+  if (!recipe) {
+    return null;
   }
 
   const badgeClass = cn(
