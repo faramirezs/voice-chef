@@ -478,6 +478,7 @@ export function useAgent() {
                 : "";
             emitEnvelope({
               type: "ui.render",
+              version: "1",
               slot: "notifications",
               component: "notification",
               level: "error",
@@ -532,6 +533,7 @@ export function useAgent() {
         const errMsg = err instanceof Error ? err.message : String(err);
         emitEnvelope({
           type: "ui.render",
+          version: "1",
           slot: "notifications",
           component: "notification",
           level: "error",
