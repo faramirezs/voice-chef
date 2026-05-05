@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { Recipe } from '@/types/recipe';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import type { RecipeSummary } from '@/types/recipe';
 
 const RECIPE_CARD_TITLE_MAX_LENGTH = 64;
 
@@ -20,18 +18,9 @@ const STATUS_STYLES: Record<string, string> = {
   archived: 'bg-gray-100 text-gray-600',
 };
 
-function ImagePlaceholder() {
-  return (
-    <div
-      className="relative flex h-36 w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${recipeImage})` }}
-      aria-hidden="true"
-    />
-  );
-}
 
 interface RecipeCardProps {
-  recipe: Recipe;
+  recipe: RecipeSummary;
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
@@ -56,7 +45,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       {/* IMAGE */}
       {recipe.photo_url ? (
         <img
-          src={recipe.photo_url}
+          key={recipe.photo_url}
+          src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
           alt={displayTitle}
           className="w-full h-32 object-cover"
         />

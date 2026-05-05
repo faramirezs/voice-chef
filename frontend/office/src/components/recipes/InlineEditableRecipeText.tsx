@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useUpdateRecipe } from '@/hooks/useRecipes';
-import type { Recipe } from '@/types/recipe';
+import type { RecipeDetail } from '@/types/recipe';
 
 type EditableRecipeField = 'name' | 'description' | 'instructions';
 
@@ -49,12 +49,10 @@ export function InlineEditableRecipeText({
 
     const payload =
       field === 'name'
-        ? ({ id: recipeId, name: nextValue } as Partial<Recipe> & { id: string })
-        : ({ id: recipeId, [field]: nextValue || null } as Partial<Recipe> & { id: string });
+        ? ({ id: recipeId, name: nextValue } as Partial<RecipeDetail> & { id: string })
+        : ({ id: recipeId, [field]: nextValue || null } as Partial<RecipeDetail> & { id: string });
 
-    updateRecipe.mutate(
-      payload,
-      {
+    updateRecipe.mutate(payload, {
         onSuccess: () => {
           setValidationError(null);
           setIsEditing(false);
@@ -96,7 +94,11 @@ export function InlineEditableRecipeText({
             <p className="text-xs text-destructive">{validationError}</p>
           )}
           <div className="flex gap-2">
-            <Button size="sm" type="button" onClick={handleSave} disabled={updateRecipe.isPending}>
+            <Button 
+              size="sm" 
+              type="button" 
+              onClick={handleSave} 
+              disabled={updateRecipe.isPending}>
               Save
             </Button>
             <Button

@@ -37,8 +37,12 @@ def link_images_to_db():
 
         for recipe_id, name, photo_url in recipes:
 
+            # Skip if the file already exists on disk (user-uploaded or previously seeded)
             if photo_url:
-                delete_file(photo_url)
+                filename = os.path.basename(photo_url)
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                if os.path.exists(file_path):
+                    continue
 
             slug = slugify(name)
             filename_guess = f"{slug}.jpg"
@@ -47,6 +51,10 @@ def link_images_to_db():
             
             if not os.path.exists(src_path):
                 continue
+
+            # Delete old photo reference from DB if it exists but file is gone
+            if photo_url:
+                delete_file(photo_url)
 
             file_uuid = str(uuid.uuid4())
             filename = f"{file_uuid}.jpg"

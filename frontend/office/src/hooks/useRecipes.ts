@@ -4,14 +4,17 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { api } from '@/api/axios';
 import { 
   getRecipes, 
   getRecipe, 
-  createRecipe, 
+  createRecipe,
+  updateRecipe,
   deleteRecipe } from '@/api/recipes';
-import { uploadRecipePhoto, deleteRecipePhoto } from '@/api/recipePhotos';
-import type { Recipe, RecipeWrite } from '@/types/recipe';
+import { uploadRecipePicture, deleteRecipePicture } from '@/api/recipePhotos';
+import type { 
+  RecipeSummary,
+  RecipeDetail, 
+  RecipeWrite } from '@/types/recipe';
 
 const RECIPES_KEY = 'recipe';
 
@@ -38,7 +41,7 @@ export function useAllRecipes(pageSize = 100) {
     queryKey: [RECIPES_KEY, 'all', pageSize],
     queryFn: async () => {
       const safePageSize = Math.min(Math.max(pageSize, 1), 100);
-      const allRecipes: Recipe[] = [];
+      const allRecipes: RecipeSummary[] = [];
       let offset = 0;
       let total = 0;
 
@@ -59,14 +62,19 @@ export function useAllRecipes(pageSize = 100) {
   });
 }
 
-export function useRecipe(id: string) {
+// The enabled flag is used here to provide granular control over when 
+// the network request should fire.
+// External Control: This is particularly useful during a deletion process: 
+// once a recipe is deleted, you can set enabled to false to prevent TanStack Query 
+// from automatically refetching a resource that no longer exists in the database.
+export function useRecipe(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [RECIPES_KEY, id],
     queryFn: async () => {
       const { data } = await getRecipe(id);
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && (options?.enabled ?? true),
     retry: (failureCount, error: any) => {
       // Don't retry if it's a 401; the interceptor is handling it
       if (error.response?.status === 401) return false;
@@ -91,8 +99,10 @@ export function useCreateRecipe() {
 export function useUpdateRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Recipe> & { id: string }) => {
-      const { data } = await api.patch<Recipe>(`/recipes/${id}`, updates);
+    mutationFn: async ({ id, ...updates }: Partial<RecipeDetail> & { id: string }) => {
+      //                 ↑ Destructuring: extract id separately
+      //                      ↑ Rest of the fields (name, description, instructions, etc.)
+      const { data } = await updateRecipe(id, updates);
       return data;
     },
     onSuccess: (updatedRecipe) => {
@@ -112,33 +122,37 @@ export function useDeleteRecipe() {
       const { data } = await deleteRecipe(id);
       return data;
     },
-    onSuccess: (deletedRecipe) => {
-      queryClient.removeQueries({ queryKey: [RECIPES_KEY, deletedRecipe.id] });
-      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
+    onSuccess: (_data, id) => { // The first argument is empty (_)
+      queryClient.removeQueries({ queryKey: [RECIPES_KEY, id] });
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY], exact: true});
     },
   });
 }
 
-export function useUploadRecipePhoto() {
+export function useUploadRecipePicture() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, file }: { id: string; file: File }) => {
-      const { data } = await uploadRecipePhoto(id, file);
+      const { data } = await uploadRecipePicture(id, file);
       return { id, photoUrl: data.photo_url as string };
     },
     onSuccess: ({ id, photoUrl }) => {
-      queryClient.setQueryData([RECIPES_KEY, 'photo', id], photoUrl);
-      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY, id] });
+      queryClient.setQueryData([RECIPES_KEY, id], (oldData: any) => ({
+        ...oldData,
+        photo_url: photoUrl,
+      }));
+      // Immediately refetch to ensure fresh data
+      queryClient.refetchQueries({ queryKey: [RECIPES_KEY, id] });
       queryClient.invalidateQueries({ queryKey: [RECIPES_KEY] });
     },
   });
 }
 
-export function useDeleteRecipePhoto() {
+export function useDeleteRecipePicture() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await deleteRecipePhoto(id);
+      await deleteRecipePicture(id);
       return id;
     },
     onSuccess: (id) => {
