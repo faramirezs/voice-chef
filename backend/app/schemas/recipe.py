@@ -10,8 +10,8 @@ from enum import Enum
 
 class RecipeIngredientWrite(SQLModel):
     ingredient_id: UUID
-    quantity: Decimal
-    unit: str
+    quantity: Decimal | None = None
+    unit: str | None = None
     preparation: str | None = None
     sort_order: int
 
@@ -40,8 +40,8 @@ class RecipeIngredientResponse(SQLModel):
     ingredient_name: str
     ingredient_default_unit: str
 
-    quantity: str
-    unit: str
+    quantity: str | None
+    unit: str | None
     quantity_grams: str
 
     preparation: str | None = None
