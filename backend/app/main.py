@@ -25,6 +25,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
+from slowapi.middleware import SlowAPIMiddleware
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+
+
+
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
 api_router.include_router(user_router)
@@ -38,3 +52,5 @@ app.include_router(api_router)
 @app.get("/")
 def hello():
     return {"message": "Hello voice-chef"}
+
+

@@ -52,7 +52,8 @@ services:
     networks:
       - app-network
     ports:
-      - "8000:80"
+      # - "8000:80"
+      - 80
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SQL_ECHO: ${SQL_ECHO}
