@@ -1,0 +1,23 @@
+[Unit]
+Description=Voice Chef — Kitchen Point
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=voice-chef
+Group=voice-chef
+ExecStart=/usr/local/bin/kitchen-point-start.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=120
+
+# Wayland session for kiosk Chromium.
+# UID 1000 is the default for the first user (voice-chef) on a fresh
+# Pi OS install. If yours differs, adjust XDG_RUNTIME_DIR=/run/user/<uid>.
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+
+[Install]
+WantedBy=graphical.target

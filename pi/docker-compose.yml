@@ -1,0 +1,36 @@
+services:
+  kitchen-frontend:
+    image: voice-chef-kitchen-frontend:latest
+    build:
+      context: ../frontend/kitchen/
+    ports:
+      - "80:80"
+    environment:
+      # Point the kitchen-frontend's nginx proxy at the server (via Tailscale).
+      # The defaults baked into docker-entrypoint.sh would point at the local
+      # docker-network names (backend / agent), which only work on the server's
+      # compose stack. On the Pi, both backend and agent live on the server.
+      BACKEND_HOST: ${SERVER_HOST}
+      BACKEND_PORT: "80"
+      AGENT_HOST: ${SERVER_HOST}
+      AGENT_PORT: "8001"
+    depends_on:
+      - stt
+    restart: unless-stopped
+
+  stt:
+    image: voice-chef-stt:latest
+    build:
+      context: ../stt/
+    ports:
+      - "8002:8002"
+    environment:
+      STT_MODEL: ${STT_MODEL:-base}
+      STT_LANGUAGE: ${STT_LANGUAGE:-}
+      STT_DEVICE: ${STT_DEVICE:-cpu}
+    volumes:
+      - whisper_models:/models
+    restart: unless-stopped
+
+volumes:
+  whisper_models:
