@@ -14,6 +14,7 @@ import { IngredientsPage } from '@/pages/IngredientsPage';
 import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { TimersPage } from '@/pages/TimersPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { FilesPage } from '@/pages/FilesPage';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
@@ -71,6 +72,7 @@ function App() {
 
           <Route path="ingredients" element={<IngredientsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="files" element={<FilesPage />} />
 
           <Route path="settings/*" element={<SettingsGeneralPage />} />
           <Route path="profile" element={<ProfilePage />} />

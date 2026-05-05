@@ -69,7 +69,6 @@ services:
       DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
-      # - ./backend/uploads:/code/uploads
       - uploads:/code/uploads
 
   agent:
