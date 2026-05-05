@@ -10,10 +10,23 @@ services:
       # The defaults baked into docker-entrypoint.sh would point at the local
       # docker-network names (backend / agent), which only work on the server's
       # compose stack. On the Pi, both backend and agent live on the server.
+      #
+      # We target backend (8000) and agent (8001) directly on the server's
+      # published ports rather than going through the server's own kitchen-frontend
+      # nginx (8082) — one less hop, and avoids coupling to the server's host
+      # port choice.
       BACKEND_HOST: ${SERVER_HOST}
-      BACKEND_PORT: "80"
+      BACKEND_PORT: ${SERVER_BACKEND_PORT:-8000}
       AGENT_HOST: ${SERVER_HOST}
-      AGENT_PORT: "8001"
+      AGENT_PORT: ${SERVER_AGENT_PORT:-8001}
+      # Where unauthenticated kitchen users get redirected to log in.
+      # Points at the server's office-frontend over Tailscale.
+      OFFICE_URL: http://${SERVER_HOST}:${SERVER_OFFICE_PORT:-8080}
+    extra_hosts:
+      # Tailscale MagicDNS names aren't visible inside Docker bridge networks.
+      # Pin the server's Tailscale IP into /etc/hosts so nginx upstream resolution
+      # works. Tailscale per-device IPs are stable, so this rarely needs editing.
+      - "${SERVER_HOST}:${SERVER_TAILSCALE_IP}"
     depends_on:
       - stt
     restart: unless-stopped
