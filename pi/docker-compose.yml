@@ -50,5 +50,25 @@ services:
       - whisper_models:/models
     restart: unless-stopped
 
+  wake:
+    image: voice-chef-wake:latest
+    build:
+      context: ../wake/
+    # /dev/snd + audio group give the container ALSA access. The reSpeaker
+    # XVF3800 is shared with PipeWire on the host (multi-client capture is
+    # supported by ALSA via dmix/dsnoop). If multiple capture devices are
+    # present, set WAKE_DEVICE to a sounddevice index (`python -m sounddevice`).
+    devices:
+      - "/dev/snd:/dev/snd"
+    group_add:
+      - "audio"
+    environment:
+      WAKE_MODELS: ${WAKE_MODELS:-hey_jarvis}
+      WAKE_THRESHOLD: ${WAKE_THRESHOLD:-0.5}
+      WAKE_COOLDOWN_MS: ${WAKE_COOLDOWN_MS:-1500}
+      WAKE_SAMPLE_RATE: ${WAKE_SAMPLE_RATE:-16000}
+      WAKE_DEVICE: ${WAKE_DEVICE:-}
+    restart: unless-stopped
+
 volumes:
   whisper_models:

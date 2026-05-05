@@ -57,6 +57,36 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Proxy wake-word events to the wake service.
+    # The /events endpoint is an SSE stream — same buffering/timeout posture
+    # as /agent/.
+    #
+    # The wake service only ships in the Pi compose; on the server compose
+    # the `wake` hostname doesn't exist. We use the variable form of
+    # proxy_pass with Docker's embedded DNS resolver (127.0.0.11) so nginx
+    # defers resolution until a request actually arrives — without this,
+    # nginx would refuse to start on the server side ("host not found in
+    # upstream wake"). When no wake service is present, /wake/* returns
+    # 502 and the SPA's EventSource simply reconnects forever, which is
+    # the right inert behaviour.
+    location /wake/ {
+        resolver 127.0.0.11 valid=30s ipv6=off;
+        set $wake_upstream "wake:8004";
+        proxy_pass http://$wake_upstream/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 24h;
+        proxy_send_timeout 24h;
+        proxy_set_header X-Accel-Buffering no;
+    }
+
     # Proxy uploads to backend file storage
     location /uploads/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/uploads/;

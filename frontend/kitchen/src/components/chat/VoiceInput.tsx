@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { KButton } from "@/components/ui/KButton";
 
 export interface SttResult {
@@ -15,6 +15,51 @@ interface VoiceInputProps {
 }
 
 const STT_URL = import.meta.env.VITE_STT_URL ?? "/stt";
+
+// Module-level registry: the VoiceInput instance registers its start/stop
+// handlers on mount so external triggers (wake-word, fullscreen stop overlay)
+// can drive voice capture without prop-drilling or context. Mirrors the
+// _sendMessage pattern in useAgent.ts.
+let _startRecording: (() => Promise<void>) | null = null;
+let _stopRecording: (() => void) | null = null;
+
+export function triggerVoiceRecording(): void {
+  if (_startRecording) {
+    void _startRecording();
+  } else {
+    console.warn("[VoiceInput] triggerVoiceRecording called but no instance is mounted");
+  }
+}
+
+export function triggerStopVoiceRecording(): void {
+  if (_stopRecording) {
+    _stopRecording();
+  }
+}
+
+// Recording-state pub/sub. The fullscreen overlay subscribes to render
+// itself when recording is active. State is published on every change
+// from the VoiceInput instance.
+export interface RecordingState {
+  recording: boolean;
+  transcribing: boolean;
+}
+
+let _currentRecordingState: RecordingState = { recording: false, transcribing: false };
+const _recordingStateListeners = new Set<(s: RecordingState) => void>();
+
+export function subscribeRecordingState(cb: (s: RecordingState) => void): () => void {
+  _recordingStateListeners.add(cb);
+  cb(_currentRecordingState);
+  return () => {
+    _recordingStateListeners.delete(cb);
+  };
+}
+
+function _publishRecordingState(s: RecordingState): void {
+  _currentRecordingState = s;
+  _recordingStateListeners.forEach((cb) => cb(s));
+}
 
 export function VoiceInput({
   onTranscript,
@@ -90,6 +135,27 @@ export function VoiceInput({
     mediaRecorderRef.current = null;
     setRecording(false);
   }, []);
+
+  // Register this instance's start/stop handlers for external triggers
+  // (wake word, fullscreen stop overlay). If multiple VoiceInputs are ever
+  // mounted, last-mount-wins; in practice there is exactly one in HudVoiceBar.
+  useEffect(() => {
+    const start = async () => {
+      if (recording || transcribing) return;
+      await startRecording();
+    };
+    _startRecording = start;
+    _stopRecording = stopRecording;
+    return () => {
+      if (_startRecording === start) _startRecording = null;
+      if (_stopRecording === stopRecording) _stopRecording = null;
+    };
+  }, [startRecording, stopRecording, recording, transcribing]);
+
+  // Publish recording state to subscribers (e.g. the fullscreen overlay).
+  useEffect(() => {
+    _publishRecordingState({ recording, transcribing });
+  }, [recording, transcribing]);
 
   const toggle = useCallback(() => {
     if (recording) {

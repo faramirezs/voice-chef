@@ -1,6 +1,9 @@
 import { AgentSlotProvider } from "./AgentSlotProvider";
 import { SlotOutlet } from "./SlotOutlet";
 import { useAgent } from "@/hooks/useAgent";
+import { useWakeWord } from "@/hooks/useWakeWord";
+import { subscribeRecordingState, type RecordingState } from "@/components/chat/VoiceInput";
+import { KitchenRecordingOverlay } from "./KitchenRecordingOverlay";
 import { useAgentSlots } from "./AgentSlotProvider";
 import { HudStatusIndicator } from "./HudStatusIndicator";
 import { HudVoiceBar } from "./HudVoiceBar";
@@ -33,8 +36,19 @@ function HudCanvasInner() {
   // useAgentState(), useIsStreaming(), useToolActivity().
   useAgent();
 
+  // Subscribe to the wake-word service. On a "wake" event, voice recording
+  // starts automatically. On the server compose (no wake service), the SSE
+  // endpoint returns 502 and EventSource silently retries — no UI impact.
+  useWakeWord();
+
   const { slots } = useAgentSlots();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [recordingState, setRecordingState] = useState<RecordingState>({
+    recording: false,
+    transcribing: false,
+  });
+
+  useEffect(() => subscribeRecordingState(setRecordingState), []);
 
   const hasCanvas = slots.canvas !== undefined;
   const hasOverlay = slots.overlay !== undefined;
@@ -107,6 +121,10 @@ function HudCanvasInner() {
           <SlotOutlet slot="overlay" />
         </div>
       ) : null}
+
+      {/* Recording overlay -- z-[60], above palette / agent overlay so the
+          stop affordance is always reachable while the mic is hot. */}
+      {recordingState.recording ? <KitchenRecordingOverlay /> : null}
     </div>
   );
 }

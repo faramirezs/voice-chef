@@ -1,0 +1,5 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+openwakeword==0.6.0
+sounddevice==0.5.1
+numpy==1.26.4
