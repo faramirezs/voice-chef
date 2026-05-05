@@ -471,9 +471,10 @@ export function useAgent() {
             // events typically arrive when the model returns 4xx/5xx
             // (rate limit, auth, timeout, etc.). Without this, the SPA
             // silently drops the error and the user sees nothing.
+            const eventRecord = event as unknown as Record<string, unknown>;
             const errorDetail =
-              typeof (event as { message?: unknown }).message === "string"
-                ? ((event as { message: string }).message)
+              typeof eventRecord.message === "string"
+                ? eventRecord.message
                 : "";
             emitEnvelope({
               type: "ui.render",
