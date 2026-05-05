@@ -18,6 +18,10 @@ services:
       target: runtime
     ports:
       - "8082:80"
+    environment:
+      # Where the kitchen SPA sends unauthenticated users for login.
+      # Default points at the office-frontend on the same host (dev).
+      OFFICE_URL: ${OFFICE_URL:-http://localhost:8080}
     networks:
       - app-network
     depends_on:

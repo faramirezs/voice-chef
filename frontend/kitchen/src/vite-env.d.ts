@@ -9,3 +9,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface AppRuntimeConfig {
+  officeUrl?: string;
+}
+
+interface Window {
+  __APP_CONFIG__?: AppRuntimeConfig;
+}

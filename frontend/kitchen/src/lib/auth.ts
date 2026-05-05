@@ -18,7 +18,12 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 export function redirectToOfficeLogin(): void {
-  const officeUrl = import.meta.env.VITE_OFFICE_URL || "http://localhost:8080";
+  // Runtime > build-time > dev default. Runtime wins so the same image
+  // can target different office hosts (Pi → Tailscale, server → localhost, etc.).
+  const officeUrl =
+    window.__APP_CONFIG__?.officeUrl ||
+    import.meta.env.VITE_OFFICE_URL ||
+    "http://localhost:8080";
   window.location.href = officeUrl + "/login";
 }
 

@@ -27,6 +27,7 @@ RUN mkdir -p /var/cache/nginx/client_temp \
     && chown -R nginx:nginx /var/log/nginx \
     && touch /var/run/nginx.pid \
     && chown nginx:nginx /var/run/nginx.pid \
-    && chown -R nginx:nginx /etc/nginx/conf.d
+    && chown -R nginx:nginx /etc/nginx/conf.d \
+    && chown -R nginx:nginx /usr/share/nginx/html
 USER nginx
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
