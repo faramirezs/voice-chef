@@ -1,5 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDeleteRecipe, useRecipe, useUpdateRecipe, useUploadRecipePhoto, useDeleteRecipePhoto } from '@/hooks/useRecipes';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { 
+  useDeleteRecipe, 
+  useRecipe, 
+  useUpdateRecipe, 
+  useUploadRecipePhoto, 
+  useDeleteRecipePhoto } from '@/hooks/useRecipes';
 import { Button } from '@/components/ui/button';
 import { InlineEditableRecipeText } from '../components/recipes/InlineEditableRecipeText';
 import { Section } from '../components/Section';
@@ -16,38 +23,34 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 
-// function TextBlock({ label, value }: { label: string; value: string | null | undefined }) {
-//   return (
-//     <div className="space-y-1">
-//       {label && <span className="text-xs text-muted-foreground uppercase tracking-wide">{label}</span>}
-//       {value
-//         ? <p className="text-sm leading-relaxed whitespace-pre-line">{value}</p>
-//         : <p className="text-sm text-muted-foreground/50 italic">empty</p>
-//       }
-//     </div>
-//   );
-// }
-
-// function formatDate(value: string | null | undefined) {
-//   if (!value) return null;
-//   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-// }
-
-
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: recipe, isLoading, isError } = useRecipe(id!);
-  const moveToActive = useUpdateRecipe();
+  const queryClient = useQueryClient();
   const deleteRecipe = useDeleteRecipe();
+  // TanStack Query is very sensitive to the enabled flag. As soon as you click 
+  // the "Delete" button and the backend returns 204, the deleteMutation.isSuccess 
+  // status instantly becomes true.
+  const { data: recipe, isLoading, isError } = useRecipe(id!, {
+    enabled: !deleteRecipe.isSuccess
+  });
+  const moveToActive = useUpdateRecipe();
   const uploadPhoto = useUploadRecipePhoto();
   const deletePhoto = useDeleteRecipePhoto();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleMoveToActive = () => {
-    if (!recipe) {
-      return;
+  // Navigate away immediately after successful deletion
+  useEffect(() => {
+    if (deleteRecipe.isSuccess) {
+      // Remove the recipe from cache immediately to prevent "not found" error
+      queryClient.removeQueries({ queryKey: ['recipe', id] });
+      // Navigate away
+      navigate('/recipes');
     }
+  }, [deleteRecipe.isSuccess, navigate, queryClient, id]);
+
+  const handleMoveToActive = () => {
+    if (!recipe) { return; }
 
     moveToActive.mutate({
       id: recipe.id,
@@ -56,23 +59,15 @@ export function RecipeDetailPage() {
   };
 
   const handleDeleteRecipe = () => {
-    if (!recipe) {
-      return;
-    }
+    if (!recipe) return;
 
     const confirmed = window.confirm(
       `Delete recipe "${recipe.name}"? This cannot be undone.`,
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    deleteRecipe.mutate(recipe.id, {
-      onSuccess: () => {
-        navigate('/recipes');
-      },
-    });
+    deleteRecipe.mutate(recipe.id);
   };
 
   const handlePhotoClick = () => {
@@ -91,14 +86,10 @@ export function RecipeDetailPage() {
   };
 
   const handleDeletePhoto = () => {
-    if (!recipe?.photo_url) {
-      return;
-    }
+    if (!recipe?.photo_url) { return; }
 
     const confirmed = window.confirm('Delete this recipe picture?');
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) { return; }
 
     deletePhoto.mutate(recipe.id);
   };
@@ -114,7 +105,8 @@ export function RecipeDetailPage() {
     );
   }
 
-  if (isError || !recipe) {
+  // Show error only if recipe genuinely doesn't exist (not during deletion)
+  if (isError && !deleteRecipe.isPending && !deleteRecipe.isSuccess) {
     return (
       <div className="space-y-4">
         <Button variant="outline" onClick={() => navigate('/recipes')}>← Back to recipes</Button>
@@ -123,6 +115,11 @@ export function RecipeDetailPage() {
         </div>
       </div>
     );
+  }
+
+  // If recipe data is missing but we're not in an error state, don't render
+  if (!recipe) {
+    return null;
   }
 
   const badgeClass = cn(

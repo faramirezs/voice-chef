@@ -13,7 +13,8 @@ from app.core.pagination import (
 from app.core.deps import get_current_user
 from app.utils.recipe_utils import (
     to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name,
-    validate_recipe_business_rules
+    validate_recipe_business_rules, validate_all_ingredients_exist_no_duplicates,
+    validate_ingredient_sort_order
 )
 from app.utils.file_service_image_utils import delete_file
 from app.models.recipe import Recipe
@@ -21,7 +22,6 @@ from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
 from app.models.users import Users
 from app.schemas.pagination import PaginatedResponse
-from app.schemas.ingredient import IngredientWrite
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
     RecipeDetailResponse, RecipeFilters, RecipeSort
@@ -123,22 +123,20 @@ def create_recipe(
 ):
     tenant_id = current_user.tenant_id
     ensure_unique_recipe_name(session, recipe.name, tenant_id)
-    
-    # Validate business rules (Error 400 from api-spec)
     validate_recipe_business_rules(recipe)
-    
-    payload = recipe.model_dump(exclude={"ingredients"})
-    payload["tenant_id"] = tenant_id
-    new_recipe = Recipe(**payload)
-    ingredients_data = recipe.ingredients or []
+    validate_ingredient_sort_order(recipe)
+    validate_all_ingredients_exist_no_duplicates(session, recipe)
 
     try:
-        # Create and save recipe first
+        payload = recipe.model_dump(exclude={"ingredients"})
+        payload["tenant_id"] = tenant_id
+        new_recipe = Recipe(**payload)
+        ingredients_data = recipe.ingredients or []
+
         session.add(new_recipe)
         session.flush()
         
         # Create ingredient links for each ingredient
-        # Loop through each ingredient
         for ing_data in ingredients_data:
             ingredient = session.get(Ingredient, ing_data.ingredient_id)
             if not ingredient:
@@ -160,9 +158,10 @@ def create_recipe(
             session.add(recipe_ingredient)
         
         session.commit()
-        session.refresh(new_recipe)
+        session.refresh(new_recipe, ["recipe_ingredients"])
         
         # Eagerly load ingredients for response
+        # This loads: Recipe → RecipeIngredient → Ingredient
         statement = (
             select(Recipe)
             .where(Recipe.id == new_recipe.id)
@@ -172,6 +171,8 @@ def create_recipe(
             )
         )
         new_recipe = session.exec(statement).first()
+
+        return to_recipe_detail(new_recipe)
         
     except IntegrityError as e:
         session.rollback()
@@ -193,8 +194,6 @@ def create_recipe(
             status_code=500, 
             detail="Internal server error"
         )
-
-    return to_recipe_detail(new_recipe)
 
 
 @router.patch("/{id}", response_model=RecipeSummaryResponse)
