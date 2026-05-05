@@ -7,6 +7,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Hide the mouse cursor when launched as a kitchen kiosk (touchscreen-only).
+         The kitchen-point-start.sh script appends ?kiosk=1; dev URLs don't, so
+         the cursor stays visible during local development. -->
+    <script>
+      if (new URLSearchParams(location.search).get("kiosk") === "1") {
+        var s = document.createElement("style");
+        s.textContent = "html, html * { cursor: none !important; }";
+        document.head.appendChild(s);
+      }
+    </script>
     <!-- Runtime config injected by docker-entrypoint.sh; absent in `npm run dev`. -->
     <script src="/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>

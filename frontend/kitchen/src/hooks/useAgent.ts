@@ -519,7 +519,7 @@ export function useAgent() {
               component: "notification",
               level: "error",
               message: friendlyAgentError(errorDetail),
-              duration: 12000,
+              duration: 10000,
             });
           }
         },
@@ -572,7 +572,7 @@ export function useAgent() {
           component: "notification",
           level: "error",
           message: friendlyAgentError(errMsg),
-          duration: 12000,
+          duration: 10000,
         });
       } finally {
         if (debugStream) {

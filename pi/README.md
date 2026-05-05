@@ -21,29 +21,36 @@ The Pi runs the kitchen UI (kitchen-frontend), audio capture (XVF3800 → PipeWi
 After Pi imaging, audio routing, Docker, and Tailscale are in place (see [`docs/kitchen-pi-plan.md`](../docs/kitchen-pi-plan.md) for the full sequence):
 
 ```bash
-# Clone the repo on the Pi
+# Clone the repo on the Pi — this directory IS the runtime location
 git clone https://github.com/faramirezs/voice-chef.git ~/voice-chef
-cd ~/voice-chef
+cd ~/voice-chef/pi
 
-# Set up the runtime directory
-mkdir -p ~/kitchen-pi
-cp pi/docker-compose.yml ~/kitchen-pi/
-cp pi/.env.example ~/kitchen-pi/.env
-$EDITOR ~/kitchen-pi/.env                     # set SERVER_HOST etc.
+# Configure
+cp .env.example .env
+$EDITOR .env                                  # SERVER_HOST, SERVER_TAILSCALE_IP,
+                                              # KITCHEN_EMAIL, KITCHEN_PASSWORD, etc.
 
-# Bring up the stack
-cd ~/kitchen-pi
-docker compose up -d
+# Bring up the Pi-only stack (kitchen-frontend + stt)
+docker compose up -d --build
 
-# Install autostart + audio config
-sudo cp ~/voice-chef/pi/systemd/kitchen-point.service /etc/systemd/system/
-sudo cp ~/voice-chef/pi/scripts/kitchen-point-start.sh /usr/local/bin/
-sudo chmod +x /usr/local/bin/kitchen-point-start.sh
+# Install audio config (WirePlumber drop-in)
 sudo mkdir -p /etc/wireplumber/wireplumber.conf.d/
 sudo cp ~/voice-chef/pi/wireplumber/51-respeaker-default.conf /etc/wireplumber/wireplumber.conf.d/
+systemctl --user restart wireplumber
+
+# Install kiosk autostart
+sudo install -m 0755 ~/voice-chef/pi/scripts/kitchen-point-start.sh /usr/local/bin/
+sudo install -m 0644 ~/voice-chef/pi/systemd/kitchen-point.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now kitchen-point.service
 ```
+
+After `enable --now`, the Pi will:
+1. Bring up the Compose stack (kitchen-frontend on port 80, stt on 8002).
+2. Wait for the kitchen-frontend to respond.
+3. Launch Chromium in fullscreen kiosk mode against `http://localhost`.
+
+On every subsequent boot, the same flow runs automatically.
 
 ## Updating the kitchen-frontend on the Pi
 
@@ -51,29 +58,29 @@ After making changes on your laptop and pushing to the branch the Pi tracks:
 
 ```bash
 ssh voice-chef@voice-chef-pi
-cd voice-chef
+cd ~/voice-chef
 git pull
-cd ~/kitchen-pi
-docker compose pull        # if images come from a registry
-# OR
-docker compose build       # if building locally
-docker compose up -d
+cd pi
+docker compose up -d --build --force-recreate kitchen-frontend
+# If kiosk autostart is installed and the Compose change should also reload Chromium:
+sudo systemctl restart kitchen-point.service
 ```
 
 ## When the kitchen user's cookie expires
 
-The kitchen UI redirects to login. Two recovery paths:
+In normal operation the kitchen-pi auto-authenticates on each page load via `KITCHEN_EMAIL` / `KITCHEN_PASSWORD` (see `frontend/kitchen/src/lib/auth.ts:tryKitchenLogin`). If you reboot, hard-refresh, or close & reopen Chromium, the silent re-login runs again — no user action needed.
 
-1. **Touchscreen re-login:** tap the email/password fields; on-screen keyboard appears (install `squeekboard` if not already present). Re-enter `kitchen@voice-chef.local` + password.
-2. **Remote re-login** (faster for an admin):
+If a JWT expires *mid-session* (60-hour token lifetime), the running SPA hits a 401 mid-stream and the user sees an error toast. Workarounds:
+
+1. **Refresh the page** (touchscreen → swipe-down or `F5` over SSH) — bootstrap silently re-logs in.
+2. **Restart the kiosk service** to clear any stale state:
 
    ```bash
    ssh voice-chef@voice-chef-pi
-   chromium-browser --user-data-dir=/home/voice-chef/.kiosk-profile http://localhost
-   # log in via SSH-tunneled X11/Wayland, or use rpi-connect to drive the screen
+   sudo systemctl restart kitchen-point.service
    ```
 
-3. **Future improvement:** lengthen JWT expiry on the server, or wire a "remember me" toggle for the kitchen user.
+3. **Future improvement:** make the kitchen frontend silently re-login on mid-session 401 (currently only the initial-load 401 triggers `tryKitchenLogin`).
 
 ## Quirks captured during install
 

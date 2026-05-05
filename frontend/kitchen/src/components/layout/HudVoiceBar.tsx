@@ -25,10 +25,13 @@ export function HudVoiceBar() {
     return () => clearTimeout(timer);
   }, [confidenceWarning]);
 
-  // Auto-dismiss the "heard" chip after 3 seconds.
+  // Auto-dismiss the "heard" chip after 10 seconds — matches the longer
+  // dwell time we use for error toasts. Earlier 3 s was too quick for a
+  // kitchen kiosk where the user may be looking at ingredients, not the
+  // chip, when their voice was transcribed.
   useEffect(() => {
     if (!heardChip) return;
-    const timer = setTimeout(() => setHeardChip(null), 3000);
+    const timer = setTimeout(() => setHeardChip(null), 10000);
     return () => clearTimeout(timer);
   }, [heardChip]);
 
