@@ -37,9 +37,9 @@ dev-back-office: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
 
 prod: $(ENV)
-	@echo "Stopping existing containers and building in prod_mode"
-	$(COMPOSE) -f $(PROD_FILE) down
-	$(COMPOSE) -f $(PROD_FILE) up --build --detach
+	@echo "Building fresh images and restarting in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) build --no-cache
+	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
 down:
