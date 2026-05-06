@@ -1,0 +1,18 @@
+// Allow the voice-chef user to manage kitchen-point.service without a
+// password prompt. Scoped narrowly: only this user, only this service —
+// other systemd actions still require normal authentication.
+//
+// Effect: the desktop launcher (pi/desktop/bring-back-kiosk.desktop) can
+// invoke `systemctl restart kitchen-point.service` directly without sudo
+// or pkexec, giving the kitchen user a one-click recovery after Alt+F4.
+//
+// Install: copy to /etc/polkit-1/rules.d/50-kitchen-kiosk.rules, then
+// reload polkit (`sudo systemctl restart polkit`) or just reboot.
+
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        action.lookup("unit") == "kitchen-point.service" &&
+        subject.user == "voice-chef") {
+        return polkit.Result.YES;
+    }
+});

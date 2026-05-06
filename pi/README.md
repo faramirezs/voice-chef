@@ -43,7 +43,18 @@ sudo install -m 0755 ~/voice-chef/pi/scripts/kitchen-point-start.sh /usr/local/b
 sudo install -m 0644 ~/voice-chef/pi/systemd/kitchen-point.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now kitchen-point.service
+
+# Install kiosk-recovery launcher
+# (polkit rule lets voice-chef restart the kiosk without sudo password;
+#  desktop icon gives a one-click "bring kiosk back" after Alt+F4)
+sudo install -m 0644 ~/voice-chef/pi/polkit/50-kitchen-kiosk.rules /etc/polkit-1/rules.d/
+sudo systemctl restart polkit
+cp ~/voice-chef/pi/desktop/bring-back-kiosk.desktop ~/Desktop/
+chmod +x ~/Desktop/bring-back-kiosk.desktop
+gio set ~/Desktop/bring-back-kiosk.desktop metadata::trusted true
 ```
+
+Note: the file manager may show an "Execute file" confirmation dialog on the first double-click of the Voice-Chef icon; choose **Execute**. Some Pi OS Trixie file managers ignore the gio trust flag and the dialog reappears each time — clicking Execute remains a one-click recovery.
 
 After `enable --now`, the Pi will:
 1. Bring up the Compose stack (kitchen-frontend on port 80, stt on 8002).
