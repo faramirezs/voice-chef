@@ -71,6 +71,13 @@ const NAV_ITEMS = [
 		)
 	},
 		{
+		title: "Files",
+		url: "/files",
+		icon: (
+			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+		)
+	},
+		{
 		title: "Ingredients",
 		url: "/ingredients",
 		icon: (

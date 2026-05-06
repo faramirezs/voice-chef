@@ -11,13 +11,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LayoutBottomIcon, AudioWave01Icon, CommandIcon, RoboticIcon, BookOpen02Icon, Settings05Icon, CropIcon, PieChartIcon, MapsIcon } from "@hugeicons/core-free-icons"
-import { NavLink } from "react-router-dom"
 
 // This is sample data.
 const data = {
@@ -155,16 +151,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink to="/files" className={({ isActive }) => isActive ? "bg-primary/10 text-primary" : ""}>
-                <HugeiconsIcon icon={BookOpen02Icon} strokeWidth={2} />
-                <span>Files</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
