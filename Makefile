@@ -30,32 +30,30 @@ $(ENV):
 # Use these when working locally. They mount source code as volumes for
 # hot-reload and bind service ports directly to the host.
 #
-#   make dev              Start everything (frontends, backend, agent, stt, db)
+#   make dev              Start everything (fast: reuses Docker layer cache)
+#   make dev-re           Same as dev but builds from scratch (--no-cache).
+#                         Use this if switching from prod or seeing stale
+#                         layer issues (e.g. wrong target: dev vs runtime).
 #   make dev-back         Start only db + backend (for API-only work)
 #   make dev-back-office  Start db + backend + office-frontend
-#   make up               Start existing containers (no rebuild, fast restart)
-
+#   make up               Start existing containers (no rebuild, fastest)
 dev: $(ENV)
-	@echo "Building and starting in dev_mode"
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
+	@echo "Building and starting in dev_mode (cached)"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
 	@echo "VOICE-CHEF is running in dev_mode"
 
-up: $(ENV)
-	@echo "Starting existing containers in dev_mode (no rebuild)"
+dev-re: $(ENV)
+	@echo "Building fresh images and starting in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
 	@echo "VOICE-CHEF is running in dev_mode"
 
 dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache db backend
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d db backend
-
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
 dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache db backend office-frontend
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d db backend office-frontend
-
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
 # ── Production target ──────────────────────────────────────────────────────
 # Use this for VPS / CI-CD deployments. Builds all images from scratch
 # (--no-cache) then recreates containers with zero-downtime rolling.
@@ -197,9 +195,10 @@ help:
 	@printf "║                      Voice Chef — Available Commands                       ║\n"
 	@printf "╚════════════════════════════════════════════════════════════════════════════╝\n"
 	@printf "\n  🚀  START (pick one)\n"
-	@printf "     %-30s %s\n" "make dev"         "Full dev stack (all services, hot-reload, ports bound to host)"
+	@printf "     %-30s %s\n" "make dev"         "Full dev stack (cached build, fast)"
+	@printf "     %-30s %s\n" "make dev-re"      "Full dev stack (clean build, --no-cache)"
 	@printf "     %-30s %s\n" "make prod"        "Production mode (nginx SSL proxy, no direct host ports)"
-	@printf "     %-30s %s\n" "make up"          "Restart existing dev containers (fast, no rebuild)"
+	@printf "     %-30s %s\n" "make up"          "Restart existing dev containers (no rebuild)"
 	@printf "\n  🧩  PARTIAL DEV (lightweight)\n"
 	@printf "     %-30s %s\n" "make dev-back"          "Only db + backend"
 	@printf "     %-30s %s\n" "make dev-back-office"   "Only db + backend + office-frontend"
@@ -226,8 +225,6 @@ help:
 # Catch-all for unrecognized targets.
 %:
 	@echo "Unknown target '$@'. Run 'make help' for available commands."
-
-# ── Phony declarations ─────────────────────────────────────────────────────
-.PHONY: all dev dev-back dev-back-office prod down re clean fclean status logs help build up start stop
+.PHONY: all dev dev-re dev-back dev-back-office prod down re clean fclean status logs help build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal
