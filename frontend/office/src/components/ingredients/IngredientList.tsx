@@ -113,7 +113,7 @@ export function IngredientsList() {
                   <CardHeader className="pb-2 h-full">
                     <div className="flex h-full items-start justify-between gap-2">
                       <CardTitle className="flex-1 text-base leading-snug break-words">
-                        {ingredient.ingredient_name}
+                        {ingredient.name}
                       </CardTitle>
                       {/* <span
                         className={cn(
@@ -138,7 +138,7 @@ export function IngredientsList() {
                   key={ingredient.id}
                   className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3"
                 >
-                  <span className="font-medium">{ingredient.ingredient_name}</span>
+                  <span className="font-medium">{ingredient.name}</span>
                   {/* <span
                     className={cn(
                       'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize',
