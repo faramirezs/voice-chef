@@ -13,6 +13,7 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from "@/components/ui/sidebar"
+import { Logo } from "@/components/logo"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LayoutBottomIcon, AudioWave01Icon, CommandIcon, RoboticIcon, BookOpen02Icon, Settings05Icon, CropIcon, PieChartIcon, MapsIcon } from "@hugeicons/core-free-icons"
 
@@ -134,7 +135,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        {/* <TeamSwitcher teams={data.teams} /> */}
+        <div className="flex items-center px-4 py-2">
+          <Logo size="90%" className="text-muted-foreground" />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
