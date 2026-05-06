@@ -18,8 +18,14 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 export function redirectToOfficeLogin(): void {
-  const officeUrl = import.meta.env.VITE_OFFICE_URL || "http://localhost:8080";
-  window.location.href = officeUrl + "/login";
+  const officeUrl = import.meta.env.VITE_OFFICE_URL;
+  if (officeUrl) {
+    // Dev: kitchen and office on different origins
+    window.location.href = officeUrl + "/login";
+  } else {
+    // Prod: behind shared proxy, same origin
+    window.location.href = "/login";
+  }
 }
 
 export async function logout(): Promise<void> {
