@@ -6,6 +6,7 @@ iteration).
 
 import asyncio
 import logging
+import os
 from typing import Any, Awaitable, Callable
 
 import httpx
@@ -19,6 +20,13 @@ logger = logging.getLogger("voice-chef.rag")
 
 PAGE_SIZE = 100
 EMBED_BATCH = 64
+
+# Shared internal-service header. Backend's `_is_internal_request` recognises
+# this and returns a synthetic admin user, bypassing user-level auth — needed
+# because the rag service has no JWT to forward and is calling backend on its
+# own behalf during indexing. Same pattern the agent uses; see
+# backend/app/core/deps.py and agent/app/agent.py.
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
 
 
 def _recipe_text(recipe: dict[str, Any]) -> str:
@@ -180,7 +188,7 @@ async def _backfill_ingredients(
     sparse_embedder: SparseEmbedder,
     backend_url: str,
 ) -> int:
-    items = await _fetch_paginated(http, f"{backend_url}/api/ingredient")
+    items = await _fetch_paginated(http, f"{backend_url}/api/ingredients")
     logger.info("fetched %s ingredients", len(items))
     return await _embed_and_upsert(
         qdrant, embedder, sparse_embedder, "ingredients", items,
@@ -211,7 +219,8 @@ async def backfill_if_empty(
     Idempotent: collections that already have data are skipped — the
     polling-based incremental sync (next iteration) keeps them fresh.
     """
-    async with httpx.AsyncClient() as http:
+    headers = {"X-Internal-Secret": INTERNAL_SECRET} if INTERNAL_SECRET else {}
+    async with httpx.AsyncClient(headers=headers) as http:
         for name, fn in _BACKFILLERS.items():
             existing = (await qdrant.count(collection_name=name, exact=True)).count
             if existing > 0:

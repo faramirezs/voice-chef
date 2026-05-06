@@ -124,6 +124,12 @@ services:
       QDRANT_URL: http://qdrant:6333
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-mpnet-base-v2}
       EMBEDDING_POLL_SECONDS: ${EMBEDDING_POLL_SECONDS:-30}
+      # Shared internal-service secret — backend's `_is_internal_request`
+      # recognises this header and bypasses user-auth for service-to-service
+      # calls (rag indexing /api/recipes, /api/ingredient at startup).
+      # Same pattern as the agent service. Without this, rag startup fails
+      # with 401 on /api/recipes.
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - embedding_models:/root/.cache/huggingface
 
