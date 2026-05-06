@@ -18,11 +18,6 @@ export function SignupPage() {
         },
       }}
       />
-      <div className="mt-4 text-sm text-center text-muted-foreground">
-        <Link to="/terms" className="underline hover:text-primary">Terms</Link>
-        <span className="mx-2">•</span>
-        <Link to="/privacy" className="underline hover:text-primary">Privacy</Link>
-      </div>
     </div>
   )
 }
