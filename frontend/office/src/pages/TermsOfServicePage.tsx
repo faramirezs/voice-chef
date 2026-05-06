@@ -64,9 +64,12 @@ export function TermsOfServicePage() {
 
             <h2>7. Third-Party Services</h2>
             <p>
-              The Service may include links or integrations with third-party services. We are
-              not responsible for third-party content or practices. Use third-party services at
-              your own risk.
+              The Service may integrate with third-party services (e.g., AI providers, speech-to-text 
+              services, or analytics tools) to provide core functionality. When using such features, 
+              certain data (such as user input, audio data, or technical metadata) may be transmitted 
+              to these third-party services strictly for the purpose of processing user requests. We 
+              select third-party providers carefully; however, we do not control their internal data 
+              handling practices. Please review their respective privacy policies for more information.
             </p>
 
             <h2>8. Privacy</h2>
