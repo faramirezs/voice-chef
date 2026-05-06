@@ -207,8 +207,8 @@ export function SignupForm({
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
+        By clicking continue, you agree to our <a href="/terms-of-service">Terms of Service</a>{" "}
+        and <a href="/privacy-policy">Privacy Policy</a>.
       </FieldDescription>
     </div>
   )

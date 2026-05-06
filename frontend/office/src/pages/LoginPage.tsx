@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/login-form"
 import personImage from "@/assets/voice-chef-person.jpg"
+import { Link } from "react-router-dom"
 
 export function LoginPage() {
   return (
@@ -14,6 +15,11 @@ export function LoginPage() {
         </div>
         <div className="p-6 md:p-8">
           <LoginForm />
+          <div className="mt-4 text-sm text-center text-muted-foreground">
+            <Link to="/terms" className="underline hover:text-primary">Terms</Link>
+            <span className="mx-2">•</span>
+            <Link to="/privacy" className="underline hover:text-primary">Privacy</Link>
+          </div>
         </div>
       </div>
     </div>
