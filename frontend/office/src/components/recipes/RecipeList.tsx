@@ -93,7 +93,7 @@ export function RecipeList() {
             </Button>
           ))}
         </div>
-        <Input
+        {/* <Input
           placeholder="Filter by status (e.g. draft, active)…"
           className="max-w-sm"
           value={statusFilter}
@@ -101,7 +101,7 @@ export function RecipeList() {
             setStatusFilter(e.target.value);
             setPage(0);
           }}
-        />
+        /> */}
         <Select
           value={sortBy}
           onValueChange={(value) => {
@@ -127,7 +127,7 @@ export function RecipeList() {
         )}
         <div className="flex gap-2 ml-auto">
           <Button
-            variant="outline"
+            variant="default"
             type="button"
             onClick={() => setViewMode((mode) => (mode === 'grid' ? 'list' : 'grid'))}
           >
