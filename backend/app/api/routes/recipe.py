@@ -16,7 +16,6 @@ from app.utils.recipe_utils import (
     validate_recipe_business_rules, validate_all_ingredients_exist_no_duplicates,
     validate_ingredient_sort_order
 )
-from app.utils.file_service_image_utils import delete_file
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
@@ -26,7 +25,7 @@ from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
     RecipeDetailResponse, RecipeFilters, RecipeSort
 )
-
+from app.utils.file_service_image_utils import delete_file
 
 # -----------------------------------------------------------------------------
 # Constants and Global Instances

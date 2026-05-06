@@ -1,26 +1,39 @@
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from uuid import UUID
+from typing import Annotated
 
 from app.core.database import get_session
 from app.core.deps import DEFAULT_TENANT_ID
-from app.core.pagination import PaginationParams, paginate, pagination_params
+from app.core.pagination import (
+    pagination_params, PaginationParams, paginate
+)
+from app.core.deps import get_current_user
+from app.utils.recipe_utils import (
+    to_recipe_detail, to_recipe_summary, ensure_unique_recipe_name,
+    validate_recipe_business_rules, validate_all_ingredients_exist_no_duplicates,
+    validate_ingredient_sort_order
+)
 from app.models.recipe import Recipe
+from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
+from app.models.users import Users
 from app.schemas.pagination import PaginatedResponse
-from app.schemas.recipe import RecipeFilters, RecipeSort, RecipeDetailResponse, RecipeSummaryResponse
-from app.utils.recipe_utils import to_recipe_detail, to_recipe_summary
+from app.schemas.recipe import (
+    RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
+    RecipeDetailResponse, RecipeFilters, RecipeSort
+)
+from app.utils.file_service_image_utils import delete_file
 from app.limiter import limiter
 
-router = APIRouter(prefix="",
-                   tags=["Public"])
+router = APIRouter(prefix="", tags=["Public"])
 
 
 @router.get("/recipes", response_model=PaginatedResponse[RecipeSummaryResponse])
-@limiter.limit("5/minute")
+# @limiter.limit("5/minute")
 def get_recipes(
     request: Request,
     session: Session = Depends(get_session),
@@ -65,21 +78,20 @@ def get_recipes(
 
 
 @router.get("/recipes/{id}", response_model=RecipeDetailResponse)
+# @limiter.limit("5/minute")
 def get_recipe(
+    current_user: Annotated[Users, Depends(get_current_user)],
     id: UUID,
     session: Session = Depends(get_session),
 ):
     statement = (
         select(Recipe)
-        .where(
-            Recipe.id == id,
-            Recipe.tenant_id == DEFAULT_TENANT_ID,
-            Recipe.status.in_(["draft", "active"]),
-        )
+        .where(Recipe.id == id, Recipe.tenant_id == current_user.tenant_id)
         .options(
-            selectinload(Recipe.recipe_ingredients).selectinload(
-                RecipeIngredient.ingredient
-            )
+            # Eagerly load the related RecipeIngredient objects in a separate query.
+            selectinload(Recipe.recipe_ingredients) 
+            # For each RecipeIngredient, also eagerly load its related Ingredient.
+            .selectinload(RecipeIngredient.ingredient) 
         )
     )
 
@@ -90,6 +102,165 @@ def get_recipe(
     return to_recipe_detail(recipe)
 
 
-# @router.get("/recipes/", response_model=RecipeDetailResponse)
-# def get_public_recipes(db: Session = Depends(get_session)):
-#     return retrieve_recipes(db=db)
+# This function creates the many-to-many relationship between a recipe 
+# and its ingredients
+@router.post("/recipes", response_model=RecipeDetailResponse, status_code=201)
+# @limiter.limit("5/minute")
+def create_recipe(
+    recipe: RecipeWrite,
+    current_user: Annotated[Users, Depends(get_current_user)],
+    session: Session = Depends(get_session),
+):
+    tenant_id = current_user.tenant_id
+    ensure_unique_recipe_name(session, recipe.name, tenant_id)
+    validate_recipe_business_rules(recipe)
+    validate_ingredient_sort_order(recipe)
+    validate_all_ingredients_exist_no_duplicates(session, recipe)
+
+    try:
+        payload = recipe.model_dump(exclude={"ingredients"})
+        payload["tenant_id"] = tenant_id
+        new_recipe = Recipe(**payload)
+        ingredients_data = recipe.ingredients or []
+
+        session.add(new_recipe)
+        session.flush()
+        
+        # Create ingredient links for each ingredient
+        for ing_data in ingredients_data:
+            ingredient = session.get(Ingredient, ing_data.ingredient_id)
+            if not ingredient:
+                session.rollback()
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"Ingredient {ing_data.ingredient_id} not found"
+                )
+            
+            # Create recipe_ingredient link
+            recipe_ingredient = RecipeIngredient(
+                recipe_id=new_recipe.id,
+                ingredient_id=ing_data.ingredient_id,
+                quantity=ing_data.quantity,
+                unit=ing_data.unit,
+                preparation=ing_data.preparation,
+                sort_order=ing_data.sort_order
+            )
+            session.add(recipe_ingredient)
+        
+        session.commit()
+        session.refresh(new_recipe, ["recipe_ingredients"])
+        
+        # Eagerly load ingredients for response
+        # This loads: Recipe → RecipeIngredient → Ingredient
+        statement = (
+            select(Recipe)
+            .where(Recipe.id == new_recipe.id)
+            .options(
+                selectinload(Recipe.recipe_ingredients)
+                .selectinload(RecipeIngredient.ingredient)
+            )
+        )
+        new_recipe = session.exec(statement).first()
+
+        return to_recipe_detail(new_recipe)
+        
+    except IntegrityError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=409, 
+            detail="Recipe name already exists or constraint violation"
+        )
+    except HTTPException:
+        raise  # Re-raise HTTPException (ingredient not found, 404)
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while creating recipe"
+        )
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error"
+        )
+    
+@router.patch("/{id}", response_model=RecipeSummaryResponse)
+# @limiter.limit("5/minute")
+def update_recipe(
+    current_user: Annotated[Users, Depends(get_current_user)],
+    id: UUID, 
+    recipe_update: RecipeUpdate, 
+    session: Session = Depends(get_session)
+):
+    """
+    Update recipe fields with partial merge semantics
+    """
+    query = select(Recipe).where(
+        Recipe.id == id, 
+        Recipe.tenant_id == current_user.tenant_id)
+    recipe = session.exec(query).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # NOTE: mpeshko - Convert the input to a dict, EXCLUDING fields not sent by the client
+    updates = recipe_update.model_dump(exclude_unset=True)
+
+    # If name is being changed, validate uniqueness first
+    if "name" in updates and updates["name"] != recipe.name:
+        ensure_unique_recipe_name(session, updates["name"], recipe.tenant_id, exclude_id=id)
+
+    for key, value in updates.items():
+        setattr(recipe, key, value)
+    
+    # Validate business rules after applying updates
+    # validate_recipe_business_rules(recipe)
+    
+    try:
+        session.add(recipe)
+        session.commit()
+        session.refresh(recipe)
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Recipe name already exists")
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error while updating recipe"
+        )
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Internal server error"
+        )
+    return to_recipe_summary(recipe)
+
+
+@router.delete("/{id}", status_code=204)
+# @limiter.limit("5/minute")
+def delete_recipe(
+    current_user: Annotated[Users, Depends(get_current_user)],
+    id: UUID, 
+    session: Session = Depends(get_session)
+):
+    statement = select(Recipe).where(
+        Recipe.id == id,
+        Recipe.tenant_id == current_user.tenant_id
+    )
+    recipe = session.exec(statement).first()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    try:
+        photo_url = recipe.photo_url
+        session.delete(recipe)
+        session.commit()
+        if photo_url:
+            delete_file(photo_url)
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+    
+    return Response(status_code=204)
