@@ -16,9 +16,9 @@ export function LoginPage() {
         <div className="p-6 md:p-8">
           <LoginForm />
           <div className="mt-4 text-sm text-center text-muted-foreground">
-            <Link to="/terms" className="underline hover:text-primary">Terms</Link>
+            <Link to="/terms" className="underline hover:text-primary">Terms of Service</Link>
             <span className="mx-2">•</span>
-            <Link to="/privacy" className="underline hover:text-primary">Privacy</Link>
+            <Link to="/privacy" className="underline hover:text-primary">Privacy Policy</Link>
           </div>
         </div>
       </div>
