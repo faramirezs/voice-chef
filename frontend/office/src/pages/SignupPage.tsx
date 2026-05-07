@@ -1,6 +1,5 @@
 import { SignupForm } from "@/components/signup-form"
 import { Toaster } from "@/components/ui/sonner"
-import { Link } from "react-router-dom"
 
 export function SignupPage() {
   return (

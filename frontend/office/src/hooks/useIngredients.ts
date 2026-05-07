@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/axios';
 import { ingredientsAutocomplete } from '@/api/ingredients';
-import type { IngredientListItem, IngredientAutocompleteItem } from '@/types/ingredients';
+import type { IngredientListItem } from '@/types/ingredients';
 import type { PaginatedResponse } from '@/types/recipe';
 
 const INGREDIENTS_KEY = 'ingredients';
