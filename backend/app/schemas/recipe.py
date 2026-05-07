@@ -18,14 +18,26 @@ def validate_recipe_name_string(v: str) -> str:
         raise ValueError("Invalid recipe name. It should contain at least 1 letter")
     return v
 
-# ─── CREATE RECIPE ──────────────────────────────────────────────────────────────────
 
-class RecipeIngredientWrite(SQLModel):
-    ingredient_id: UUID
-    quantity: Decimal | None = None
+# ─── CREATE/UPDATE RECIPE INGREDIENT ────────────────────────────────────────────────
+
+# NOTE: We cannot have the same ingredient in the same recipe twice
+# You cannot have two different ingredients in the same recipe with the same sort_order
+
+class RecipeIngredient(SQLModel):
+    quantity: Decimal | None = Field(default=None, gt=0)
     unit: str | None = None
     preparation: str | None = None
-    sort_order: int
+
+class RecipeIngredientWrite(RecipeIngredient):
+    ingredient_id: UUID
+    sort_order: int = Field(ge=0)
+
+class RecipeIngredientUpdate(RecipeIngredient):
+    ingredient_id: UUID | None = None
+    sort_order: int | None = Field(ge=0)
+
+# ─── CREATE RECIPE ──────────────────────────────────────────────────────────────────
 
 
 class RecipeWrite(SQLModel):
@@ -52,6 +64,34 @@ class RecipeWrite(SQLModel):
     def validate_name_content(cls, v: str):
         # if v is None Pydantic will catch that before the validator runs
         return validate_recipe_name_string(v)
+
+
+# ─── UPDATE RECIPE ──────────────────────────────────────────────────────────────────
+
+
+class RecipeUpdate(SQLModel):
+    # min_length=1 : it must be at least one character long
+    name: str | None = Field(default=None, min_length=1)
+    description: str | None = None
+    instructions: str | None = None
+
+    status: str | None = None
+    yield_mode: str | None = None
+
+    portion_size_grams: Decimal | None = Field(default=None, gt=0)
+    portions_count_resolved: Decimal | None = Field(default=None, gt=0)
+    total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
+    total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def validate_optional_name(cls, v: str | None):
+        # only validate if the user actually sent a value
+        if v is not None:
+            return validate_recipe_name_string(v)
+        return v
+
+    # ingredients: List[RecipeIngredientUpdate] | None = None
 
 
 # ─── RESPONSES ──────────────────────────────────────────────────────────────────
@@ -92,42 +132,6 @@ class RecipeDetailResponse(RecipeSummaryResponse):
     cooking_time_minutes: int | None
     is_component: bool
     ingredients: List[RecipeIngredientResponse]
-
-
-# ─── UPDATE RECIPE ──────────────────────────────────────────────────────────────────
-
-
-class RecipeIngredientUpdate(SQLModel):
-    ingredient_id: UUID | None = None
-    quantity: Decimal | None = None
-    unit: str | None = None
-    preparation: str | None = None
-    sort_order: int | None = None
-
-
-class RecipeUpdate(SQLModel):
-    # min_length=1 : it must be at least one character long
-    name: str | None = Field(default=None, min_length=1)
-    description: str | None = None
-    instructions: str | None = None
-
-    status: str | None = None
-    yield_mode: str | None = None
-
-    portion_size_grams: Decimal | None = Field(default=None, gt=0)
-    portions_count_resolved: Decimal | None = Field(default=None, gt=0)
-    total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
-    total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
-
-    @field_validator("name")
-    @classmethod
-    def validate_optional_name(cls, v: str | None):
-        # only validate if the user actually sent a value
-        if v is not None:
-            return validate_recipe_name_string(v)
-        return v
-
-    # ingredients: List[RecipeIngredientUpdate] | None = None
 
 
 # ─── SORT, FILTERS ──────────────────────────────────────────────────────────────────
