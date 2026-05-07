@@ -15,82 +15,88 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, ReceiptEuroIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Calendar03Icon, ComponentIcon, CookBookIcon, Files01Icon, Home07Icon, RoboticIcon } from "@hugeicons/core-free-icons"
 import { NavLink } from "react-router-dom"
 
-import { ComputerTerminalIcon } from "@hugeicons/core-free-icons"
 
 const NAV_ITEMS = [
 	{
 		title: "Starting page",
 		url: "/",
 		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+			<HugeiconsIcon icon={Home07Icon} strokeWidth={2} />
 		)
 	},
 	{
 		title: "Recipes",
 		url: "/recipes",
 		icon: (
-			<HugeiconsIcon icon={ReceiptEuroIcon} strokeWidth={2} />
+			<HugeiconsIcon icon={CookBookIcon} strokeWidth={2} />
 		)
 	},
 	{
 		title: "Menu planner",
 		url: "/menu-planner",
 		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+			<HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} />
 		)
 	},
+	// {
+	// 	title: "Tasks",
+	// 	url: "/tasks",
+	// 	icon: (
+	// 		<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+	// 	)
+	// },
+	// {
+	// 	title: "Calculator",
+	// 	url: "/calculator",
+	// 	icon: (
+	// 		<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+	// 	)
+	// },
+	// {
+	// 	title: "Timers",
+	// 	url: "/timers",
+	// 	icon: (
+	// 		<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+	// 	)
+	// },
+	// {
+	// 	title: "Notes",
+	// 	url: "/notes",
+	// 	icon: (
+	// 		<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+	// 	)
+	// },
 	{
-		title: "Tasks",
-		url: "/tasks",
-		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
-		)
-	},
-	{
-		title: "Calculator",
-		url: "/calculator",
-		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
-		)
-	},
-		{
-		title: "Timers",
-		url: "/timers",
-		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
-		)
-	},
-	{
-		title: "Notes",
-		url: "/notes",
-		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
-		)
-	},
-		{
 		title: "Files",
 		url: "/files",
 		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+			<HugeiconsIcon icon={Files01Icon} strokeWidth={2} />
 		)
 	},
-		{
+	{
 		title: "Ingredients",
 		url: "/ingredients",
 		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+			<HugeiconsIcon icon={ComponentIcon} strokeWidth={2} />
 		)
 	},
-			{
-		title: "Analytics",
-		url: "/analytics",
+	{
+		title: "AI Assistant",
+		url: "/ai-assistant",
 		icon: (
-			<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+			<HugeiconsIcon icon={RoboticIcon} strokeWidth={2} />
 		)
-	}
+	},
+	// 	{
+	// 	title: "Analytics",
+	// 	url: "/analytics",
+	// 	icon: (
+	// 		<HugeiconsIcon icon={ComputerTerminalIcon} strokeWidth={2} />
+	// 	)
+	// }
 ]
 
 export function NavMain({
