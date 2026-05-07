@@ -1,54 +1,104 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Voice Chef — Makefile
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Quick start:
+#   make dev          → Full dev stack (all services, hot-reload)
+#   make prod         → Production deployment (nginx reverse proxy + SSL)
+#
+# IMPORTANT:
+#   All build targets use --no-cache to avoid stale Docker layer bugs
+#   when switching between dev (target: dev) and prod (target: runtime).
+#   See: https://github.com/moby/moby/issues/38379
+#
+# ═══════════════════════════════════════════════════════════════════════════
+
 COMPOSE = docker compose
 PROD_FILE = docker-compose.yml
 DEV_FILE = docker-compose.override.yml
-
 ENV = .env
 
+# ── Default target ─────────────────────────────────────────────────────────
 all: help
 
-# Checks if .env exists. If not it copy-creates from .env.example
+# ── Environment bootstrap ──────────────────────────────────────────────────
+# Copy-creates .env from .env.example if it does not exist.
 $(ENV):
-	@if [ ! -f "$(ENV)" ]; then \
-		echo "Creating $(ENV) from .env.example"; \
-		cp .env.example $(ENV); \
-	fi
+	@test -f $(ENV) || (cp .env.example $(ENV) && echo "Created $(ENV) from .env.example")
 
-# Main targets/commands to build, run and and stop + clean the application
-build: $(ENV)
-	@echo "Building the images..."
-	$(COMPOSE) build --no-cache
-
+# ── Development targets ────────────────────────────────────────────────────
+# Use these when working locally. They mount source code as volumes for
+# hot-reload and bind service ports directly to the host.
+#
+#   make dev              Start everything (fast: reuses Docker layer cache)
+#   make dev-re           Same as dev but builds from scratch (--no-cache).
+#                         Use this if switching from prod or seeing stale
+#                         layer issues (e.g. wrong target: dev vs runtime).
+#   make dev-back         Start only db + backend (for API-only work)
+#   make dev-back-office  Start db + backend + office-frontend
+#   make up               Start existing containers (no rebuild, fastest)
 dev: $(ENV)
-	@echo "Building and starting in dev_mode"
+	@echo "Building and starting in dev_mode (cached)"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
 	@echo "VOICE-CHEF is running in dev_mode"
 
-up: $(ENV)
-	@echo "Starting in dev_mode"
+dev-re: $(ENV)
+	@echo "Building fresh images and starting in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
 	@echo "VOICE-CHEF is running in dev_mode"
 
 dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
-
 dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+# ── Production target ──────────────────────────────────────────────────────
+# Use this for VPS / CI-CD deployments. Builds all images from scratch
+# (--no-cache) then recreates containers with zero-downtime rolling.
+#
+#   make prod   Build fresh images and restart all services
+#
+# The shared nginx-proxy terminates SSL on 443 and routes:
+#   /            → office-frontend
+#   /kitchen/    → kitchen-frontend
+#   /api/        → backend
+#   /agent/      → agent (WebSocket-capable)
+#   /stt/        → stt
+#   /uploads/    → backend
+#   /docs        → backend (Swagger)
+#   /openapi.json → backend
 
 prod: $(ENV)
-	@echo "Stopping existing containers and building in prod_mode"
-	$(COMPOSE) -f $(PROD_FILE) down
-	$(COMPOSE) -f $(PROD_FILE) up --build
+	@echo "Building fresh images and restarting in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) build --no-cache
+	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
+
+# ── Lifecycle targets ──────────────────────────────────────────────────────
+#   make down   Stop and remove containers (images + volumes are kept)
+#   make start  Start stopped containers (no rebuild)
+#   make stop   Stop running containers (no removal)
 
 down:
 	@echo "Stopping and removing the containers..."
-	$(COMPOSE) down
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) down
+	@echo "Done."
 
-re: clean dev
+start:
+	@echo "Starting the containers..."
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) start
 
-# Clean-up targets/commands
+stop:
+	@echo "Stopping the containers..."
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) stop
+
+# ── Clean-up targets ───────────────────────────────────────────────────────
+#   make clean    Remove containers + images (keeps volumes & data)
+#   make fclean   NUCLEAR OPTION: removes everything including volumes
+#                 (WARNING: this wipes the database and uploaded files)
+
 clean:
 	@echo "Stopping the app and removing containers + images..."
 	$(COMPOSE) down --rmi local
@@ -56,9 +106,18 @@ clean:
 fclean:
 	@echo "Stopping the app and removing containers + images + volumes..."
 	$(COMPOSE) down --rmi all -v --remove-orphans
-	docker volume prune
+	docker volume prune -f
+	@echo "Nuclear cleanup complete. Database and uploads are gone."
 
-# Targets/commands to show current state, logs and command
+# ── Full reset + dev start ─────────────────────────────────────────────────
+#   make re   Shortcut for: make clean && make dev
+
+re: clean dev
+
+# ── Observability targets ──────────────────────────────────────────────────
+#   make status   Show running containers, ports, images, volumes
+#   make logs     Stream logs from all services
+
 status:
 	@$(COMPOSE) ps -a --format "table {{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"
 	@printf '\n'
@@ -66,105 +125,113 @@ status:
 	@printf '\n'
 	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
 	@printf '\n'
-		@( \
-			printf "IMAGE\tID\tSIZE\n"; \
-			docker images \
-				--filter "label=com.docker.compose.project=$(shell basename $(PWD))" \
-				--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
-			docker images postgres \
-				--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
-		) | column -t; \
+	@( \
+		printf "IMAGE\tID\tSIZE\n"; \
+		docker images \
+			--filter "label=com.docker.compose.project=$(shell basename $(PWD))" \
+			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+		docker images postgres \
+			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+	) | column -t; \
 		printf '\n'
-
+	@echo "Docker compose containers status:"
 logs:
-	$(COMPOSE) logs
+	@echo "Fetching logs..."
+	@docker compose logs -f
 
-# Default target of Makefile is help
-help:
-	@printf "%b\n" $(HELP_TEXT)
+# ── Build target (no start) ────────────────────────────────────────────────
+#   make build   Build all images without starting containers.
+#                Useful for CI caching or verifying Dockerfile changes.
 
-%:
-	@echo "Unknown command: '$@'\n"
-	@printf "%b\n" $(HELP_TEXT)
+build: $(ENV)
+	@echo "Building images..."
+	$(COMPOSE) build --no-cache
 
-define HELP_TEXT
-	"Available commands:\n" \
-	" make dev:	Build and start in development mode" \
-	" make dev-back:	Build and run db and backend in dev mode" \
-	" make prod:	Build and start in production mode" \
-	" make down:	Stop and remove containers" \
-	" make re:	Clean all then run in dev mode\n" \
-	" make clean:	Remove containers + images" \
-	" make fclean:	Remove containers + images + volumes\n" \
-	" make status:	Full Docker state" \
-	" make logs:	Show logs" \
-	" make drift-gate-local:	Run local 4-gate schema drift check (strict pending-autogen gate)" \
-	" make dump-blast-check:	Reset DB volume and test dump-init -> alembic head upgrade" \
-	" make dump-regen:	Regenerate db/init/01_dump.sql from migration head" \
-	" make help:	Show available commands\n" \
-	" make build:	Build images from compose file" \
-	" make agent-build:\tBuild only agent service" \
-	" make agent-build-nocache:\tBuild only agent service without cache" \
-	" make agent-recreate:\tRecreate and run only agent service\n" \
-	" make stt-build:\tBuild only stt service" \
-	" make stt-build-nocache:\tBuild only stt service without cache" \
-	" make stt-recreate:\tRecreate and run only stt service\n" \
-	" make refresh-env-agent:\tRecreate backend and agent with fresh env\n" \
-	" make up:	Calling the command dev" \
-	" make start:	Start the containers" \
-	" make stop:	Stop running containers"
-endef
+# ── Per-service targets (for targeted rebuilds / debugging) ────────────────
 
-# Aux targets/commands
 agent-build: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build agent
+	$(COMPOSE) -f $(PROD_FILE) build agent
 
 agent-build-nocache: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache agent
+	$(COMPOSE) -f $(PROD_FILE) build --no-cache agent
 
 agent-recreate: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate agent
+	$(COMPOSE) -f $(PROD_FILE) up -d --build --force-recreate agent
 
 stt-build: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build stt
+	$(COMPOSE) -f $(PROD_FILE) build stt
 
 stt-build-nocache: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) build --no-cache stt
+	$(COMPOSE) -f $(PROD_FILE) build --no-cache stt
 
 stt-recreate: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --force-recreate stt
+	$(COMPOSE) -f $(PROD_FILE) up -d --build --force-recreate stt
 
 refresh-env-agent: $(ENV)
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --no-deps --force-recreate backend agent
+	$(COMPOSE) -f $(PROD_FILE) up -d --build --force-recreate backend agent
 
-start:
-	$(COMPOSE) start
+# ── Database targets ───────────────────────────────────────────────────────
 
-stop:
-	$(COMPOSE) stop
-
-dump-blast-check:
-	chmod +x db/scripts/dump_upgrade_blast_check.sh
-	./db/scripts/dump_upgrade_blast_check.sh
-
-dump-regen:
-	@echo "Regenerating db/init/01_dump.sql from migration head (isolated temp DB)..."
-	chmod +x db/scripts/regenerate_dump_from_head.sh
-	./db/scripts/regenerate_dump_from_head.sh
-	@echo "Done: db/init/01_dump.sql regenerated from migration head"
-
+# Run all four schema-drift gates locally (strict check).
 drift-gate-local:
-	@echo "Running local 4-gate schema drift check..."
-	chmod +x db/scripts/run_local_drift_gate.sh
-	./db/scripts/run_local_drift_gate.sh
-	@echo "Done: local schema drift gate passed"
+	@bash -c 'cd backend && python -m pytest tests/test_drift_gate.py -v'
 
+# Blast-test: wipe DB volume, re-initialize from dump, then run alembic upgrade.
+dump-blast-check:
+	@bash -c 'cd backend && python scripts/dump_blast_check.py'
+
+# Regenerate db/init/01_dump.sql from the current migration head.
+dump-regen:
+	@bash -c 'cd backend && python scripts/dump_regenerate.py'
+
+# Open a psql shell inside the running db container.
 db-connect:
-	docker exec -it voice-chef-db-1 psql -h localhost -p 5432 -U recipe_user -d recipe_db
+	@docker compose exec db psql -U $(shell grep POSTGRES_USER .env | cut -d= -f2) -d $(shell grep POSTGRES_DB .env | cut -d= -f2)
 
+# Open a bash shell inside the running agent container.
 agent-terminal:
-	docker exec -it voice-chef-agent-1 bash
+	@docker compose exec agent bash
 
-.PHONY: all dev dev-back dev-back-office prod down re clean fclean status logs help % build up start stop
+# ═══════════════════════════════════════════════════════════════════════════
+# Help
+# ═══════════════════════════════════════════════════════════════════════════
+
+help:
+	@printf "\n"
+	@printf "╔════════════════════════════════════════════════════════════════════════════╗\n"
+	@printf "║                      Voice Chef — Available Commands                       ║\n"
+	@printf "╚════════════════════════════════════════════════════════════════════════════╝\n"
+	@printf "\n  🚀  START (pick one)\n"
+	@printf "     %-30s %s\n" "make dev"         "Full dev stack (cached build, fast)"
+	@printf "     %-30s %s\n" "make dev-re"      "Full dev stack (clean build, --no-cache)"
+	@printf "     %-30s %s\n" "make prod"        "Production mode (nginx SSL proxy, no direct host ports)"
+	@printf "     %-30s %s\n" "make up"          "Restart existing dev containers (no rebuild)"
+	@printf "\n  🧩  PARTIAL DEV (lightweight)\n"
+	@printf "     %-30s %s\n" "make dev-back"          "Only db + backend"
+	@printf "     %-30s %s\n" "make dev-back-office"   "Only db + backend + office-frontend"
+	@printf "\n  🛑  STOP / CLEAN\n"
+	@printf "     %-30s %s\n" "make down"        "Stop and remove containers"
+	@printf "     %-30s %s\n" "make stop"        "Stop containers (keep them)"
+	@printf "     %-30s %s\n" "make clean"       "Remove containers + images (keeps data)"
+	@printf "     %-30s %s\n" "make fclean"      "⚠️  NUCLEAR: removes everything including DB + uploads"
+	@printf "\n  🔧  PER-SERVICE REBUILDS\n"
+	@printf "     %-30s %s\n" "make agent-build-nocache"  "Rebuild agent from scratch"
+	@printf "     %-30s %s\n" "make stt-build-nocache"    "Rebuild STT from scratch"
+	@printf "     %-30s %s\n" "make refresh-env-agent"    "Recreate backend + agent with fresh env"
+	@printf "\n  👁  OBSERVE\n"
+	@printf "     %-30s %s\n" "make status"      "Containers, images, and volumes"
+	@printf "     %-30s %s\n" "make logs"        "Stream all service logs"
+	@printf "\n  🗄  DATABASE\n"
+	@printf "     %-30s %s\n" "make db-connect"          "Open psql shell in db container"
+	@printf "     %-30s %s\n" "make drift-gate-local"    "Run local schema-drift checks"
+	@printf "     %-30s %s\n" "make dump-blast-check"    "Test dump-init → alembic upgrade"
+	@printf "     %-30s %s\n" "make dump-regen"          "Regenerate db/init/01_dump.sql"
+	@printf "\n"
+
+# ── Fallback ───────────────────────────────────────────────────────────────
+# Catch-all for unrecognized targets.
+%:
+	@echo "Unknown target '$@'. Run 'make help' for available commands."
+.PHONY: all dev dev-re dev-back dev-back-office prod down re clean fclean status logs help build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal
