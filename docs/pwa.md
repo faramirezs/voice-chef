@@ -90,6 +90,16 @@ fetch('/api/recipes')  // in DevTools Console
 
 Should fail (not return a cached response). Confirms the runtime caching rules are working.
 
+## Browser support
+
+The PWA is verified on **Chromium / Chrome** (the standard PWA target — full manifest support, address-bar install button, respects `start_url`, etc.). Other browsers behave with varying degrees of completeness:
+
+- **Safari macOS** (Sonoma+): installs via File → Add to Dock. Tested but quirky — Safari's "Add to Dock" tends to capture the URL the user was viewing at install time rather than honoring the manifest's `start_url`, so users may need to navigate to `/kitchen/` explicitly before installing. Cookie jar is also separate from the regular Safari browser, so first launch lands at the login page.
+- **Safari iOS**: installs via Share → Add to Home Screen. Manifest support is partial; the `apple-mobile-web-app-*` meta tags in `index.html` patch the gaps.
+- **Firefox**: no PWA install on desktop; partial on Android via Add to Home Screen.
+
+For the 42 minor evaluation, Chromium is the recommended browser — that's where install + offline behaviors are most consistent and testable.
+
 ## Limitations & Future Work
 
 - **Maskable icon is the same as the regular 512** — it should ideally have ~25% safe-area padding around the logo for Android adaptive icons. Acceptable for the minor; can iterate when we have a designed asset.

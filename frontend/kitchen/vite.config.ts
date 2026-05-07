@@ -32,11 +32,13 @@ export default defineConfig(({ mode }) => ({
         background_color: "#0a0a0a",
         display: "standalone",
         orientation: "any",
-        // Relative — resolves to the directory containing the manifest, so
-        // it's "/" in dev and "/kitchen/" in production behind the proxy.
-        // Avoids the auto-prefixed `scope` and a literal `start_url` ending
-        // up out-of-scope per the Web App Manifest spec.
-        start_url: ".",
+        // Mode-aware absolute path. In production behind the HTTPS proxy
+        // the kitchen mounts at /kitchen/; in dev (Vite, no proxy) it
+        // mounts at root. Safari on macOS doesn't always honor relative
+        // start_urls when installing via "Add to Dock" — explicit absolute
+        // makes the intent unambiguous to Chrome (which respects manifest
+        // start_url) while staying within the auto-prefixed scope.
+        start_url: mode === "production" ? "/kitchen/" : "/",
         icons: [
           { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
