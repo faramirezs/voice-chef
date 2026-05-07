@@ -18,19 +18,27 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useNavigate } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { UnfoldMoreIcon, SparklesIcon, CheckmarkBadgeIcon, CreditCardIcon, NotificationIcon, LogoutIcon } from "@hugeicons/core-free-icons"
+import { UnfoldMoreIcon, CheckmarkBadgeIcon, LogoutIcon } from "@hugeicons/core-free-icons"
+import { useAuth } from "@/hooks/useAuth"
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
-}) {
+export function NavUser() {
   const { isMobile } = useSidebar()
+  const navigate = useNavigate()
+  const { user } = useAuth()  // Get user from hook
+
+  if (!user) {
+    return null
+  }
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    localStorage.removeItem("token_expiry")
+    navigate("/login", { replace: true })
+  }
 
   return (
     <SidebarMenu>
@@ -43,7 +51,7 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">👤</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -62,7 +70,7 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">👤</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
@@ -72,28 +80,28 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} />
                 Upgrade to Pro
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => navigate("/profile")}>
                 <HugeiconsIcon icon={CheckmarkBadgeIcon} strokeWidth={2} />
-                Account
+                Profile settings
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <HugeiconsIcon icon={CreditCardIcon} strokeWidth={2} />
                 Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
+              </DropdownMenuItem> */}
+              {/* <DropdownMenuItem>
                 <HugeiconsIcon icon={NotificationIcon} strokeWidth={2} />
                 Notifications
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
               Log out
             </DropdownMenuItem>

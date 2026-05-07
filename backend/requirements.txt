@@ -4,8 +4,10 @@ fastapi[standard]>=0.113.0,<0.114.0 # standard includes python-multipart, email-
 greenlet==3.3.2
 psycopg[binary]>=3.1
 alembic>=1.13
+Pillow==10.0.1
 pydantic==2.12.5
 pydantic_core==2.41.5
+pydantic-settings==2.0.0
 SQLAlchemy==2.0.48
 sqlmodel==0.0.37
 typing-inspection==0.4.2

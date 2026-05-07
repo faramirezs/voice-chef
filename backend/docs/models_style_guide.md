@@ -12,6 +12,8 @@
   - [5.3. Explicitly Named Indexes (`Index`)](#53-explicitly-named-indexes-index)
   - [5.4. Explicitly Named Foreign Key Constraints (`ForeignKeyConstraint`)](#54-explicitly-named-foreign-key-constraints-foreignkeyconstraint)
 - [6. Nullable Types (`Optional`)](#6-nullable-types-optional)
+- [7. Relationship](#7-relationship)
+- [8. sa_type](#8-sa_type)
 
 
 This document outlines the conventions and best practices for creating SQLModel ORM classes in this project. The goal is to maintain a consistent and readable codebase.
@@ -23,7 +25,7 @@ This document outlines the conventions and best practices for creating SQLModel 
 We use DB-side UUID defaults.
 
 ```python
-id: uuid.UUID = Field(
+id: UUID = Field(
     default=None,
     primary_key=True,
     sa_column_kwargs={"server_default": text("gen_random_uuid()")}
@@ -45,13 +47,13 @@ id: uuid.UUID = Field(
     ```
 
 2.  **Level 2: Use `sa_column_kwargs` to add features.**
-    *   **When:** When you are happy with the database column type SQLModel infers from your Python type hint (e.g., `uuid.UUID` -> `Uuid`), but you need to add a database-specific feature that `Field` doesn't have a parameter for.
+    *   **When:** When you are happy with the database column type SQLModel infers from your Python type hint (e.g., `UUID` -> `Uuid`), but you need to add a database-specific feature that `Field` doesn't have a parameter for.
     *   **Common Use Case:** Adding `server_default`.
 
     ```python
     # Good: `sa_column_kwargs` adds a DB-side default to the `Uuid` column
     # that SQLModel correctly infers from the type hint.
-    id: uuid.UUID = Field(
+    id: UUID = Field(
         default=None,
         primary_key=True,
         sa_column_kwargs={"server_default": text("gen_random_uuid()")}
@@ -61,7 +63,6 @@ id: uuid.UUID = Field(
 3.  **Level 3 (Use when necessary): Use `sa_column=Column()` to replace the column.**
     *   **When:** When you need to take full control and completely replace the column that SQLModel would generate.
     *   **Reason:** This is necessary when the features you need cannot be expressed with Level 1 or 2. For example, SQLModel's `max_length` (Level 1) is a shortcut for `String(length)`, but you cannot use it in combination with `sa_column_kwargs` (Level 2). If you need both a specific string length *and* a `server_default`, you must escalate to Level 3.
-    *   **Why avoid it if possible?** Using `sa_column=Column()` for everything defeats the purpose of SQLModel, which is to simplify ORM definitions by inferring columns from type hints. It makes the code more verbose and less "SQLModel-idiomatic". Reserve it for cases where it's truly needed.
 
     ```python
     # Correct: `sa_column=Column()` is required here because we need to 
@@ -72,10 +73,20 @@ id: uuid.UUID = Field(
             'role',
             String(50),
             nullable=False,
-            server_default=text("'editor'::character varying")
+            server_default=text("'editor'")
         )
     )
     ```
+
+    * JSONB type: `sa_column=Column()` is also required here because SQLModel cannot infer the DB type `JSONB` from a `dict` hint.
+
+    ```python
+    settings: dict | None = Field(
+        default=None, 
+        sa_column=Column('settings', JSONB, server_default=text("'{}'"))
+    )
+    ```
+    *   **Why avoid it if possible?** Using `sa_column=Column()` for everything defeats the purpose of SQLModel, which is to simplify ORM definitions by inferring columns from type hints. It makes the code more verbose and less "SQLModel-idiomatic". Reserve it for cases where it's truly needed.
 
 ### 3. `Column` vs. `mapped_column`
 
@@ -214,4 +225,29 @@ class User(SQLModel, table=True):
 
 # Incorrect: This will raise a TypeError
 #     tenant: "Tenant" | None = Relationship(back_populates="users")
+```
+
+### 7. Relationship
+
+To connect a model to a Many-to-Many table (`t_ingredient_additives`), instead of `link_model`, we use `sa_relationship_kwargs`. 
+
+`sa_relationship_kwargs` passes parameters directly to SQLAlchemy, bypassing the SQLModel's internal validation. Thus, we avoid an error: `TypeError: Boolean value of this clause is not defined`.
+
+back_populates - ...
+
+### 8. sa_type
+
+Using `sa_type` is a good way to keep our SQLModel code clean and concise.
+
+`sa_type` is a shortcut in SQLModel's `Field` for specifying the SQLAlchemy column type when you don't need other specific `Column` configurations.
+
+**Rule**
+
+Use `sa_type=...` when you only need to define the data type (like `Text`, `Numeric`, `Boolean`) and the database column name is the same as your model's attribute name.
+
+Use the more verbose `sa_column=Column(...)` when you need to specify more details.
+
+Example:
+```python
+description: str | None = Field(default=None, sa_type=Text)
 ```

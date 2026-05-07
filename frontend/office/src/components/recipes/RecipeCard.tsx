@@ -1,8 +1,16 @@
 import { useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { Recipe } from '@/types/recipe';
-import recipeImage from '@/assets/voice-chef-recipe.jpg';
+import type { RecipeSummary } from '@/types/recipe';
+
+const RECIPE_CARD_TITLE_MAX_LENGTH = 64;
+
+function formatRecipeCardTitle(title: string) {
+  if (title.length <= RECIPE_CARD_TITLE_MAX_LENGTH) {
+    return title;
+  }
+
+  return `${title.slice(0, RECIPE_CARD_TITLE_MAX_LENGTH - 1).trimEnd()}…`;
+}
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -10,22 +18,14 @@ const STATUS_STYLES: Record<string, string> = {
   archived: 'bg-gray-100 text-gray-600',
 };
 
-function ImagePlaceholder() {
-  return (
-    <div
-      className="relative flex h-36 w-full items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${recipeImage})` }}
-      aria-hidden="true"
-    />
-  );
-}
 
 interface RecipeCardProps {
-  recipe: Recipe;
+  recipe: RecipeSummary;
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const navigate = useNavigate();
+  const displayTitle = formatRecipeCardTitle(recipe.name);
 
   // const yieldLabel =
   //   recipe.yield_amount != null
@@ -38,24 +38,36 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   );
 
   return (
-    <Card className="h-[16.5rem] cursor-pointer gap-2 pt-0 hover:scale-[1.02] hover:animate-pulse hover:shadow-lg" onClick={() => navigate(`/recipes/${recipe.id}`)}>
-      <ImagePlaceholder />
-      <CardHeader className="pb-2 h-full">
-        <div className="flex h-full items-start justify-between gap-2">
-          <CardTitle className="flex-1 text-base leading-snug break-words">{recipe.name}</CardTitle>
-          <span className={badgeClass}>{recipe.status}</span>
+    <div
+      onClick={() => navigate(`/recipes/${recipe.id}`)}
+      className="rounded-lg border bg-card overflow-hidden cursor-pointer hover:shadow transition"
+    >
+      {/* IMAGE */}
+      {recipe.photo_url ? (
+        <img
+          key={recipe.photo_url}
+          src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
+          alt={displayTitle}
+          className="w-full h-32 object-cover"
+        />
+      ) : (
+        <div className="w-full h-32 bg-muted flex items-center justify-center text-xs text-muted-foreground">
+          No Image
         </div>
-      </CardHeader>
-      {/* <CardContent className="text-sm text-muted-foreground space-y-1">
-        {yieldLabel && (
-          <p>
-            <span className="font-medium text-foreground">Yield:</span> {yieldLabel}
-          </p>
-        )}
-        {recipe.recipe_number && (
-          <p className="text-xs font-mono">#{recipe.recipe_number}</p>
-        )}
-      </CardContent> */}
-    </Card>
+      )}
+
+      {/* CONTENT */}
+      <div className="p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-medium text-sm leading-tight line-clamp-2">
+            {displayTitle}
+          </h3>
+
+          <span className={badgeClass}>
+            {recipe.status}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

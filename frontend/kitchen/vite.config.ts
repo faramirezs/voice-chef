@@ -4,7 +4,12 @@ import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // In production, the kitchen frontend is mounted at /kitchen/ behind the
+  // shared nginx-proxy (see PR #216). In dev (Vite dev server) it serves
+  // at root. vite-plugin-pwa picks up `base` automatically and prefixes
+  // start_url, scope, icon paths in the generated manifest accordingly.
+  base: mode === "production" ? "/kitchen/" : "/",
   plugins: [
     react(),
     tailwindcss(),
@@ -13,7 +18,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       // Static assets that should be served alongside the manifest. The icons
       // live in public/icons/ so Vite copies them to dist/icons/.
-      includeAssets: ["icons/*.png", "favicon.ico"],
+      includeAssets: ["icons/*.png", "favicon.svg"],
       manifest: {
         // `id` is the stable identifier for the installed app, separate from
         // `start_url`. Hard-coding it means the install survives even if we
@@ -27,12 +32,16 @@ export default defineConfig({
         background_color: "#0a0a0a",
         display: "standalone",
         orientation: "any",
-        start_url: "/",
+        // Relative — resolves to the directory containing the manifest, so
+        // it's "/" in dev and "/kitchen/" in production behind the proxy.
+        // Avoids the auto-prefixed `scope` and a literal `start_url` ending
+        // up out-of-scope per the Web App Manifest spec.
+        start_url: ".",
         icons: [
-          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "/icons/icon-maskable-512.png",
+            src: "icons/icon-maskable-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
@@ -102,10 +111,27 @@ export default defineConfig({
   server: {
     host: true,
     port: 5174,
+    proxy: {
+      '/api': {
+        target: 'http://backend:80',
+        changeOrigin: true,
+      },
+      '/agent': {
+        target: 'http://agent:8001',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/agent/, ''),
+      },
+      '/stt': {
+        target: 'http://stt:8002',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/stt/, ''),
+      },
+    },
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+}));

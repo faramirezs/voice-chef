@@ -1,54 +1,47 @@
-export interface Recipe {
+// RecipeIngredientResponse
+export interface RecipeIngredientResponse {
+  id: string;
+  ingredient_id:string;
+  ingredient_name: string;
+  ingredient_default_unit: string;
+  quantity: string;
+  unit: string;
+  quantity_grams: string;
+  preparation: string | null;
+  sort_order: number;
+}
+
+export interface RecipeSummary { // old Recipe
   id: string;
   name: string;
+  description: string | null;
   status: string;
+  yield_mode: string;
+  portion_size_grams: string | null;
+  total_raw_weight_grams: string | null;
+  total_cooked_weight_grams: string | null;
+  portions_count_resolved: string | null;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
-  tenant_id: string | null;
-  created_by: string | null;
-  description: string | null;
-  description_short: string | null;
-  instructions: string | null;
-  notes: string | null;
-  notes_instructions: string | null;
-  serving_recommendation: string | null;
-  side_dishes: string | null;
-  storage_text: string | null;
-  origin_fish: string | null;
-  origin_location: string | null;
-  devices: string | null;
-  utensils: string | null;
-  packaging: string | null;
-  packaging_material: string | null;
-  ingredient_list_custom: string | null;
-  allergene_source: string | null;
-  yield_amount: number | null;
-  reduction_factor: number | null;
-  eigene_menge: number | null;
-  net_weight: number | null;
-  fill_weight: number | null;
-  fill_quantity: number | null;
-  drained_weight: number | null;
-  total_weight: number | null;
-  portion_weight: number | null;
-  margin: number | null;
-  nutri_score_veg_fruits: number | null;
-  preference_nutri_value: number | null;
-  yield_unit: string | null;
-  recipe_number: string | null;
-  batch_number: string | null;
-  storage_temperature: string | null;
-  labor_effort: string | null;
-  nutri_score_category: string | null;
-  unit_measure: string | null;
-  unit_serving: string | null;
-  portion_by_weight: boolean;
-  mise_en_place_display: boolean;
-  is_component: boolean;
-  production_date: string | null;
-  use_by_date: string | null;
-  expiry_date: string | null;
 }
+
+export interface RecipeDetail extends RecipeSummary {
+  instructions: string | null;
+  preparation_time_minutes: number | null;
+  cooking_time_minutes: number | null;
+  is_component: boolean;
+  ingredients?: RecipeIngredientResponse[];
+
+  // below: present in DB Shema, but not used
+  // created_by: string | null;
+  // yield_amount: number | null;
+  // yield_unit: string | null;
+  // reduction_factor: number | null;
+  // recipe_number: string | null;
+  // storage_temperature: string | null;
+}
+  
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -59,8 +52,42 @@ export interface PaginatedResponse<T> {
   };
 }
 
+export interface RecipeIngredientWrite {
+  ingredient_id: string;
+  quantity?: string | null;
+  unit?: string | null;
+  preparation?: string | null;
+  sort_order: number;
+}
+
+export interface RecipeWrite {
+  name: string;  // Required
+  description?: string | null;
+  instructions?: string | null;
+  status?: string; // Optional (has backend default)
+  yield_mode?: string; // Optional (has backend default)
+  portion_size_grams?: string | null;
+  portions_count_resolved?: string | null;
+  total_raw_weight_grams?: string | null;
+  total_cooked_weight_grams?: string | null;
+  ingredients?: RecipeIngredientWrite[];
+}
+
+// RecipeIngredientResponse
 export interface Ingredient {
   id: string;
-  name: string;
-  [key: string]: unknown;
+  ingredient_id:string;
+  ingredient_name: string;
+  ingredient_default_unit: string;
+  quantity: string;
+  unit: string;
+  quantity_grams: string;
+  preparation: string | null;
+  sort_order: number;
+  
+  // below: present in DB Shema, but not used
+  // source?: string | null;
+  // is_custom?: boolean;
+  // created_at?: string;
+  // updated_at?: string;
 }

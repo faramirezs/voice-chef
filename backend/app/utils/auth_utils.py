@@ -1,10 +1,15 @@
 import os
+from sqlmodel import Session, select
+from fastapi import HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher
 import argon2
 from password_validator import PasswordValidator
 import jwt
-from fastapi.security import OAuth2PasswordBearer
+from uuid import UUID
+
+from app.models.users import Users
 
 # -----------------------------------------------------------------------------
 # Constants and Global Instances
@@ -13,9 +18,9 @@ from fastapi.security import OAuth2PasswordBearer
 # JWT signing key, algorithm, and token lifetime (for access tokens).
 SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_key_for_testing")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 3600
 
-ph = PasswordHasher() 
+ph = PasswordHasher()
 
 # OAuth2 scheme dependency. 
 # It tells FastAPI which URL to use to get the token.
@@ -73,3 +78,25 @@ def create_access_token(data: dict) -> str:
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     
     return encoded_jwt
+
+# NOTE: mpeshko - the exclude_id parameter is needed to reuse the helper 
+# when updating a record
+def ensure_unique_user_email(
+        session: Session, 
+        email: str,
+        exclude_id: UUID | None = None
+) -> None:
+
+    query = select(Users).where((Users.email == email))
+    if exclude_id:
+        query = query.where(Users.id != exclude_id)
+     # sends query to database and deblocks
+    result = session.exec(query)
+    existing_user = result.first()
+
+    if existing_user:
+        if existing_user.email == email:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="E-Mail already registered."
+            )

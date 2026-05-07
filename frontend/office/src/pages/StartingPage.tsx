@@ -3,6 +3,8 @@ import recipeImage from "@/assets/voice-chef-recipe.jpg"
 import personImage from "@/assets/voice-chef-person.jpg"
 import aiImage from "@/assets/voice-chef-ai.jpg"
 
+const KITCHEN_URL = import.meta.env.VITE_KITCHEN_URL || "http://localhost:8082"
+
 export function StartingPage() {
   return (
     <div className="flex min-h-[calc(100svh-9rem)] flex-col gap-6">
@@ -40,8 +42,10 @@ export function StartingPage() {
           <p className="mt-2 text-lg text-white/90">Plan your weekly menu.</p>
           </div>
         </NavLink>
-        <NavLink
-          to="/ai-assistant"
+        <a
+          href={KITCHEN_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
         >
           <div
@@ -50,10 +54,10 @@ export function StartingPage() {
           />
           <div className="pointer-events-none absolute inset-0 bg-black/35 opacity-100 transition-opacity duration-300 group-hover:opacity-100" />
           <div className="relative z-10">
-          <h2 className="text-3xl font-semibold text-white">AI Assistant</h2>
-          <p className="mt-2 text-lg text-white/90">Get help with ideas and prep.</p>
+          <h2 className="text-3xl font-semibold text-white">Ai Kitchen Display</h2>
+          <p className="mt-2 text-lg text-white/90">Open the kitchen screen.</p>
           </div>
-        </NavLink>
+        </a>
       </div>
     </div>
   );

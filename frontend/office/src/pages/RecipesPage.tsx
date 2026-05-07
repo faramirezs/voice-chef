@@ -1,8 +1,14 @@
 import { RecipeList } from '@/components/recipes/RecipeList';
 import { Button } from '@/components/ui/button';
-// import { Popover } from 'radix-ui';
+import { useNavigate } from 'react-router-dom';
 
 export function RecipesPage() {
+  const navigate = useNavigate();
+
+  const handleCreateRecipe = () => {
+    navigate('/recipes/new');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -10,7 +16,7 @@ export function RecipesPage() {
           <h1 className="text-2xl font-semibold">Recipes</h1>
           <p className="text-muted-foreground">Browse and manage your recipe collection.</p>
         </div>
-        <Button onClick={() => alert('Create new recipe functionality coming soon!')}>
+        <Button onClick={handleCreateRecipe}>
           Create new recipe
         </Button>
       </div>

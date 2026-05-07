@@ -53,3 +53,12 @@ ag-ui/
 
 # Build assets
 frontend/kitchen/dist/
+local/PLAN.md
+AGENTS.md
+
+# Learning folders
+target-docs/
+knowledge/
+
+# upload folders
+**/uploads/

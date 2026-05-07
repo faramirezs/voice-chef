@@ -1,9 +1,28 @@
 services:
+  nginx-proxy:
+    build: ./nginx-proxy/
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - office-frontend
+      - kitchen-frontend
+      - backend
+      - agent
+      - stt
+    networks:
+      - app-network
+    volumes:
+      - nginx_ssl:/etc/nginx/ssl
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+
   office-frontend:
     build:
       context: ./frontend/office/
-    ports:
-      - "8080:80"
+      target: runtime
+      args:
+        - VITE_KITCHEN_URL=${VITE_KITCHEN_URL:-/kitchen/}
     networks:
       - app-network
     depends_on:
@@ -12,8 +31,7 @@ services:
   kitchen-frontend:
     build:
       context: ./frontend/kitchen/
-    ports:
-      - "8082:80"
+      target: runtime
     networks:
       - app-network
     depends_on:
@@ -28,8 +46,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-       - "5432"
     networks:
       - app-network
     healthcheck:
@@ -47,12 +63,14 @@ services:
         condition: service_healthy
     networks:
       - app-network
-    ports:
-      - "80"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SQL_ECHO: ${SQL_ECHO}
       SECRET_KEY: ${SECRET_KEY}
+      DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
+    volumes:
+      - uploads:/code/uploads
 
   agent:
     build:
@@ -62,13 +80,14 @@ services:
       - backend
     networks:
       - app-network
-    ports:
-      - "8001:8001"
     environment:
       FASTAPI_INTERNAL_URL: http://backend:80
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      AGENT_MODEL: ${AGENT_MODEL}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-nvidia}
+      AGENT_BASE_URL: ${AGENT_BASE_URL}
+      AGENT_API_KEY: ${AGENT_API_KEY}
+      AGENT_MODEL: ${AGENT_MODEL:-deepseek-ai/deepseek-v4-flash}
       AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
 
   stt:
     build:
@@ -76,8 +95,6 @@ services:
       dockerfile: Dockerfile
     networks:
       - app-network
-    ports:
-      - "8002:8002"
     environment:
       STT_MODEL: ${STT_MODEL:-base}
       STT_LANGUAGE: ${STT_LANGUAGE:-}
@@ -88,6 +105,8 @@ services:
 volumes:
   whisper_models:
   postgres_data:
+  uploads:
+  nginx_ssl:
 
 networks:
   app-network:
