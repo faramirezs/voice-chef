@@ -9,9 +9,9 @@ concurrency:
 
 on:
   push:
-    branches: [main, develop, 206-tls-certification-https-protocol-implementation]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
