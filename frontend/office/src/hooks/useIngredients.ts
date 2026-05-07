@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/axios';
 import { ingredientsAutocomplete } from '@/api/ingredients';
-import type { Ingredient, PaginatedResponse } from '@/types/recipe';
+import type { IngredientListItem, IngredientAutocompleteItem } from '@/types/ingredients';
+import type { PaginatedResponse } from '@/types/recipe';
 
 const INGREDIENTS_KEY = 'ingredients';
 const INGREDIENTS_AUTOCOMPLETE_KEY = 'ingredients-autocomplete';
@@ -15,7 +16,7 @@ export function useIngredients(filters?: {
   return useQuery({
     queryKey: [INGREDIENTS_KEY, filters],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Ingredient>>('/ingredients', {
+      const { data } = await api.get<PaginatedResponse<IngredientListItem>>('/ingredients', {
         params: filters,
       });
       return data;
