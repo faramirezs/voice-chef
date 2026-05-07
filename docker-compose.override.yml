@@ -1,4 +1,7 @@
 services:
+  nginx-proxy:
+    profiles: ["disabled"]  # Keeps it in compose but won't start
+
   office-frontend:
     build:
       target: dev

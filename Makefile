@@ -27,6 +27,7 @@ $(ENV):
 	@test -f $(ENV) || (cp .env.example $(ENV) && echo "Created $(ENV) from .env.example")
 
 # ── Development targets ────────────────────────────────────────────────────
+
 # Use these when working locally. They mount source code as volumes for
 # hot-reload and bind service ports directly to the host.
 #
@@ -37,6 +38,12 @@ $(ENV):
 #   make dev-back         Start only db + backend (for API-only work)
 #   make dev-back-office  Start db + backend + office-frontend
 #   make up               Start existing containers (no rebuild, fastest)
+
+# Dev mode access:
+# - Office: http://localhost:5173
+# - Kitchen: http://localhost:5174
+# - Backend API: http://localhost:8000
+
 dev: $(ENV)
 	@echo "Building and starting in dev_mode (cached)"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
@@ -54,7 +61,9 @@ dev-back: $(ENV)
 dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+
 # ── Production target ──────────────────────────────────────────────────────
+
 # Use this for VPS / CI-CD deployments. Builds all images from scratch
 # (--no-cache) then recreates containers with zero-downtime rolling.
 #
