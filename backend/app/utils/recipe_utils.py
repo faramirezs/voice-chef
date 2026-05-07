@@ -110,6 +110,7 @@ def ensure_unique_recipe_name(
 
     if not name:
         return
+    
     q = select(Recipe).where(
         Recipe.name == name.strip(), 
         Recipe.tenant_id == tenant_id
