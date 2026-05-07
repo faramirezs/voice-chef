@@ -1,4 +1,3 @@
-import React from "react";
 
 export function PrivacyPolicyPage() {
   return (
@@ -61,15 +60,15 @@ export function PrivacyPolicyPage() {
 
             <h2>5. Third-Party Services and Analytics</h2>
             <p>
-                We use third-party services to provide core functionality of the Service, 
+                We use third-party services to provide core functionality of the Service,
                 including AI-based features, speech-to-text processing, and analytics.
 
-                When you use these features, certain data may be transmitted to third-party 
-                providers. This may include user input (text), audio data, and technical 
+                When you use these features, certain data may be transmitted to third-party
+                providers. This may include user input (text), audio data, and technical
                 metadata required to process requests.
 
-                These third-party services process data on our behalf and only for the 
-                purpose of providing the requested functionality. However, we do not 
+                These third-party services process data on our behalf and only for the
+                purpose of providing the requested functionality. However, we do not
                 fully control their internal data handling practices.
 
                 We recommend reviewing the privacy policies of these providers for more details.
