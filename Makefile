@@ -104,13 +104,21 @@ stop:
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) stop
 
 # ── Clean-up targets ───────────────────────────────────────────────────────
-#   make clean    Remove containers + images (keeps volumes & data)
-#   make fclean   NUCLEAR OPTION: removes everything including volumes
-#                 (WARNING: this wipes the database and uploaded files)
+#   make clean       Remove containers + images (keeps volumes & data)
+#   make clean-nginx Remove ALL images including nginx (keeps database volume)
+#   make fclean      NUCLEAR OPTION: removes everything including volumes
+#                    (WARNING: this wipes the database and uploaded files)
 
 clean:
 	@echo "Stopping the app and removing containers + images..."
 	$(COMPOSE) down --rmi local
+
+clean-nginx:
+	@echo "Removing ALL Docker images (including nginx-proxy)..."
+	$(COMPOSE) down --rmi all --remove-orphans
+	$(COMPOSE) rm -f nginx-proxy
+	docker rmi voice-chef-nginx-proxy:latest
+	@echo "All images removed. Database volume preserved."
 
 fclean:
 	@echo "Stopping the app and removing containers + images + volumes..."
@@ -222,6 +230,7 @@ help:
 	@printf "     %-30s %s\n" "make down"        "Stop and remove containers"
 	@printf "     %-30s %s\n" "make stop"        "Stop containers (keep them)"
 	@printf "     %-30s %s\n" "make clean"       "Remove containers + images (keeps data)"
+	@printf "     %-30s %s\n" "make clean-nginx" "Remove ALL images including nginx (keeps DB)"
 	@printf "     %-30s %s\n" "make fclean"      "⚠️  NUCLEAR: removes everything including DB + uploads"
 	@printf "\n  🔧  PER-SERVICE REBUILDS\n"
 	@printf "     %-30s %s\n" "make agent-build-nocache"  "Rebuild agent from scratch"
@@ -241,6 +250,6 @@ help:
 # Catch-all for unrecognized targets.
 %:
 	@echo "Unknown target '$@'. Run 'make help' for available commands."
-.PHONY: all dev dev-re dev-back dev-back-office prod down re clean fclean status logs help build up start stop
+.PHONY: all dev dev-re dev-back dev-back-office prod down re clean clean-nginx fclean status logs help build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal
