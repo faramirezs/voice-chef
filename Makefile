@@ -119,15 +119,22 @@ re: clean dev
 #   make logs     Stream logs from all services
 
 status:
+	@$(COMPOSE) ps -a --format "table {{.ID}}\t{{.Name}}\t{{.Status}}\t{{.Ports}}"
+	@printf '\n'
+	@docker volume ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
+	@printf '\n'
+	@docker network ls --filter "label=com.docker.compose.project=$(shell basename $(PWD))"
+	@printf '\n'
+	@( \
+		printf "IMAGE\tID\tSIZE\n"; \
+		docker images \
+			--filter "label=com.docker.compose.project=$(shell basename $(PWD))" \
+			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+		docker images postgres \
+			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
+	) | column -t; \
+		printf '\n'
 	@echo "Docker compose containers status:"
-	@docker compose ps
-	@echo ""
-	@echo "Docker images:"
-	@docker images | grep "voice-chef" || true
-	@echo ""
-	@echo "Docker volumes:"
-	@docker volume ls | grep "voice-chef" || true
-
 logs:
 	@echo "Fetching logs..."
 	@docker compose logs -f
