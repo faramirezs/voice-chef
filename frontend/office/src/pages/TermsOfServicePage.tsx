@@ -1,5 +1,3 @@
-import React from "react";
-import personImage from "@/assets/voice-chef-ai.jpg";
 
 export function TermsOfServicePage() {
   return (
