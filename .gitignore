@@ -62,3 +62,6 @@ knowledge/
 
 # upload folders
 **/uploads/
+
+# mpeshko: backend integration test 
+test_backend.py
