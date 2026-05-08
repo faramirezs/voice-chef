@@ -1,12 +1,28 @@
 services:
+  nginx-proxy:
+    build: ./nginx-proxy/
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - office-frontend
+      - kitchen-frontend
+      - backend
+      - agent
+      - stt
+    networks:
+      - app-network
+    volumes:
+      - nginx_ssl:/etc/nginx/ssl
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+
   office-frontend:
     build:
       context: ./frontend/office/
       target: runtime
       args:
-        - VITE_KITCHEN_URL=${VITE_KITCHEN_URL:-http://localhost:8082}
-    ports:
-      - "8080:80"
+        - VITE_KITCHEN_URL=${VITE_KITCHEN_URL:-/kitchen/}
     networks:
       - app-network
     depends_on:
@@ -16,8 +32,6 @@ services:
     build:
       context: ./frontend/kitchen/
       target: runtime
-    ports:
-      - "8082:80"
     networks:
       - app-network
     depends_on:
@@ -32,8 +46,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-       - "5432"
     networks:
       - app-network
     healthcheck:
@@ -51,8 +63,6 @@ services:
         condition: service_healthy
     networks:
       - app-network
-    ports:
-      - "8000:80"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SQL_ECHO: ${SQL_ECHO}
@@ -70,8 +80,6 @@ services:
       - backend
     networks:
       - app-network
-    ports:
-      - "8001:8001"
     environment:
       FASTAPI_INTERNAL_URL: http://backend:80
       RAG_SERVICE_URL: http://rag:8003
@@ -89,8 +97,6 @@ services:
       dockerfile: Dockerfile
     networks:
       - app-network
-    ports:
-      - "8002:8002"
     environment:
       STT_MODEL: ${STT_MODEL:-base}
       STT_LANGUAGE: ${STT_LANGUAGE:-}
@@ -139,6 +145,7 @@ volumes:
   qdrant_storage:
   embedding_models:
   uploads:
+  nginx_ssl:
 
 networks:
   app-network:
