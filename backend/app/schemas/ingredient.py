@@ -1,6 +1,5 @@
 from sqlmodel import SQLModel, Field
 from uuid import UUID
-from decimal import Decimal
 from datetime import datetime
 
 

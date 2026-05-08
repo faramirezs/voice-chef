@@ -6,18 +6,43 @@ from datetime import datetime
 from pydantic import field_validator
 from fastapi import Query
 from enum import Enum
+import re # Regular Expression
+
+# --- Shared Logic Utility ---
+def validate_recipe_name_string(v: str) -> str:
+    """The core logic used by all name validators."""
+    v = v.strip()
+    if not v:
+        raise ValueError("Invalid recipe name. Recipe name cannot be empty")
+    if not re.search(r"[a-zA-Z]", v):
+        raise ValueError("Invalid recipe name. It should contain at least 1 letter")
+    return v
 
 
-class RecipeIngredientWrite(SQLModel):
-    ingredient_id: UUID
-    quantity: Decimal | None = None
+# ─── CREATE/UPDATE RECIPE INGREDIENT ────────────────────────────────────────────────
+
+# NOTE: We cannot have the same ingredient in the same recipe twice
+# You cannot have two different ingredients in the same recipe with the same sort_order
+
+class RecipeIngredient(SQLModel):
+    quantity: Decimal | None = Field(default=None, gt=0)
     unit: str | None = None
     preparation: str | None = None
-    sort_order: int
+
+class RecipeIngredientWrite(RecipeIngredient):
+    ingredient_id: UUID
+    sort_order: int = Field(ge=0)
+
+class RecipeIngredientUpdate(RecipeIngredient):
+    ingredient_id: UUID | None = None
+    sort_order: int | None = Field(ge=0)
+
+# ─── CREATE RECIPE ──────────────────────────────────────────────────────────────────
 
 
 class RecipeWrite(SQLModel):
-    name: str
+    # In Pydantic the ... (Ellipsis) signifies that a field is required
+    name: str = Field(..., min_length=1)
     description: str | None = None
     instructions: str | None = None
 
@@ -33,6 +58,44 @@ class RecipeWrite(SQLModel):
     # such as sharing the same list across instances.
     ingredients: List[RecipeIngredientWrite] = Field(default_factory=list)
     #                                          ↑ HAS default: OPTIONAL
+
+    @field_validator("name")
+    @classmethod
+    def validate_name_content(cls, v: str):
+        # if v is None Pydantic will catch that before the validator runs
+        return validate_recipe_name_string(v)
+
+
+# ─── UPDATE RECIPE ──────────────────────────────────────────────────────────────────
+
+
+class RecipeUpdate(SQLModel):
+    # min_length=1 : it must be at least one character long
+    name: str | None = Field(default=None, min_length=1)
+    description: str | None = None
+    instructions: str | None = None
+
+    status: str | None = None
+    yield_mode: str | None = None
+
+    portion_size_grams: Decimal | None = Field(default=None, gt=0)
+    portions_count_resolved: Decimal | None = Field(default=None, gt=0)
+    total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
+    total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def validate_optional_name(cls, v: str | None):
+        # only validate if the user actually sent a value
+        if v is not None:
+            return validate_recipe_name_string(v)
+        return v
+
+    # ingredients: List[RecipeIngredientUpdate] | None = None
+
+
+# ─── RESPONSES ──────────────────────────────────────────────────────────────────
+
 
 class RecipeIngredientResponse(SQLModel):
     id: UUID
@@ -71,37 +134,7 @@ class RecipeDetailResponse(RecipeSummaryResponse):
     ingredients: List[RecipeIngredientResponse]
 
 
-class RecipeIngredientUpdate(SQLModel):
-    ingredient_id: UUID | None = None
-    quantity: Decimal | None = None
-    unit: str | None = None
-    preparation: str | None = None
-    sort_order: int | None = None
-
-
-class RecipeUpdate(SQLModel):
-    name: str | None = None
-    description: str | None = None
-    instructions: str | None = None
-
-    status: str | None = None
-    yield_mode: str | None = None
-
-    portion_size_grams: Decimal | None = Field(default=None, gt=0)
-    portions_count_resolved: Decimal | None = Field(default=None, gt=0)
-    total_raw_weight_grams: Decimal | None = Field(default=None, ge=0)
-    total_cooked_weight_grams: Decimal | None = Field(default=None, ge=0)
-
-    @field_validator("name")
-    @classmethod
-    def name_must_not_be_empty(cls, v: str | None):
-        if v is not None:
-            v = v.strip()
-            if not v:
-                raise ValueError("Recipe name cannot be empty")
-        return v
-
-    # ingredients: List[RecipeIngredientUpdate] | None = None
+# ─── SORT, FILTERS ──────────────────────────────────────────────────────────────────
 
 
 class RecipeSort(str, Enum):
