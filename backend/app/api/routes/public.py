@@ -88,7 +88,8 @@ def get_recipe(
     request: Request,
     id: UUID,
     session: Session = Depends(get_session),
-    api_key: Annotated[Tuple[UUID, str] | None, Depends(validate_api_key)] = None,
+    api_key: Annotated[Tuple[UUID, str] | None, 
+                       Depends(validate_api_key)] = None,
 ):
     """
     Public endpoint to retrieve a single recipe.

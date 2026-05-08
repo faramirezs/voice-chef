@@ -1,5 +1,7 @@
 import hashlib
+import json
 import secrets
+from pathlib import Path
 from fastapi import Depends, HTTPException, status, Request
 from typing import Optional, Tuple
 from uuid import UUID
@@ -70,9 +72,6 @@ async def validate_api_key(
     Raises:
         HTTPException: If API key is invalid or inactive
     """
-    from pathlib import Path
-    import json
-    
     api_key_header = request.headers.get("X-API-Key")
     
     if not api_key_header:
@@ -89,28 +88,29 @@ async def validate_api_key(
         for tenant_file in api_keys_dir.glob("*.json"):
             try:
                 with open(tenant_file, 'r') as f:
-                    keys_data = json.load(f)
+                    key_data = json.load(f)
                 
-                for key_id, key_info in keys_data.items():
-                    if (key_info['key_hash'] == key_hash and 
-                        key_info.get('is_active', True)):
-                        # Extract tenant_id from filename
-                        tenant_id_str = tenant_file.stem
-                        tenant_id = UUID(tenant_id_str)
-                        
-                        # Update last_used_at timestamp
-                        from datetime import datetime
-                        key_info['last_used_at'] = datetime.utcnow().isoformat()
-                        
-                        try:
-                            with open(tenant_file, 'w') as f:
-                                json.dump(keys_data, f, indent=2, default=str)
-                        except Exception:
-                            # Don't fail if we can't update timestamp
-                            pass
-                        
-                        return (tenant_id, key_id)
-            except (json.JSONDecodeError, IOError):
+                if (key_data and 
+                    key_data.get('key_hash') == key_hash and 
+                    key_data.get('is_active', True)):
+                    # Extract tenant_id from filename
+                    tenant_id_str = tenant_file.stem
+                    tenant_id = UUID(tenant_id_str)
+                    key_id = key_data.get('id', 'default')
+                    
+                    # Update last_used_at timestamp
+                    from datetime import datetime
+                    key_data['last_used_at'] = datetime.utcnow().isoformat()
+                    
+                    try:
+                        with open(tenant_file, 'w') as f:
+                            json.dump(key_data, f, indent=2, default=str)
+                    except Exception:
+                        # Don't fail if we can't update timestamp
+                        pass
+                    
+                    return (tenant_id, key_id)
+            except (json.JSONDecodeError, IOError, ValueError):
                 continue
     
     raise HTTPException(

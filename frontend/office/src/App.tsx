@@ -15,7 +15,7 @@ import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { TimersPage } from '@/pages/TimersPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { FilesPage } from '@/pages/FilesPage';
-// import { APIKeysPage } from '@/pages/APIKeysPage';
+import { APIKeysPage } from '@/pages/APIKeysPage';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
@@ -78,7 +78,7 @@ function App() {
           <Route path="ingredients" element={<IngredientsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="files" element={<FilesPage />} />
-          {/* <Route path="api-keys" element={<APIKeysPage />} /> */}
+          <Route path="api-keys" element={<APIKeysPage />} />
 
           <Route path="settings/*" element={<SettingsGeneralPage />} />
           <Route path="profile" element={<ProfilePage />} />

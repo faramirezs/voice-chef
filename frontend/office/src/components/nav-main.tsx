@@ -126,13 +126,13 @@ export function NavMain({
       <SidebarMenu>
 				{NAV_ITEMS.map((item) => (
 					<SidebarMenuItem key={item.title}>
+						<SidebarMenuButton asChild>
 							<NavLink to={item.url} className={({ isActive }) => isActive ? "bg-primary/10 text-primary" : ""}>
-						<SidebarMenuButton>
 								{item.icon}
 								<span>{item.title}</span>
-						</SidebarMenuButton>
 							</NavLink>
-					</SidebarMenuItem>
+						</SidebarMenuButton>
+						</SidebarMenuItem>
 				))}
 
         {items.map((item) => (

@@ -13,15 +13,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { listAPIKeys, createAPIKey, deleteAPIKey } from '@/api/apiKeys';
 import type { APIKeyListResponse, APIKeyCreateResponse } from '@/types/apiKeys';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Copy01Icon, Trash02Icon } from '@hugeicons/core-free-icons';
+import { Copy01Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 
 export function APIKeysPage() {
-  const [apiKeys, setApiKeys] = useState<APIKeyListResponse[]>([]);
+  const [apiKey, setApiKey] = useState<APIKeyListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeyDescription, setNewKeyDescription] = useState('');
   const [createdKey, setCreatedKey] = useState<APIKeyCreateResponse | null>(null);
@@ -37,9 +36,9 @@ export function APIKeysPage() {
       setLoading(true);
       setError(null);
       const response = await listAPIKeys();
-      setApiKeys(response.data);
+      setApiKey(response.data.length > 0 ? response.data[0] : null);
     } catch (err) {
-      setError('Failed to load API keys');
+      setError('Failed to load API key');
       console.error(err);
     } finally {
       setLoading(false);
@@ -63,6 +62,7 @@ export function APIKeysPage() {
       setCreatedKey(response.data);
       setNewKeyName('');
       setNewKeyDescription('');
+      setIsCreateDialogOpen(false);
       await loadApiKeys();
     } catch (err) {
       setError('Failed to create API key');
@@ -73,13 +73,12 @@ export function APIKeysPage() {
   };
 
   const handleDeleteKey = async () => {
-    if (!selectedKeyId) return;
+    if (!apiKey) return;
 
     try {
       setError(null);
-      await deleteAPIKey(selectedKeyId);
+      await deleteAPIKey(apiKey.id);
       await loadApiKeys();
-      setSelectedKeyId(null);
       setIsDeleteDialogOpen(false);
     } catch (err) {
       setError('Failed to delete API key');
@@ -140,13 +139,15 @@ export function APIKeysPage() {
       <div className="flex gap-2">
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>Create API Key</Button>
+            <Button>{apiKey ? 'Regenerate API Key' : 'Create API Key'}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New API Key</DialogTitle>
+              <DialogTitle>{apiKey ? 'Regenerate API Key' : 'Create New API Key'}</DialogTitle>
               <DialogDescription>
-                Create a new API key for accessing the API.
+                {apiKey 
+                  ? 'Creating a new API key will replace your existing key. The old key will no longer work.'
+                  : 'Create an API key for accessing the API. You can only have one API key per tenant.'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -192,20 +193,17 @@ export function APIKeysPage() {
         </Dialog>
       </div>
 
-      {isDeleteDialogOpen && selectedKeyId && (
+      {isDeleteDialogOpen && apiKey && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 rounded-lg">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-auto space-y-4">
             <h2 className="text-lg font-semibold">Delete API Key</h2>
             <p className="text-sm text-gray-600">
-              Are you sure you want to delete the API key? This action cannot be undone.
+              Are you sure you want to delete your API key? Once deleted, you'll need to create a new one to access the API. This action cannot be undone.
             </p>
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => {
-                  setIsDeleteDialogOpen(false);
-                  setSelectedKeyId(null);
-                }}
+                onClick={() => setIsDeleteDialogOpen(false)}
               >
                 Cancel
               </Button>
@@ -222,65 +220,59 @@ export function APIKeysPage() {
 
       {loading ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          Loading API keys...
+          Loading API key...
         </div>
-      ) : apiKeys.length === 0 ? (
+      ) : !apiKey ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          No API keys created yet. Create one to get started.
+          <p>No API key created yet.</p>
+          <p className="text-sm mt-2">Click the button above to create your API key.</p>
         </div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Name</th>
-                  <th className="px-4 py-3 text-left font-semibold">Key Preview</th>
-                  <th className="px-4 py-3 text-left font-semibold">Description</th>
-                  <th className="px-4 py-3 text-left font-semibold">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold">Created</th>
-                  <th className="px-4 py-3 text-left font-semibold">Last Used</th>
-                  <th className="px-4 py-3 text-center font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {apiKeys.map((key) => (
-                  <tr key={key.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{key.name}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{key.key_preview}</td>
-                    <td className="px-4 py-3 max-w-xs truncate">
-                      {key.description || '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          key.is_active
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        {key.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{formatDate(key.created_at)}</td>
-                    <td className="px-4 py-3">{formatDate(key.last_used_at)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedKeyId(key.id);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <HugeiconsIcon icon={Trash02Icon} strokeWidth={2} className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="rounded-lg border p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Name</p>
+              <p className="text-lg font-semibold mt-1">{apiKey.name}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Key Preview</p>
+              <p className="text-lg font-mono mt-1">{apiKey.key_preview}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Status</p>
+              <span
+                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
+                  apiKey.is_active
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-gray-50 text-gray-700'
+                }`}
+              >
+                {apiKey.is_active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Created</p>
+              <p className="text-lg font-semibold mt-1">{formatDate(apiKey.created_at)}</p>
+            </div>
+            {apiKey.description && (
+              <div className="md:col-span-2">
+                <p className="text-sm font-medium text-muted-foreground">Description</p>
+                <p className="text-base mt-1">{apiKey.description}</p>
+              </div>
+            )}
+            <div className="md:col-span-2">
+              <p className="text-sm font-medium text-muted-foreground">Last Used</p>
+              <p className="text-lg font-semibold mt-1">{formatDate(apiKey.last_used_at)}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-4 border-t">
+            <Button
+              variant="destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="w-4 h-4 mr-2" />
+              Delete API Key
+            </Button>
           </div>
         </div>
       )}

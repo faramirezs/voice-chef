@@ -32,26 +32,26 @@ def _get_tenant_file(tenant_id: UUID) -> Path:
     return API_KEYS_DIR / f"{tenant_id}.json"
 
 
-def _load_tenant_keys(tenant_id: UUID) -> dict:
-    """Load all API keys for a tenant from file."""
+def _load_tenant_key(tenant_id: UUID) -> Optional[dict]:
+    """Load the API key for a tenant from file."""
     file_path = _get_tenant_file(tenant_id)
     if not file_path.exists():
-        return {}
+        return None
     
     try:
         with open(file_path, 'r') as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError):
-        return {}
+        return None
 
 
-def _save_tenant_keys(tenant_id: UUID, keys_data: dict) -> None:
-    """Save all API keys for a tenant to file."""
+def _save_tenant_key(tenant_id: UUID, key_data: dict) -> None:
+    """Save the API key for a tenant to file."""
     file_path = _get_tenant_file(tenant_id)
     _ensure_api_keys_dir()
     
     with open(file_path, 'w') as f:
-        json.dump(keys_data, f, indent=2, default=str)
+        json.dump(key_data, f, indent=2, default=str)
 
 
 # ─── API Key Service ────────────────────────────────────────────────────────
@@ -62,73 +62,70 @@ class APIKeyService:
     @staticmethod
     def list_api_keys(tenant_id: UUID) -> List[APIKeyListResponse]:
         """
-        List all API keys for a tenant.
+        Get the API key for a tenant.
         
         Args:
             tenant_id: The tenant ID
             
         Returns:
-            List of API key responses
+            List containing the single API key if it exists, otherwise empty
         """
-        keys_data = _load_tenant_keys(tenant_id)
+        key_data = _load_tenant_key(tenant_id)
         
-        api_keys = []
-        for key_id, key_info in keys_data.items():
-            api_keys.append(APIKeyListResponse(
-                id=UUID(key_id),
-                name=key_info['name'],
-                key_preview=key_info['key_preview'],
-                description=key_info.get('description'),
-                is_active=key_info.get('is_active', True),
-                created_at=datetime.fromisoformat(key_info['created_at']),
-                updated_at=datetime.fromisoformat(key_info['updated_at']),
-                last_used_at=datetime.fromisoformat(key_info['last_used_at']) if key_info.get('last_used_at') else None,
-                tenant_id=tenant_id,
-            ))
+        if not key_data:
+            return []
         
-        return api_keys
+        return [APIKeyListResponse(
+            id=UUID(key_data['id']),
+            name=key_data['name'],
+            key_preview=key_data['key_preview'],
+            description=key_data.get('description'),
+            is_active=key_data.get('is_active', True),
+            created_at=datetime.fromisoformat(key_data['created_at']),
+            updated_at=datetime.fromisoformat(key_data['updated_at']),
+            last_used_at=datetime.fromisoformat(key_data['last_used_at']) if key_data.get('last_used_at') else None,
+            tenant_id=tenant_id,
+        )]
     
     @staticmethod
-    def get_api_key(tenant_id: UUID, key_id: UUID) -> APIKeyListResponse:
+    def get_api_key(tenant_id: UUID, key_id: UUID = None) -> APIKeyListResponse:
         """
-        Get a specific API key by ID.
+        Get the API key for a tenant. The key_id parameter is ignored since there's only one key per tenant.
         
         Args:
             tenant_id: The tenant ID
-            key_id: The API key ID
+            key_id: Ignored (kept for API compatibility)
             
         Returns:
             The API key response
             
         Raises:
-            HTTPException: If key not found or not owned by tenant
+            HTTPException: If no key exists for the tenant
         """
-        keys_data = _load_tenant_keys(tenant_id)
-        key_id_str = str(key_id)
+        key_data = _load_tenant_key(tenant_id)
         
-        if key_id_str not in keys_data:
+        if not key_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="API key not found"
             )
         
-        key_info = keys_data[key_id_str]
         return APIKeyListResponse(
-            id=key_id,
-            name=key_info['name'],
-            key_preview=key_info['key_preview'],
-            description=key_info.get('description'),
-            is_active=key_info.get('is_active', True),
-            created_at=datetime.fromisoformat(key_info['created_at']),
-            updated_at=datetime.fromisoformat(key_info['updated_at']),
-            last_used_at=datetime.fromisoformat(key_info['last_used_at']) if key_info.get('last_used_at') else None,
+            id=UUID(key_data['id']),
+            name=key_data['name'],
+            key_preview=key_data['key_preview'],
+            description=key_data.get('description'),
+            is_active=key_data.get('is_active', True),
+            created_at=datetime.fromisoformat(key_data['created_at']),
+            updated_at=datetime.fromisoformat(key_data['updated_at']),
+            last_used_at=datetime.fromisoformat(key_data['last_used_at']) if key_data.get('last_used_at') else None,
             tenant_id=tenant_id,
         )
     
     @staticmethod
     def create_api_key(tenant_id: UUID, api_key_data: APIKeyCreate) -> APIKeyCreateResponse:
         """
-        Create a new API key for a tenant.
+        Create a new API key for a tenant. If a key already exists, it will be replaced.
         
         Args:
             tenant_id: The tenant ID
@@ -137,42 +134,30 @@ class APIKeyService:
         Returns:
             The created API key response (with full key)
         """
-        keys_data = _load_tenant_keys(tenant_id)
-        
-        # Check if name already exists
-        for key_info in keys_data.values():
-            if key_info['name'] == api_key_data.name:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="An API key with this name already exists"
-                )
-        
         # Generate new key
         new_key = generate_api_key()
         key_hash = hash_api_key(new_key)
         key_preview = get_key_preview(new_key)
-        key_id = UUID(int=0).hex[:8]  # Simple ID generation, can be improved
         
-        # Import UUID to generate proper ID
         from uuid import uuid4
         key_id = str(uuid4())
         
         now = datetime.utcnow()
         
-        # Store the key info (without the full key)
-        keys_data[key_id] = {
+        # Create the key data
+        key_data = {
             'id': key_id,
             'name': api_key_data.name,
             'key_hash': key_hash,
             'key_preview': key_preview,
             'description': api_key_data.description,
-            'is_active': api_key_data.is_active,
+            'is_active': api_key_data.is_active if api_key_data.is_active is not None else True,
             'created_at': now.isoformat(),
             'updated_at': now.isoformat(),
             'last_used_at': None,
         }
         
-        _save_tenant_keys(tenant_id, keys_data)
+        _save_tenant_key(tenant_id, key_data)
         
         return APIKeyCreateResponse(
             id=UUID(key_id),
@@ -180,7 +165,7 @@ class APIKeyService:
             key=new_key,
             key_preview=key_preview,
             description=api_key_data.description,
-            is_active=api_key_data.is_active,
+            is_active=key_data['is_active'],
             created_at=now,
             tenant_id=tenant_id,
         )
@@ -188,15 +173,15 @@ class APIKeyService:
     @staticmethod
     def update_api_key(
         tenant_id: UUID, 
-        key_id: UUID, 
-        api_key_update: APIKeyUpdate
+        key_id: UUID = None, 
+        api_key_update: APIKeyUpdate = None
     ) -> APIKeyListResponse:
         """
-        Update an API key.
+        Update the API key for a tenant. The key_id parameter is ignored.
         
         Args:
             tenant_id: The tenant ID
-            key_id: The API key ID
+            key_id: Ignored (kept for API compatibility)
             api_key_update: The update data
             
         Returns:
@@ -205,78 +190,71 @@ class APIKeyService:
         Raises:
             HTTPException: If key not found or update fails
         """
-        keys_data = _load_tenant_keys(tenant_id)
-        key_id_str = str(key_id)
+        key_data = _load_tenant_key(tenant_id)
         
-        if key_id_str not in keys_data:
+        if not key_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="API key not found"
             )
         
-        key_info = keys_data[key_id_str]
-        
         # Update fields
         if api_key_update.name is not None:
-            # Check if new name already exists
-            for other_id, other_info in keys_data.items():
-                if other_id != key_id_str and other_info['name'] == api_key_update.name:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="An API key with this name already exists"
-                    )
-            key_info['name'] = api_key_update.name
+            key_data['name'] = api_key_update.name
         
         if api_key_update.description is not None:
-            key_info['description'] = api_key_update.description
+            key_data['description'] = api_key_update.description
         
         if api_key_update.is_active is not None:
-            key_info['is_active'] = api_key_update.is_active
+            key_data['is_active'] = api_key_update.is_active
         
-        key_info['updated_at'] = datetime.utcnow().isoformat()
+        key_data['updated_at'] = datetime.utcnow().isoformat()
         
-        _save_tenant_keys(tenant_id, keys_data)
+        _save_tenant_key(tenant_id, key_data)
         
         return APIKeyListResponse(
-            id=key_id,
-            name=key_info['name'],
-            key_preview=key_info['key_preview'],
-            description=key_info.get('description'),
-            is_active=key_info.get('is_active', True),
-            created_at=datetime.fromisoformat(key_info['created_at']),
-            updated_at=datetime.fromisoformat(key_info['updated_at']),
-            last_used_at=datetime.fromisoformat(key_info['last_used_at']) if key_info.get('last_used_at') else None,
+            id=UUID(key_data['id']),
+            name=key_data['name'],
+            key_preview=key_data['key_preview'],
+            description=key_data.get('description'),
+            is_active=key_data.get('is_active', True),
+            created_at=datetime.fromisoformat(key_data['created_at']),
+            updated_at=datetime.fromisoformat(key_data['updated_at']),
+            last_used_at=datetime.fromisoformat(key_data['last_used_at']) if key_data.get('last_used_at') else None,
             tenant_id=tenant_id,
         )
     
     @staticmethod
-    def delete_api_key(tenant_id: UUID, key_id: UUID) -> None:
+    def delete_api_key(tenant_id: UUID, key_id: UUID = None) -> None:
         """
-        Delete an API key.
+        Delete the API key for a tenant. The key_id parameter is ignored.
         
         Args:
             tenant_id: The tenant ID
-            key_id: The API key ID
+            key_id: Ignored (kept for API compatibility)
             
         Raises:
-            HTTPException: If key not found
+            HTTPException: If no key exists
         """
-        keys_data = _load_tenant_keys(tenant_id)
-        key_id_str = str(key_id)
+        key_data = _load_tenant_key(tenant_id)
         
-        if key_id_str not in keys_data:
+        if not key_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="API key not found"
             )
         
-        del keys_data[key_id_str]
-        _save_tenant_keys(tenant_id, keys_data)
+        # Delete the file to remove the key
+        file_path = _get_tenant_file(tenant_id)
+        try:
+            file_path.unlink()
+        except FileNotFoundError:
+            pass
     
     @staticmethod
     def validate_api_key(key_hash: str, tenant_id: UUID) -> Optional[str]:
         """
-        Validate an API key hash against stored keys.
+        Validate an API key hash against the stored key for a tenant.
         
         Args:
             key_hash: The hash of the API key to validate
@@ -285,26 +263,26 @@ class APIKeyService:
         Returns:
             The key ID if valid and active, None otherwise
         """
-        keys_data = _load_tenant_keys(tenant_id)
+        key_data = _load_tenant_key(tenant_id)
         
-        for key_id, key_info in keys_data.items():
-            if (key_info['key_hash'] == key_hash and 
-                key_info.get('is_active', True)):
-                return key_id
+        if (key_data and 
+            key_data['key_hash'] == key_hash and 
+            key_data.get('is_active', True)):
+            return key_data['id']
         
         return None
     
     @staticmethod
-    def update_last_used(tenant_id: UUID, key_id: str) -> None:
+    def update_last_used(tenant_id: UUID, key_id: str = None) -> None:
         """
-        Update the last_used_at timestamp for an API key.
+        Update the last_used_at timestamp for the API key. The key_id parameter is ignored.
         
         Args:
             tenant_id: The tenant ID
-            key_id: The API key ID
+            key_id: Ignored (kept for compatibility)
         """
-        keys_data = _load_tenant_keys(tenant_id)
+        key_data = _load_tenant_key(tenant_id)
         
-        if key_id in keys_data:
-            keys_data[key_id]['last_used_at'] = datetime.utcnow().isoformat()
-            _save_tenant_keys(tenant_id, keys_data)
+        if key_data:
+            key_data['last_used_at'] = datetime.utcnow().isoformat()
+            _save_tenant_key(tenant_id, key_data)
