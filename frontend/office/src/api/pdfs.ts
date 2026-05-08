@@ -1,4 +1,5 @@
 import { api } from './axios';
+import type { AxiosProgressEvent } from 'axios';
 import { useQuery } from '@tanstack/react-query';
 
 export interface PDFFile {
@@ -26,7 +27,10 @@ export const deletePDF = async (filename: string) => {
   await api.delete(`/pdfs/${filename}`);
 };
 
-export const uploadPDF = (file: File) => {
+export const uploadPDF = (
+  file: File,
+  onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
+) => {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -34,5 +38,6 @@ export const uploadPDF = (file: File) => {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
+    onUploadProgress,
   });
 };
