@@ -31,11 +31,16 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      console.warn("Unauthorized! Redirecting to login...");
+      // Don't redirect if we're already on the login page
+      // (allows login form to show the "Invalid email or password" error)
+      const isLoginPage = window.location.pathname === "/login" || window.location.pathname === "/signup";
       
-      localStorage.removeItem("token");
-
-      window.location.href = "/login";
+      if (!isLoginPage) {
+        console.warn("Unauthorized! Redirecting to login...");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
     }
 
     // Still reject the promise so the calling component can handle local errors

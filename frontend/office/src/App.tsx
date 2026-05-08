@@ -18,6 +18,8 @@ import { FilesPage } from '@/pages/FilesPage';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
+import { TermsOfServicePage } from '@/pages/TermsOfServicePage';
+import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 
 function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const isLoggedIn = Boolean(localStorage.getItem('token'));
@@ -49,6 +51,8 @@ function App() {
               </PublicOnlyRoute>
             }
           />
+          <Route path="terms" element={<TermsOfServicePage />} />
+          <Route path="privacy" element={<PrivacyPolicyPage />} />
 
         <Route
           element={

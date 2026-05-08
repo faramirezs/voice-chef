@@ -19,10 +19,10 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { MoreHorizontalCircle01Icon, FolderIcon, ArrowRightIcon, Delete02Icon } from "@hugeicons/core-free-icons"
 
-export function NavProjects({
-  projects,
+export function NavShortcuts({
+  shortcuts,
 }: {
-  projects: {
+  shortcuts: {
     name: string
     url: string
     icon: React.ReactNode
@@ -34,7 +34,7 @@ export function NavProjects({
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Shortcuts</SidebarGroupLabel>
       <SidebarMenu>
-        {projects.map((item) => (
+        {shortcuts.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton asChild>
               <a href={item.url}>
