@@ -41,7 +41,7 @@ if [ -z "$ALEMBIC" ] || [ -z "$PYTHON" ] || [ -z "$PYTEST" ]; then
 fi
 
 # Provide DATABASE_URL for drift_check.py and pytest conftest if not already set
-export DATABASE_URL="${DATABASE_URL_LOCAL}"
+export DATABASE_URL="${DATABASE_URL_LOCAL:-}"
 
 LOG_FILE="${DRIFT_LOG_FILE:-logs/drift_gate_local.log}"
 PENDING_REV_ID="${PENDING_REV_ID:-pending_check_tmp_local}"
