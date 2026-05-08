@@ -190,12 +190,16 @@ refresh-env-agent: $(ENV)
 # ── Database targets ───────────────────────────────────────────────────────
 
 # Run all four schema-drift gates locally (strict check).
-drift-gate-local:
-    @echo "Ensuring database is running..."
-    $(COMPOSE) -f $(PROD_FILE) up -d db
-    @sleep 2
+drift-gate-local: $(ENV)
+	@echo "Ensuring database is running..."
+	$(COMPOSE) -f $(PROD_FILE) up -d db
+	@sleep 2
 	@echo "Running local 4-gate schema drift check..."
-	chmod +x db/scripts/run_local_drift_gate.sh
+	@chmod +x db/scripts/run_local_drift_gate.sh
+	@DB_USER=$$(grep POSTGRES_USER .env | cut -d= -f2); \
+	DB_PASS=$$(grep POSTGRES_PASSWORD .env | cut -d= -f2); \
+	DB_NAME=$$(grep POSTGRES_DB .env | cut -d= -f2); \
+	export DATABASE_URL="postgresql+psycopg://$$DB_USER:$$DB_PASS@localhost:5432/$$DB_NAME"; \
 	./db/scripts/run_local_drift_gate.sh
 	@echo "Done: local schema drift gate passed"
 

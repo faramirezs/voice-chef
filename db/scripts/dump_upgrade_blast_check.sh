@@ -16,12 +16,17 @@ LOG_FILE="$LOG_DIR/dump_upgrade_blast_check.log"
 
 mkdir -p "$LOG_DIR"
 
-# DATABASE_URL_LOCAL must be set (from .env)
-if [ -z "${DATABASE_URL_LOCAL:-}" ]; then
-  echo "ERROR: DATABASE_URL_LOCAL environment variable is not set"
+# DATABASE_URL must be set (from .env)
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "ERROR: DATABASE_URL environment variable is not set"
   exit 1
 fi
-DB_URL="$DATABASE_URL_LOCAL"
+DB_URL="$DATABASE_URL"
+
+# Extract PostgreSQL credentials from environment
+DB_USER="${POSTGRES_USER:-recipe_user}"
+DB_NAME="${POSTGRES_DB:-recipe_db}"
+DB_PASS="${POSTGRES_PASSWORD:-}"
 
 {
   echo "[blast-check] started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -35,7 +40,7 @@ docker compose up -d db >> "$LOG_FILE" 2>&1
 
 echo "[blast-check] waiting for db health" | tee -a "$LOG_FILE"
 for i in $(seq 1 30); do
-  if docker compose exec -T db pg_isready -U recipe_user -d recipe_db >/dev/null 2>&1; then
+  if docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
     echo "[blast-check] db is healthy" | tee -a "$LOG_FILE"
     break
   fi
@@ -49,7 +54,7 @@ done
 echo "[blast-check] waiting for stable SQL connectivity" | tee -a "$LOG_FILE"
 stable_ok=0
 for i in $(seq 1 40); do
-  if docker compose exec -T db psql -U recipe_user -d recipe_db -c "SELECT 1;" >/dev/null 2>&1; then
+  if docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" >/dev/null 2>&1; then
     stable_ok=$((stable_ok + 1))
     if [[ "$stable_ok" -ge 2 ]]; then
       echo "[blast-check] SQL connectivity is stable" | tee -a "$LOG_FILE"
@@ -75,7 +80,7 @@ set -e
 echo "[blast-check] alembic exit code: $ALEMBIC_EXIT" | tee -a "$LOG_FILE"
 
 echo "[blast-check] current alembic_version rows:" | tee -a "$LOG_FILE"
-docker compose exec -T db psql -U recipe_user -d recipe_db -c "SELECT version_num FROM alembic_version;" >> "$LOG_FILE" 2>&1 || true
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT version_num FROM alembic_version;" >> "$LOG_FILE" 2>&1 || true
 
 echo "[blast-check] finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" | tee -a "$LOG_FILE"
 

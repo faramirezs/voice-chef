@@ -5,7 +5,6 @@ from sqlalchemy.pool import NullPool
 from alembic.config import Config
 
 
-# NOTE: mpeshko - DATABASE_URL or DATABASE_URL_LOCAL???
 # DATABASE_URL must be set (from .env or environment)
 TEST_DB_URL = os.environ.get("DATABASE_URL")
 if not TEST_DB_URL:
