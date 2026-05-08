@@ -151,7 +151,7 @@ status:
 			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
 	) | column -t; \
 		printf '\n'
-	@echo "Docker compose containers status:"
+
 logs:
 	@echo "Fetching logs..."
 	@docker compose logs -f

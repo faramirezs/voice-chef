@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "/code/uploads"
     UPLOAD_URL_PREFIX: str = "/uploads"
+    # File-backed API keys (path in container). Mount a volume here for persistence.
+    API_KEYS_FILE: str = "/data/api_keys.json"
 
     class Config:
         env_file = ".env"
