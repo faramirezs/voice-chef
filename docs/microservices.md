@@ -151,6 +151,58 @@ background task, so the service starts serving (with whatever vectors
 are currently in qdrant) immediately rather than blocking for the
 several minutes a full backfill takes.
 
+### Testing and reindex commands
+
+All commands assume the working directory is the repo root, where
+`.env` lives. The rag service listens on `localhost:8003`.
+
+Health and progress (no auth):
+
+```bash
+# Liveness probe
+curl -s http://localhost:8003/health
+
+# Full sync/reindex progress snapshot
+curl -s http://localhost:8003/status
+```
+
+Search smoke tests (no auth on search; tenant filtering is a future item):
+
+```bash
+curl -s -X POST http://localhost:8003/search/recipes \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "chickpeas and lemon", "k": 3}'
+
+curl -s -X POST http://localhost:8003/search/ingredients \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "Aubergine", "k": 5}'
+```
+
+Manual reindex (drops both collections, re-embeds from scratch, runs in
+the background — returns immediately):
+
+```bash
+curl -s -X POST http://localhost:8003/reindex \
+  -H "X-Internal-Secret: $(grep ^INTERNAL_SECRET= .env | cut -d= -f2-)"
+```
+
+Note the `-f2-` (with trailing dash) on `cut`. The secret is base64 and
+ends with `=`, so plain `-f2` truncates the trailing `=` and produces a
+401. After kicking off the reindex, poll `/status` to watch progress;
+`indexing` flips back to `false` when done. A full reindex of the seed
+corpus takes ~5–6 minutes.
+
+Rotating the shared secret (`INTERNAL_SECRET` is shared between agent
+and rag):
+
+```bash
+# Generate a new secret
+openssl rand -base64 32
+
+# Edit .env, then restart the services that load it
+docker compose up -d agent rag
+```
+
 ## Reference
 
 Planned improvements — Valkey pub/sub for event-driven RAG re-indexing and
