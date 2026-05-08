@@ -380,6 +380,7 @@ async def sync_collections(
 
                 if not rebuild:
                     logger.info("all collections in sync; nothing to do")
+                    state.finish()
                     return
 
                 # Drop + recreate the collections that need rebuilding.
