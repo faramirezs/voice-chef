@@ -21,25 +21,31 @@ from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
 from app.models.users import Users
+from app.models.api_keys import APIKeys
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
     RecipeDetailResponse, RecipeFilters, RecipeSort
 )
 from app.utils.file_service_image_utils import delete_file
+from app.utils.api_key_utils import validate_api_key
 from app.limiter import limiter
 
 router = APIRouter(prefix="", tags=["Public"])
 
 
 @router.get("/recipes", response_model=PaginatedResponse[RecipeSummaryResponse])
-# @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 def get_recipes(
     request: Request,
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
     filters: RecipeFilters = Depends(),
 ):
+    """
+    Public endpoint to list recipes from the default tenant.
+    No authentication required, but rate-limited.
+    """
     query = select(Recipe).where(Recipe.tenant_id == DEFAULT_TENANT_ID)
 
     # Public list can be narrowed explicitly with ?status=draft|active.
@@ -78,19 +84,25 @@ def get_recipes(
 
 
 @router.get("/recipes/{id}", response_model=RecipeDetailResponse)
-# @limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def get_recipe(
-    current_user: Annotated[Users, Depends(get_current_user)],
+    request: Request,
     id: UUID,
     session: Session = Depends(get_session),
+    api_key: Annotated[APIKeys, Depends(validate_api_key)] = None,
 ):
+    """
+    Public endpoint to retrieve a single recipe.
+    Requires API key authentication.
+    """
+    # Use API key's tenant if provided, otherwise use default tenant
+    tenant_id = api_key.tenant_id if api_key else DEFAULT_TENANT_ID
+    
     statement = (
         select(Recipe)
-        .where(Recipe.id == id, Recipe.tenant_id == current_user.tenant_id)
+        .where(Recipe.id == id, Recipe.tenant_id == tenant_id)
         .options(
-            # Eagerly load the related RecipeIngredient objects in a separate query.
             selectinload(Recipe.recipe_ingredients) 
-            # For each RecipeIngredient, also eagerly load its related Ingredient.
             .selectinload(RecipeIngredient.ingredient) 
         )
     )
@@ -102,16 +114,19 @@ def get_recipe(
     return to_recipe_detail(recipe)
 
 
-# This function creates the many-to-many relationship between a recipe 
-# and its ingredients
 @router.post("/recipes", response_model=RecipeDetailResponse, status_code=201)
-# @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 def create_recipe(
+    request: Request,
     recipe: RecipeWrite,
-    current_user: Annotated[Users, Depends(get_current_user)],
+    api_key: Annotated[APIKeys, Depends(validate_api_key)],
     session: Session = Depends(get_session),
 ):
-    tenant_id = current_user.tenant_id
+    """
+    Public endpoint to create a recipe.
+    Requires API key authentication.
+    """
+    tenant_id = api_key.tenant_id
     ensure_unique_recipe_name(session, recipe.name, tenant_id)
     validate_recipe_business_rules(recipe)
     validate_ingredient_sort_order(recipe)
@@ -151,7 +166,6 @@ def create_recipe(
         session.refresh(new_recipe, ["recipe_ingredients"])
         
         # Eagerly load ingredients for response
-        # This loads: Recipe → RecipeIngredient → Ingredient
         statement = (
             select(Recipe)
             .where(Recipe.id == new_recipe.id)
@@ -171,7 +185,7 @@ def create_recipe(
             detail="Recipe name already exists or constraint violation"
         )
     except HTTPException:
-        raise  # Re-raise HTTPException (ingredient not found, 404)
+        raise
     except SQLAlchemyError as e:
         session.rollback()
         raise HTTPException(
@@ -186,24 +200,25 @@ def create_recipe(
         )
     
 @router.patch("/{id}", response_model=RecipeSummaryResponse)
-# @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 def update_recipe(
-    current_user: Annotated[Users, Depends(get_current_user)],
+    request: Request,
     id: UUID, 
     recipe_update: RecipeUpdate, 
+    api_key: Annotated[APIKeys, Depends(validate_api_key)],
     session: Session = Depends(get_session)
 ):
     """
-    Update recipe fields with partial merge semantics
+    Public endpoint to update a recipe.
+    Requires API key authentication.
     """
     query = select(Recipe).where(
         Recipe.id == id, 
-        Recipe.tenant_id == current_user.tenant_id)
+        Recipe.tenant_id == api_key.tenant_id)
     recipe = session.exec(query).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    # NOTE: mpeshko - Convert the input to a dict, EXCLUDING fields not sent by the client
     updates = recipe_update.model_dump(exclude_unset=True)
 
     # If name is being changed, validate uniqueness first
@@ -212,9 +227,6 @@ def update_recipe(
 
     for key, value in updates.items():
         setattr(recipe, key, value)
-    
-    # Validate business rules after applying updates
-    # validate_recipe_business_rules(recipe)
     
     try:
         session.add(recipe)
@@ -239,15 +251,20 @@ def update_recipe(
 
 
 @router.delete("/{id}", status_code=204)
-# @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 def delete_recipe(
-    current_user: Annotated[Users, Depends(get_current_user)],
+    request: Request,
     id: UUID, 
+    api_key: Annotated[APIKeys, Depends(validate_api_key)],
     session: Session = Depends(get_session)
 ):
+    """
+    Public endpoint to delete a recipe.
+    Requires API key authentication.
+    """
     statement = select(Recipe).where(
         Recipe.id == id,
-        Recipe.tenant_id == current_user.tenant_id
+        Recipe.tenant_id == api_key.tenant_id
     )
     recipe = session.exec(statement).first()
     if not recipe:
