@@ -1,7 +1,18 @@
-"""Initial backfill: fetch all recipes and ingredients from the backend,
-embed them, and upsert into qdrant. Runs once at startup if collections
-are empty. Polling-based incremental sync is a separate concern (next
-iteration).
+"""Backfill + sync: fetch recipes and ingredients from the backend, embed
+them, and upsert into qdrant.
+
+Two entry points:
+- `sync_collections(...)` — called at startup. Per collection, compares the
+  qdrant point count against the backend's total. Empty → full backfill.
+  Match → skip. Mismatch → drop + recreate + full backfill (catches recipes
+  added or deleted between container restarts).
+- `force_reindex(...)` — called from POST /reindex. Drops everything and
+  re-embeds from scratch regardless of state. Use after editing recipe
+  content (which doesn't change the count, so sync_collections wouldn't
+  detect it) or after switching the embedding model.
+
+Polling-based incremental sync (catching mid-uptime edits without a manual
+trigger) is a separate concern — see docs/voiceNextSteps.md Topic 3.
 """
 
 import asyncio
@@ -27,6 +38,17 @@ EMBED_BATCH = 64
 # own behalf during indexing. Same pattern the agent uses; see
 # backend/app/core/deps.py and agent/app/agent.py.
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+
+# Backend list endpoints used for count-comparison. Order matters for log
+# readability only.
+_COUNT_ENDPOINTS: dict[str, str] = {
+    "recipes": "/api/recipes",
+    "ingredients": "/api/ingredients",
+}
+
+# Serialize concurrent sync/reindex calls. Without this, a startup sync and
+# an admin-triggered /reindex could race and double-embed everything.
+_sync_lock = asyncio.Lock()
 
 
 def _recipe_text(recipe: dict[str, Any]) -> str:
@@ -117,6 +139,7 @@ async def _embed_and_upsert(
     items: list[dict[str, Any]],
     text_fn: Callable[[dict[str, Any]], str],
     payload_fn: Callable[[dict[str, Any]], dict[str, Any]],
+    progress_cb: Callable[[int], None] | None = None,
 ) -> int:
     upserted = 0
     total = len(items)
@@ -140,6 +163,8 @@ async def _embed_and_upsert(
         ]
         await qdrant.upsert(collection_name=collection, points=points)
         upserted += len(points)
+        if progress_cb is not None:
+            progress_cb(upserted)
         logger.info(
             "[%s] embedded+upserted %s/%s", collection, upserted, total
         )
@@ -171,13 +196,14 @@ async def _backfill_recipes(
     embedder: Embedder,
     sparse_embedder: SparseEmbedder,
     backend_url: str,
+    progress_cb: Callable[[int], None] | None = None,
 ) -> int:
     summaries = await _fetch_paginated(http, f"{backend_url}/api/recipes")
     logger.info("fetched %s recipe summaries; hydrating with detail", len(summaries))
     detailed = await _hydrate_recipes(http, backend_url, summaries)
     return await _embed_and_upsert(
         qdrant, embedder, sparse_embedder, "recipes", detailed,
-        _recipe_text, _recipe_payload,
+        _recipe_text, _recipe_payload, progress_cb=progress_cb,
     )
 
 
@@ -187,19 +213,27 @@ async def _backfill_ingredients(
     embedder: Embedder,
     sparse_embedder: SparseEmbedder,
     backend_url: str,
+    progress_cb: Callable[[int], None] | None = None,
 ) -> int:
     items = await _fetch_paginated(http, f"{backend_url}/api/ingredients")
     logger.info("fetched %s ingredients", len(items))
     return await _embed_and_upsert(
         qdrant, embedder, sparse_embedder, "ingredients", items,
-        _ingredient_text, _ingredient_payload,
+        _ingredient_text, _ingredient_payload, progress_cb=progress_cb,
     )
 
 
 _BACKFILLERS: dict[
     str,
     Callable[
-        [httpx.AsyncClient, AsyncQdrantClient, Embedder, SparseEmbedder, str],
+        [
+            httpx.AsyncClient,
+            AsyncQdrantClient,
+            Embedder,
+            SparseEmbedder,
+            str,
+            Callable[[int], None] | None,
+        ],
         Awaitable[int],
     ],
 ] = {
@@ -208,28 +242,216 @@ _BACKFILLERS: dict[
 }
 
 
-async def backfill_if_empty(
+async def _get_backend_total(
+    http: httpx.AsyncClient, backend_url: str, endpoint: str
+) -> int | None:
+    """Ask the backend how many entities exist for a given list endpoint.
+    Returns None if the response shape doesn't carry a meta.total — caller
+    must treat that as "unknown" and fall back to skip-if-non-empty."""
+    try:
+        r = await http.get(
+            f"{backend_url}{endpoint}",
+            params={"limit": 1, "offset": 0},
+            timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, dict):
+            meta = data.get("meta") or {}
+            total = meta.get("total")
+            if isinstance(total, int):
+                return total
+        return None
+    except Exception as exc:
+        logger.warning("couldn't fetch backend total for %s: %s", endpoint, exc)
+        return None
+
+
+async def _run_backfill(
+    http: httpx.AsyncClient,
     qdrant: AsyncQdrantClient,
     embedder: Embedder,
     sparse_embedder: SparseEmbedder,
     backend_url: str,
-) -> None:
-    """Backfill any collection that currently has zero points.
+    name: str,
+    expected_total: int | None,
+    state: "_StateLike",
+) -> int:
+    """Run a single backfill function with progress accounting against the
+    shared sync state. The state's items_done is incremented as batches
+    upsert; items_total is set up-front when known so the UI can compute
+    an ETA."""
+    fn = _BACKFILLERS[name]
+    if expected_total is not None:
+        state.set_total(expected_total)
+    state.phase = f"backfilling {name}"
+    logger.info("starting backfill: %s (from %s)", name, backend_url)
+    base_done = state.items_done
 
-    Idempotent: collections that already have data are skipped — the
-    polling-based incremental sync (next iteration) keeps them fresh.
+    def _cb(done_in_collection: int) -> None:
+        state.progress(base_done + done_in_collection)
+
+    count = await fn(http, qdrant, embedder, sparse_embedder, backend_url, _cb)
+    logger.info("backfill complete: %s — %s points upserted", name, count)
+    return count
+
+
+# Type stub to keep us decoupled from sync_state.SyncState (avoids a
+# cyclic import while still letting type-checkers help). Anything with
+# the methods we call qualifies.
+class _StateLike:
+    items_done: int = 0
+    phase: str | None = None
+    def set_total(self, total: int) -> None: ...
+    def progress(self, done: int) -> None: ...
+    def start(self, phase: str | None = None) -> None: ...
+    def finish(self, error: str | None = None) -> None: ...
+
+
+async def sync_collections(
+    qdrant: AsyncQdrantClient,
+    embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
+    backend_url: str,
+    state: _StateLike,
+    drop_and_recreate: Callable[[list[str]], Awaitable[None]],
+) -> None:
+    """Bring qdrant collections in line with the backend.
+
+    For each collection:
+    - empty in qdrant → full backfill
+    - count matches backend → skip
+    - count differs from backend → drop, recreate, full backfill
+
+    `drop_and_recreate` is supplied by main.py and knows the embedding
+    dimension; we keep it injected so sync.py stays free of qdrant
+    schema details.
     """
-    headers = {"X-Internal-Secret": INTERNAL_SECRET} if INTERNAL_SECRET else {}
-    async with httpx.AsyncClient(headers=headers) as http:
-        for name, fn in _BACKFILLERS.items():
-            existing = (await qdrant.count(collection_name=name, exact=True)).count
-            if existing > 0:
-                logger.info(
-                    "collection '%s' already has %s points; skipping backfill",
-                    name,
-                    existing,
-                )
-                continue
-            logger.info("starting backfill: %s (from %s)", name, backend_url)
-            count = await fn(http, qdrant, embedder, sparse_embedder, backend_url)
-            logger.info("backfill complete: %s — %s points upserted", name, count)
+    async with _sync_lock:
+        state.start(phase="checking collections")
+        try:
+            headers = (
+                {"X-Internal-Secret": INTERNAL_SECRET} if INTERNAL_SECRET else {}
+            )
+            async with httpx.AsyncClient(headers=headers) as http:
+                # Pass 1: figure out which collections need rebuilding
+                rebuild: list[tuple[str, int | None]] = []
+                aggregate_total = 0
+                for name in _BACKFILLERS:
+                    existing = (
+                        await qdrant.count(collection_name=name, exact=True)
+                    ).count
+                    endpoint = _COUNT_ENDPOINTS[name]
+                    expected = await _get_backend_total(
+                        http, backend_url, endpoint
+                    )
+                    if existing == 0:
+                        logger.info(
+                            "[%s] empty — full backfill needed (expected ≈%s)",
+                            name,
+                            expected if expected is not None else "?",
+                        )
+                        rebuild.append((name, expected))
+                        if expected:
+                            aggregate_total += expected
+                        continue
+                    if expected is None:
+                        logger.info(
+                            "[%s] %s points; backend total unknown — skipping",
+                            name,
+                            existing,
+                        )
+                        continue
+                    if existing == expected:
+                        logger.info(
+                            "[%s] %s points match backend; skipping",
+                            name,
+                            existing,
+                        )
+                        continue
+                    logger.warning(
+                        "[%s] count mismatch: qdrant=%s backend=%s — full rebuild",
+                        name,
+                        existing,
+                        expected,
+                    )
+                    rebuild.append((name, expected))
+                    aggregate_total += expected
+
+                if not rebuild:
+                    logger.info("all collections in sync; nothing to do")
+                    return
+
+                # Drop + recreate the collections that need rebuilding.
+                await drop_and_recreate([n for n, _ in rebuild])
+
+                # Pass 2: backfill in order. items_done accumulates across
+                # collections so the snapshot ETA is global, not per-coll.
+                state.set_total(aggregate_total)
+                for name, expected in rebuild:
+                    await _run_backfill(
+                        http,
+                        qdrant,
+                        embedder,
+                        sparse_embedder,
+                        backend_url,
+                        name,
+                        expected,
+                        state,
+                    )
+            state.finish()
+        except Exception as exc:
+            logger.exception("sync_collections failed: %s", exc)
+            state.finish(error=str(exc))
+
+
+async def force_reindex(
+    qdrant: AsyncQdrantClient,
+    embedder: Embedder,
+    sparse_embedder: SparseEmbedder,
+    backend_url: str,
+    state: _StateLike,
+    drop_and_recreate: Callable[[list[str]], Awaitable[None]],
+) -> None:
+    """Drop both collections and re-embed from scratch.
+
+    Use after editing recipe content (which doesn't change the count, so
+    sync_collections wouldn't notice) or after switching the embedding
+    model. Concurrent calls are serialized via the sync lock.
+    """
+    async with _sync_lock:
+        state.start(phase="full reindex")
+        try:
+            headers = (
+                {"X-Internal-Secret": INTERNAL_SECRET} if INTERNAL_SECRET else {}
+            )
+            async with httpx.AsyncClient(headers=headers) as http:
+                # Sum expected totals so the ETA is global.
+                aggregate_total = 0
+                expected_per: dict[str, int | None] = {}
+                for name in _BACKFILLERS:
+                    expected = await _get_backend_total(
+                        http, backend_url, _COUNT_ENDPOINTS[name]
+                    )
+                    expected_per[name] = expected
+                    if expected:
+                        aggregate_total += expected
+                state.set_total(aggregate_total)
+
+                await drop_and_recreate(list(_BACKFILLERS.keys()))
+
+                for name in _BACKFILLERS:
+                    await _run_backfill(
+                        http,
+                        qdrant,
+                        embedder,
+                        sparse_embedder,
+                        backend_url,
+                        name,
+                        expected_per[name],
+                        state,
+                    )
+            state.finish()
+        except Exception as exc:
+            logger.exception("force_reindex failed: %s", exc)
+            state.finish(error=str(exc))

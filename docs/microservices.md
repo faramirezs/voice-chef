@@ -98,6 +98,29 @@ kitchen tablet may run on a different host than the rest of the stack,
 Tailscale provides cross-host service discovery so the same service-name
 addressing continues to work.
 
+## TLS / encrypted transport
+
+The system uses **perimeter TLS**: the only HTTPS termination is at the
+shared `nginx-proxy` (PR #216). Every browser-facing path
+(`https://localhost/`, `/kitchen/`, `/api/`, `/agent/`, `/stt/`, `/uploads/`,
+`/docs`) is served over HTTPS via the proxy's self-signed certificate.
+Inter-service traffic on the internal Docker bridge network is plain HTTP
+(`http://backend:80`, `http://agent:8001`, `http://rag:8003`,
+`http://qdrant:6333`).
+
+This matches the standard production pattern for a single-host Compose
+deployment: the network boundary is the host, the encryption boundary is
+the proxy, and the internal Docker network is treated as trusted because
+it is not exposed beyond the host. Adding TLS to every service-to-service
+call (mTLS, separate certificates per container, qdrant TLS mode) would
+require meaningful cert management with no real-world threat reduction
+in this topology.
+
+When the deployment moves to a multi-host or cluster topology — where
+inter-service traffic crosses untrusted networks — the right next step is
+service mesh / mTLS rather than ad-hoc per-service TLS. Tracked as a
+future hardening item.
+
 ## Operational endpoints
 
 Each FastAPI service exposes `GET /health` returning
@@ -109,6 +132,24 @@ directives in a future hardening pass.
 Today only the `db` service has a Compose-level `healthcheck` block.
 Extending the pattern to backend, agent, stt, and rag — and converting
 `depends_on` to use `condition: service_healthy` — is tracked but not done.
+
+The `rag` service additionally exposes:
+- `GET /status` — current sync/reindex progress snapshot (`indexing`,
+  `items_done`, `items_total`, `eta_seconds`, `phase`). Used by the
+  agent's search responses (which surface the `indexing` flag for a
+  light-tier UX notification) and ready for a future kitchen-frontend
+  banner that polls this endpoint for richer progress UI.
+- `POST /reindex` — drops both qdrant collections and re-embeds from
+  scratch. Auth-gated by the same `INTERNAL_SECRET` header pattern the
+  agent uses against backend. Runs in the background; poll `/status`
+  for completion.
+
+Sync behavior at startup: rag compares each collection's qdrant point
+count against the backend's total. Empty → full backfill; matches → skip;
+mismatch → drop, recreate, re-embed. The startup sync runs as a
+background task, so the service starts serving (with whatever vectors
+are currently in qdrant) immediately rather than blocking for the
+several minutes a full backfill takes.
 
 ## Reference
 

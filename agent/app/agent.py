@@ -151,6 +151,16 @@ If a search tool returns an error envelope (no strong match found):
 - Call show_notification(level: "info") explaining no match was found.
 - Then STOP. Do not call additional tools in this run.
 
+INDEX-REBUILDING NOTICE:
+If a search_recipes or search_ingredients result has meta.indexing == true,
+the recipe/ingredient index is currently rebuilding and the result set may
+be incomplete or stale. After your normal response (rendering the recipe
+card, scaling, etc.), call show_notification(level: "info", message:
+"Recipe index is rebuilding — results may be incomplete.") ONCE in this
+run. Do not block or refuse the user's request — render the result you got
+and add the notification on top. If indexing is false or absent, ignore
+this rule.
+
 Do NOT invent recipes or recommend irrelevant items.
 
 SCALING RULE:
@@ -842,7 +852,16 @@ async def search_recipes(
         "type": "recipes.list",
         "version": "1",
         "items": list_items,
-        "meta": {"limit": k, "offset": 0, "total": len(list_items)},
+        "meta": {
+            "limit": k,
+            "offset": 0,
+            "total": len(list_items),
+            # Surface the rag service's index-rebuilding state so the LLM
+            # can react via show_notification (see SYSTEM_PROMPT). False
+            # when the rag response doesn't include the field (older
+            # builds).
+            "indexing": bool(payload.get("indexing", False)),
+        },
         "query": query,
         "search": "semantic",
     }
@@ -914,4 +933,8 @@ async def search_ingredients(
         "version": "1",
         "query": query,
         "items": list_items,
+        "meta": {
+            # Same indexing flag pattern as search_recipes — see SYSTEM_PROMPT.
+            "indexing": bool(payload.get("indexing", False)),
+        },
     }

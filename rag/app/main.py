@@ -19,7 +19,8 @@ from qdrant_client.http.models import (
 
 from .embedder import Embedder
 from .sparse_embedder import SparseEmbedder
-from .sync import backfill_if_empty
+from .sync import force_reindex, sync_collections
+from .sync_state import state as sync_state
 
 logger = logging.getLogger("voice-chef.rag")
 logging.basicConfig(level=logging.INFO)
@@ -28,47 +29,86 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:80")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-mpnet-base-v2")
 POLL_SECONDS = int(os.getenv("EMBEDDING_POLL_SECONDS", "30"))
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
 
 COLLECTIONS = ("recipes", "ingredients")
 
 
-async def _has_hybrid_schema(client: AsyncQdrantClient, name: str) -> bool:
-    """A collection is hybrid-ready if it has named 'dense' + 'sparse' vectors."""
+async def _has_compatible_schema(
+    client: AsyncQdrantClient, name: str, expected_dim: int
+) -> bool:
+    """A collection is hybrid-compatible if it has named 'dense' + 'sparse'
+    vectors AND the dense vector dimension matches the current embedding
+    model. Mismatch on dim means the model has changed (different embedding
+    space), in which case existing vectors are invalid and the collection
+    must be rebuilt."""
     info = await client.get_collection(collection_name=name)
     vectors = info.config.params.vectors
     sparse = info.config.params.sparse_vectors or {}
     has_dense = isinstance(vectors, dict) and "dense" in vectors
     has_sparse = isinstance(sparse, dict) and "sparse" in sparse
-    return has_dense and has_sparse
+    if not (has_dense and has_sparse):
+        return False
+    dense_params = vectors.get("dense") if isinstance(vectors, dict) else None
+    actual_dim = getattr(dense_params, "size", None)
+    if actual_dim != expected_dim:
+        logger.warning(
+            "collection '%s' has dim=%s but embedding model expects dim=%s — "
+            "treating as incompatible, will rebuild",
+            name,
+            actual_dim,
+            expected_dim,
+        )
+        return False
+    return True
+
+
+async def _create_collection(client: AsyncQdrantClient, name: str, dim: int) -> None:
+    await client.create_collection(
+        collection_name=name,
+        vectors_config={
+            "dense": VectorParams(size=dim, distance=Distance.COSINE),
+        },
+        sparse_vectors_config={
+            "sparse": SparseVectorParams(modifier=Modifier.IDF),
+        },
+    )
+    logger.info(
+        "created qdrant collection: %s (dense %s-dim cosine + sparse BM25 IDF)",
+        name,
+        dim,
+    )
 
 
 async def ensure_collections(client: AsyncQdrantClient, dim: int) -> None:
+    """Make sure each collection exists with the right schema. Drops +
+    recreates anything that's incompatible (legacy single-vector schema OR
+    different embedding dim — the latter catches embedding-model swaps)."""
     existing = {c.name for c in (await client.get_collections()).collections}
     for name in COLLECTIONS:
         if name in existing:
-            if await _has_hybrid_schema(client, name):
-                logger.info("collection '%s' has hybrid schema; keeping", name)
+            if await _has_compatible_schema(client, name, dim):
+                logger.info("collection '%s' has compatible schema; keeping", name)
                 continue
             logger.warning(
-                "collection '%s' has legacy schema; dropping for re-creation "
-                "(backfill will re-embed)",
-                name,
+                "collection '%s' incompatible; dropping for re-creation", name,
             )
             await client.delete_collection(collection_name=name)
-        await client.create_collection(
-            collection_name=name,
-            vectors_config={
-                "dense": VectorParams(size=dim, distance=Distance.COSINE),
-            },
-            sparse_vectors_config={
-                "sparse": SparseVectorParams(modifier=Modifier.IDF),
-            },
-        )
-        logger.info(
-            "created qdrant collection: %s (dense %s-dim cosine + sparse BM25 IDF)",
-            name,
-            dim,
-        )
+        await _create_collection(client, name, dim)
+
+
+async def _drop_and_recreate(
+    client: AsyncQdrantClient, dim: int, names: list[str]
+) -> None:
+    """Drop the named collections (if present) and recreate them with the
+    current schema. Used by sync.py during count-mismatch rebuilds and by
+    the /reindex endpoint."""
+    for name in names:
+        try:
+            await client.delete_collection(collection_name=name)
+        except Exception as exc:
+            logger.info("delete_collection(%s) — already absent: %s", name, exc)
+        await _create_collection(client, name, dim)
 
 
 @asynccontextmanager
@@ -83,14 +123,44 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     sparse_embedder = SparseEmbedder()
     qdrant = AsyncQdrantClient(url=QDRANT_URL)
     await ensure_collections(qdrant, embedder.dim)
-    await backfill_if_empty(qdrant, embedder, sparse_embedder, BACKEND_URL)
 
     app.state.embedder = embedder
     app.state.sparse_embedder = sparse_embedder
     app.state.qdrant = qdrant
+    app.state.dim = embedder.dim
+
+    # Bind a closure that captures the qdrant client + dim so sync.py can
+    # request a drop+recreate without knowing the schema details.
+    async def drop_recreate(names: list[str]) -> None:
+        await _drop_and_recreate(qdrant, embedder.dim, names)
+
+    app.state.drop_recreate = drop_recreate
+
+    # Run sync in the background so the service starts serving immediately.
+    # While the sync runs, /search returns whatever is currently in qdrant
+    # (empty on first boot, stale otherwise). Search responses include an
+    # `indexing` flag so callers can surface that state to users.
+    sync_task = asyncio.create_task(
+        sync_collections(
+            qdrant,
+            embedder,
+            sparse_embedder,
+            BACKEND_URL,
+            sync_state,
+            drop_recreate,
+        ),
+        name="rag-startup-sync",
+    )
+    app.state.sync_task = sync_task
 
     yield
 
+    if not sync_task.done():
+        sync_task.cancel()
+        try:
+            await sync_task
+        except (asyncio.CancelledError, Exception):
+            pass
     await qdrant.close()
 
 
@@ -100,6 +170,54 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "rag"}
+
+
+@app.get("/status")
+async def status() -> dict[str, Any]:
+    """Full sync/reindex progress snapshot. Light-tier consumers only need
+    `indexing`; the rest (items_done, items_total, eta_seconds, phase) is
+    here for a future Medium-tier UI banner that polls this endpoint."""
+    return sync_state.snapshot()
+
+
+def _require_internal_secret(request: Request) -> None:
+    """Gate write/admin endpoints behind the same shared secret the agent
+    uses to call backend. Without this, anyone reachable on the network
+    could trigger a multi-minute reindex."""
+    if not INTERNAL_SECRET:
+        # No secret configured — allow (matches existing fail-open behaviour
+        # in backend.deps._is_internal_request when INTERNAL_SECRET is empty).
+        return
+    if request.headers.get("X-Internal-Secret") != INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="internal secret required")
+
+
+@app.post("/reindex")
+async def reindex(request: Request) -> dict[str, Any]:
+    """Drop both collections and re-embed from scratch. Returns
+    immediately; the work runs in the background. Poll /status for
+    progress. Concurrent calls are serialized via the sync lock — a
+    second /reindex while the first is running blocks until the first
+    finishes, then runs the second.
+
+    Auth: requires X-Internal-Secret header matching the INTERNAL_SECRET
+    env var. Used to keep the endpoint inaccessible to public clients
+    even if eventually exposed through the nginx-proxy.
+    """
+    _require_internal_secret(request)
+    # Run in background — this can take several minutes for a full corpus.
+    asyncio.create_task(
+        force_reindex(
+            request.app.state.qdrant,
+            request.app.state.embedder,
+            request.app.state.sparse_embedder,
+            BACKEND_URL,
+            sync_state,
+            request.app.state.drop_recreate,
+        ),
+        name="rag-force-reindex",
+    )
+    return {"status": "accepted", "snapshot": sync_state.snapshot()}
 
 
 # --- Search ----------------------------------------------------------------
@@ -130,6 +248,11 @@ class SearchHit(BaseModel):
 class SearchResponse(BaseModel):
     query: str
     items: list[SearchHit]
+    # True while the index is rebuilding. Light-tier UX hint: callers (the
+    # agent) read this and surface a "results may be incomplete" notice to
+    # the user. Medium-tier consumers can call /status for the full
+    # progress snapshot.
+    indexing: bool = False
 
 
 async def _search(
@@ -165,7 +288,7 @@ async def _search(
         )
         for p in result.points
     ]
-    return SearchResponse(query=text, items=items)
+    return SearchResponse(query=text, items=items, indexing=sync_state.running)
 
 
 @app.post("/search/recipes", response_model=SearchResponse)
