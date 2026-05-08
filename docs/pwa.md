@@ -4,6 +4,10 @@
 
 > "Minor: Progressive Web App (PWA) with offline support and installability."
 
+## Architectural role
+
+This PWA is what lets us run a single kitchen-frontend deployment instead of two. Before, the Pi ran its own copy of the SPA + nginx so it could survive brief network outages and route API calls over Tailscale. The service worker now handles the offline shell + catalog cache; Tailscale handles the routing. The Pi-side container becomes redundant — tracked in the kitchen-pi follow-up (PR TBD).
+
 ## What's Implemented
 
 The kitchen-frontend (`frontend/kitchen`) is now a PWA:
@@ -32,9 +36,18 @@ The recipe/ingredient SWR layer means a user who's loaded the catalog while onli
 
 A SPA navigation fallback is configured: any in-app route serves `index.html` from cache, except for the dynamic paths above (which are denied via `navigateFallbackDenylist` to ensure they hit the network).
 
-### Honest scope of "offline"
+### Offline scope (what works, what doesn't)
 
-The **app shell** works offline — open the kitchen UI, see the rendered layout, navigate around the SPA. Anything that requires the backend (recipes list, voice transcription, agent responses) needs the network. This is the standard PWA pattern; full offline functionality (request queuing, replay) was not in scope for the minor.
+| Works offline | Needs network |
+|---|---|
+| App shell reload | Agent responses (LLM is server-side) |
+| Recipe + ingredient lists (last-seen) | Semantic search via RAG |
+| Recipe detail viewing (last-seen) | Image uploads |
+| Recipe scaling math | Auth token refresh |
+
+On the Pi, faster-whisper runs locally — the transcription step itself works offline. What fails when the network is down is the agent step that consumes the transcript and returns a response. Non-Pi devices (phone or tablet PWA install) route STT to the server, so for them voice end-to-end requires network.
+
+Voice-first is the kitchen's primary UX, and the agent always needs the server. Going further on offline coverage (full-catalog precache, IndexedDB-backed offline search, Background Sync for mutations) was evaluated and rejected as gilding: spending engineering effort on offline browsing beyond "what was last seen" doesn't pay off in real kitchen scenarios where the headline interaction is offline-incompatible regardless.
 
 ## How to Verify (for the evaluator)
 
