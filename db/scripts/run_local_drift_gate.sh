@@ -10,6 +10,13 @@ if [ -f "$ROOT_DIR/.venv/bin/activate" ]; then
     source "$ROOT_DIR/.venv/bin/activate"
 fi
 
+# Load environment variables from .env
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+fi
+
 if [ -x "$ROOT_DIR/.venv/bin/alembic" ]; then
     ALEMBIC="$ROOT_DIR/.venv/bin/alembic"
 else
@@ -34,7 +41,7 @@ if [ -z "$ALEMBIC" ] || [ -z "$PYTHON" ] || [ -z "$PYTEST" ]; then
 fi
 
 # Provide DATABASE_URL for drift_check.py and pytest conftest if not already set
-export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db}"
+export DATABASE_URL="${DATABASE_URL_LOCAL}"
 
 LOG_FILE="${DRIFT_LOG_FILE:-logs/drift_gate_local.log}"
 PENDING_REV_ID="${PENDING_REV_ID:-pending_check_tmp_local}"

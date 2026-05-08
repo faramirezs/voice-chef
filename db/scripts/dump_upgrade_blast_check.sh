@@ -4,12 +4,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# Load environment variables from .env
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+fi
+
 LOG_DIR="logs"
 LOG_FILE="$LOG_DIR/dump_upgrade_blast_check.log"
 
 mkdir -p "$LOG_DIR"
 
-DB_URL="${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db}"
+# DATABASE_URL_LOCAL must be set (from .env)
+if [ -z "${DATABASE_URL_LOCAL:-}" ]; then
+  echo "ERROR: DATABASE_URL_LOCAL environment variable is not set"
+  exit 1
+fi
+DB_URL="$DATABASE_URL_LOCAL"
 
 {
   echo "[blast-check] started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"

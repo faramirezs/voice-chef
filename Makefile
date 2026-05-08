@@ -191,15 +191,25 @@ refresh-env-agent: $(ENV)
 
 # Run all four schema-drift gates locally (strict check).
 drift-gate-local:
-	@bash -c 'cd backend && python -m pytest tests/test_drift_gate.py -v'
+    @echo "Ensuring database is running..."
+    $(COMPOSE) -f $(PROD_FILE) up -d db
+    @sleep 2
+	@echo "Running local 4-gate schema drift check..."
+	chmod +x db/scripts/run_local_drift_gate.sh
+	./db/scripts/run_local_drift_gate.sh
+	@echo "Done: local schema drift gate passed"
 
 # Blast-test: wipe DB volume, re-initialize from dump, then run alembic upgrade.
 dump-blast-check:
-	@bash -c 'cd backend && python scripts/dump_blast_check.py'
+	chmod +x db/scripts/dump_upgrade_blast_check.sh
+	./db/scripts/dump_upgrade_blast_check.sh
 
 # Regenerate db/init/01_dump.sql from the current migration head.
 dump-regen:
-	@bash -c 'cd backend && python scripts/dump_regenerate.py'
+	@echo "Regenerating db/init/01_dump.sql from migration head (isolated temp DB)..."
+	chmod +x db/scripts/regenerate_dump_from_head.sh
+	./db/scripts/regenerate_dump_from_head.sh
+	@echo "Done: db/init/01_dump.sql regenerated from migration head"
 
 # Open a psql shell inside the running db container.
 db-connect:

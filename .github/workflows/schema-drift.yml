@@ -140,7 +140,7 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: recipe_user
-          POSTGRES_PASSWORD: recipe_pass123
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
           POSTGRES_DB: recipe_db
         ports:
           - 5432:5432
@@ -151,7 +151,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db
+      DATABASE_URL: postgresql+psycopg://recipe_user:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/recipe_db
       PYTHONPATH: ./fastapi
       DRIFT_LOG_FILE: logs/drift_gate_dump_compat_ci.log
 
@@ -173,12 +173,12 @@ jobs:
 
       - name: Bootstrap dump-init schema
         run: |
-          PGPASSWORD=recipe_pass123 psql \
+          PGPASSWORD=${{ secrets.CI_POSTGRES_PASSWORD }} psql \
             -h localhost -U recipe_user -d recipe_db \
             -v ON_ERROR_STOP=1 \
             -f db/init/01_dump.sql
 
-          PGPASSWORD=recipe_pass123 psql \
+          PGPASSWORD=${{ secrets.CI_POSTGRES_PASSWORD }} psql \
             -h localhost -U recipe_user -d recipe_db \
             -v ON_ERROR_STOP=1 \
             -f db/init/02_align_alembic_revision.sql
