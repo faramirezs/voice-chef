@@ -15,7 +15,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, Calendar03Icon, ComponentIcon, CookBookIcon, Files01Icon, Home07Icon, RoboticIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Calendar03Icon, ComponentIcon, CookBookIcon, Files01Icon, Home07Icon, RoboticIcon, Key01Icon } from "@hugeicons/core-free-icons"
 import { NavLink } from "react-router-dom"
 
 
@@ -88,6 +88,13 @@ const NAV_ITEMS = [
 		url: "/ai-assistant",
 		icon: (
 			<HugeiconsIcon icon={RoboticIcon} strokeWidth={2} />
+		)
+	},
+	{
+		title: "API Keys",
+		url: "/api-keys",
+		icon: (
+			<HugeiconsIcon icon={Key01Icon} strokeWidth={2} />
 		)
 	},
 	// 	{

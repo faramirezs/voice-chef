@@ -111,11 +111,10 @@ stop:
 
 clean:
 	@echo "Stopping the app and removing containers + images..."
-	$(COMPOSE) down --rmi local
+	$(COMPOSE) down --rmi local --remove-orphans
 
-clean-nginx:
+clean-nginx: clean
 	@echo "Removing ALL Docker images (including nginx-proxy)..."
-	$(COMPOSE) down --rmi all --remove-orphans
 	$(COMPOSE) rm -f nginx-proxy
 	docker rmi voice-chef-nginx-proxy:latest
 	@echo "All images removed. Database volume preserved."

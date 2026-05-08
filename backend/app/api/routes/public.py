@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from uuid import UUID
-from typing import Annotated
+from typing import Annotated, Optional, Tuple
 
 from app.core.database import get_session
 from app.core.deps import DEFAULT_TENANT_ID
@@ -21,7 +21,6 @@ from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.recipe_ingredients import RecipeIngredient
 from app.models.users import Users
-from app.models.api_keys import APIKeys
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.recipe import (
     RecipeWrite, RecipeSummaryResponse, RecipeUpdate, 
@@ -89,14 +88,14 @@ def get_recipe(
     request: Request,
     id: UUID,
     session: Session = Depends(get_session),
-    api_key: Annotated[APIKeys, Depends(validate_api_key)] = None,
+    api_key: Annotated[Tuple[UUID, str] | None, Depends(validate_api_key)] = None,
 ):
     """
     Public endpoint to retrieve a single recipe.
     Requires API key authentication.
     """
     # Use API key's tenant if provided, otherwise use default tenant
-    tenant_id = api_key.tenant_id if api_key else DEFAULT_TENANT_ID
+    tenant_id = api_key[0] if api_key else DEFAULT_TENANT_ID
     
     statement = (
         select(Recipe)
@@ -119,14 +118,14 @@ def get_recipe(
 def create_recipe(
     request: Request,
     recipe: RecipeWrite,
-    api_key: Annotated[APIKeys, Depends(validate_api_key)],
+    api_key: Annotated[Tuple[UUID, str], Depends(validate_api_key)],
     session: Session = Depends(get_session),
 ):
     """
     Public endpoint to create a recipe.
     Requires API key authentication.
     """
-    tenant_id = api_key.tenant_id
+    tenant_id = api_key[0]
     ensure_unique_recipe_name(session, recipe.name, tenant_id)
     validate_recipe_business_rules(recipe)
     validate_ingredient_sort_order(recipe)
@@ -205,16 +204,17 @@ def update_recipe(
     request: Request,
     id: UUID, 
     recipe_update: RecipeUpdate, 
-    api_key: Annotated[APIKeys, Depends(validate_api_key)],
+    api_key: Annotated[Tuple[UUID, str], Depends(validate_api_key)],
     session: Session = Depends(get_session)
 ):
     """
     Public endpoint to update a recipe.
     Requires API key authentication.
     """
+    tenant_id = api_key[0]
     query = select(Recipe).where(
         Recipe.id == id, 
-        Recipe.tenant_id == api_key.tenant_id)
+        Recipe.tenant_id == tenant_id)
     recipe = session.exec(query).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
@@ -255,16 +255,19 @@ def update_recipe(
 def delete_recipe(
     request: Request,
     id: UUID, 
-    api_key: Annotated[APIKeys, Depends(validate_api_key)],
+    api_key: Annotated[Optional[Tuple[UUID, str]], Depends(validate_api_key)],
     session: Session = Depends(get_session)
 ):
     """
     Public endpoint to delete a recipe.
     Requires API key authentication.
     """
+    if not api_key:
+        raise HTTPException(status_code=401, detail="API key required")
+    
     statement = select(Recipe).where(
         Recipe.id == id,
-        Recipe.tenant_id == api_key.tenant_id
+        Recipe.tenant_id == api_key[0]
     )
     recipe = session.exec(statement).first()
     if not recipe:

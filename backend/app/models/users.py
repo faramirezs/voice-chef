@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from app.models.ingredient import Ingredient
     from app.models.categories import Categories, Tag
     from app.models.agents import Agents, AgentInteractions
-    from app.models.api_keys import APIKeys
     from app.models.tasks import TaskLists, ShoppingLists
 
 # ─── ORM SQLMOdel model for users ─────────────────────────────────────────────────
@@ -77,7 +76,6 @@ class Tenants(SQLModel, table=True):
 
     # Relationship attributes
     agents: List['Agents'] = Relationship(back_populates='tenant')
-    api_keys: List['APIKeys'] = Relationship(back_populates='tenant')
     categories: List['Categories'] = Relationship(back_populates='tenant')
     users: List['Users'] = Relationship(back_populates='tenant')
     recipes: List['Recipe'] = Relationship(back_populates="tenant")
