@@ -21,7 +21,7 @@ import {
 import { useNavigate } from "react-router-dom"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { UnfoldMoreIcon, CheckmarkBadgeIcon, LogoutIcon } from "@hugeicons/core-free-icons"
-import { useAuth } from "@/hooks/useAuth"
+import { clearAuthData, useAuth } from "@/hooks/useAuth"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
@@ -33,11 +33,16 @@ export function NavUser() {
   }
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" })
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    localStorage.removeItem("token_expiry")
-    navigate("/login", { replace: true })
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      })
+    } finally {
+      clearAuthData()
+      navigate("/login", { replace: true })
+    }
   }
 
   return (
