@@ -71,13 +71,20 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - uploads:/code/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:80/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   agent:
     build:
       context: ./agent
       dockerfile: Dockerfile
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-network
     environment:
@@ -90,6 +97,12 @@ services:
       AGENT_MODEL: ${AGENT_MODEL:-deepseek-ai/deepseek-v4-flash}
       AGENT_DEBUG_STREAM: ${AGENT_DEBUG_STREAM}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   stt:
     build:
@@ -103,31 +116,46 @@ services:
       STT_DEVICE: ${STT_DEVICE:-cpu}
     volumes:
       - whisper_models:/models
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8002/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.14.1
     networks:
       - app-network
-    ports:
-      - "6333:6333"
-      - "6334:6334"
+    environment:
+      # Qdrant uses double-underscore for nested config keys. Setting this
+      # requires every client to send `api-key: <value>` — closes lateral
+      # access from anything else on app-network.
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
     volumes:
       - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   rag:
     build:
       context: ./rag
       dockerfile: Dockerfile
     depends_on:
-      - backend
-      - qdrant
+      backend:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     networks:
       - app-network
-    ports:
-      - "8003:8003"
     environment:
       BACKEND_URL: http://backend:80
       QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-paraphrase-multilingual-mpnet-base-v2}
       EMBEDDING_POLL_SECONDS: ${EMBEDDING_POLL_SECONDS:-30}
       # Shared internal-service secret — backend's `_is_internal_request`
@@ -138,6 +166,12 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - embedding_models:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
 volumes:
   whisper_models:

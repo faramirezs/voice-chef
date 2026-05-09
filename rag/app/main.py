@@ -27,9 +27,16 @@ logging.basicConfig(level=logging.INFO)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:80")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "").strip() or None
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-mpnet-base-v2")
 POLL_SECONDS = int(os.getenv("EMBEDDING_POLL_SECONDS", "30"))
-INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "")
+INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "").strip()
+
+if not INTERNAL_SECRET:
+    logger.warning(
+        "INTERNAL_SECRET is not set — admin endpoints (/reindex) will reject "
+        "all requests with 403."
+    )
 
 COLLECTIONS = ("recipes", "ingredients")
 
@@ -121,7 +128,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     embedder = Embedder(EMBEDDING_MODEL)
     sparse_embedder = SparseEmbedder()
-    qdrant = AsyncQdrantClient(url=QDRANT_URL)
+    qdrant = AsyncQdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=30)
     await ensure_collections(qdrant, embedder.dim)
 
     app.state.embedder = embedder
@@ -182,12 +189,14 @@ async def status() -> dict[str, Any]:
 
 def _require_internal_secret(request: Request) -> None:
     """Gate write/admin endpoints behind the same shared secret the agent
-    uses to call backend. Without this, anyone reachable on the network
-    could trigger a multi-minute reindex."""
+    uses to call backend. Fail-closed: if INTERNAL_SECRET is unset, the
+    endpoint is disabled (403). This mirrors backend.deps._is_internal_request,
+    which also returns False when the secret is empty."""
     if not INTERNAL_SECRET:
-        # No secret configured — allow (matches existing fail-open behaviour
-        # in backend.deps._is_internal_request when INTERNAL_SECRET is empty).
-        return
+        raise HTTPException(
+            status_code=403,
+            detail="internal secret not configured — endpoint disabled",
+        )
     if request.headers.get("X-Internal-Secret") != INTERNAL_SECRET:
         raise HTTPException(status_code=401, detail="internal secret required")
 
@@ -221,9 +230,10 @@ async def reindex(request: Request) -> dict[str, Any]:
 
 
 # --- Search ----------------------------------------------------------------
-# Tenant filtering note: a `tenant_id` parameter is accepted for forward
-# compatibility but is currently a no-op. Two upstream blockers (tracked in
-# docs/voiceNextSteps.md "Known issues"):
+# Tenant filtering note: `tenant_id` is accepted for forward compatibility
+# but not yet implemented. Sending it returns 501 — fail-loud rather than
+# silently returning unfiltered results, which would be a cross-tenant leak.
+# Two upstream blockers (tracked in docs/voiceNextSteps.md "Known issues"):
 #   1. Backend API does not yet expose tenant_id on /api/recipes responses,
 #      so the indexer can't tag vectors with tenant in their payloads.
 #   2. JWT-based auth on these endpoints requires the agent-auth fix on main.
@@ -235,7 +245,10 @@ class SearchRequest(BaseModel):
     k: int = Field(5, ge=1, le=50, description="Number of results to return")
     tenant_id: str | None = Field(
         None,
-        description="Reserved for future tenant filtering (no-op today).",
+        description=(
+            "Reserved for future tenant filtering. Not yet implemented — "
+            "sending a non-null value returns 501."
+        ),
     )
 
 
@@ -261,6 +274,14 @@ async def _search(
     text = req.query.strip()
     if not text:
         raise HTTPException(status_code=400, detail="query must not be empty")
+    if req.tenant_id is not None:
+        raise HTTPException(
+            status_code=501,
+            detail=(
+                "tenant_id filtering not implemented — backend does not yet "
+                "expose tenant_id on /api/recipes responses"
+            ),
+        )
 
     embedder: Embedder = request.app.state.embedder
     sparse_embedder: SparseEmbedder = request.app.state.sparse_embedder
