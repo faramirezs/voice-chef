@@ -12,6 +12,7 @@ from app.api.routes.api_keys import router as api_keys_router
 from app.api.routes.public import router as public_router
 from app.core.limiter import limiter
 from app.core.config import settings
+from app.core.publicapi_config import configure_public_api_openapi
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
@@ -33,16 +34,6 @@ app = FastAPI(
     # docs_url="/docs",
     # openapi_url="/openapi.json",
 )
-
-app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
-
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request, exc):
-    return {
-        "detail": str(exc.detail),
-        "status_code": 429,
-    }
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
@@ -67,6 +58,18 @@ public_app = FastAPI(
     openapi_url="/openapi.json",
     redoc_url=None,
 )
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return {
+        "detail": str(exc.detail),
+        "status_code": 429,
+    }
+
+configure_public_api_openapi(public_app)
 
 public_app.state.limiter = limiter
 public_app.add_middleware(SlowAPIMiddleware)

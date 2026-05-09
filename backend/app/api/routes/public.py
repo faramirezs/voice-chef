@@ -38,15 +38,17 @@ router = APIRouter(prefix="", tags=["Public"])
 @limiter.limit("5/minute")
 def get_recipes(
     request: Request,
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
     filters: RecipeFilters = Depends(),
 ):
     """
-    Public endpoint to list recipes from the default tenant.
-    No authentication required, but rate-limited.
+    Public endpoint to list recipes from the tenant's API key.
+    Requires API key authentication.
     """
-    query = select(Recipe).where(Recipe.tenant_id == DEFAULT_TENANT_ID)
+    tenant_id = api_key[0]
+    query = select(Recipe).where(Recipe.tenant_id == tenant_id)
 
     # Public list can be narrowed explicitly with ?status=draft|active.
     # If omitted, return both so seeded draft data is visible in non-prod setups.
@@ -119,7 +121,7 @@ def get_recipe(
 def create_recipe(
     request: Request,
     recipe: RecipeWrite,
-    api_key: Annotated[Tuple[UUID, str], Depends(validate_api_key)],
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session),
 ):
     """
@@ -256,15 +258,13 @@ def update_recipe(
 def delete_recipe(
     request: Request,
     id: UUID, 
-    api_key: Annotated[Optional[Tuple[UUID, str]], Depends(validate_api_key)],
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session)
 ):
     """
     Public endpoint to delete a recipe.
     Requires API key authentication.
     """
-    if not api_key:
-        raise HTTPException(status_code=401, detail="API key required")
     
     statement = select(Recipe).where(
         Recipe.id == id,
