@@ -36,10 +36,10 @@ jobs:
           echo "Schema drift gate failed — aborting deploy"
           exit 1
 
-      # - name: Check VPS disk space
-      #   run: |
-      #     ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-      #       "echo '=== Disk usage ===' && df -h / && echo '=== Docker disk usage ===' && docker system df"
+      - name: Check VPS disk space
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "echo '=== Disk usage ===' && df -h / && echo '=== Docker disk usage ===' && docker system df"
       - name: Set deploy mode
         id: mode
         run: echo "mode=${{ github.event.inputs.mode || 'prod' }}" >> $GITHUB_OUTPUT
@@ -53,6 +53,16 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Fix VPS git permissions (if needed)
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && \
+             if ! touch .git/objects/.write-test 2>/dev/null; then \
+               echo 'Permissions broken on .git/objects — attempting fix...'; \
+               sudo chown -R \$(whoami):\$(whoami) .git || echo 'sudo failed — fix manually on VPS: sudo chown -R \$USER:\$USER .git'; \
+             else \
+               rm -f .git/objects/.write-test; \
+             fi"
       - name: Pull latest code on VPS
         run: |
           DEPLOY_BRANCH="${{ github.event_name == 'workflow_run' && 'main' || github.ref_name }}"
