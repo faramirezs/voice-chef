@@ -2,6 +2,7 @@ import { useVoiceSubmit } from "@/hooks/useVoiceSubmit";
 import { type SttResult } from "@/components/chat/VoiceInput";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KCard } from "@/components/ui/KCard";
+import { KButton } from "@/components/ui/KButton";
 import { KInput } from "@/components/ui/KInput";
 import { VoiceInput } from "@/components/chat/VoiceInput";
 import { getSendMessage, useEnvelope, useIsStreaming, setSharedAgentState, getAbortAgent } from "@/hooks/useAgent";
@@ -239,15 +240,7 @@ export function CommandPalette() {
             className="w-full"
             disabled={isStreaming}
           />
-          {isStreaming && (
-            <button
-              type="button"
-              onClick={() => getAbortAgent()()}
-              className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
-            >
-              Stop
-            </button>
-          )}
+
         </div>
         <VoiceInput
           onTranscript={handleVoiceTranscript}
@@ -265,19 +258,33 @@ export function CommandPalette() {
         {/* Streaming thinking indicator */}
         {isStreaming && (
           <div className="flex items-center justify-center gap-3 py-6">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
-            </span>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="animate-spin text-primary"
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
             <span className="text-text font-medium">Thinking...</span>
+            <KButton
+              type="button"
+              onClick={() => getAbortAgent()()}
+              variant="ghost"
+              size="icon"
+              className="bg-error text-white ring-error/60 animate-pulse h-10 w-10"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            </KButton>
           </div>
         )}
-
-        {/* Blur overlay over results during streaming */}
-        {isStreaming && activeItems.length > 0 && (
-          <div className="absolute inset-0 bg-surface/40 backdrop-blur-sm z-10 rounded-lg" />
-        )}
-
 
         {isCommandMode && query === "/" && (
           <div className="py-1 text-xs text-text-muted uppercase tracking-wide">
