@@ -9,7 +9,8 @@ COPY backend/scripts/link_photos.py /code/scripts/link_photos.py
 COPY backend/scripts/__init__.py /code/scripts/__init__.py
 
 RUN chmod +x /code/entrypoint.sh
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+	pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY backend/app /code/app
 COPY alembic.ini /code/alembic.ini
