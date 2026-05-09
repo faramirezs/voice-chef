@@ -63,11 +63,6 @@ dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
 
-up: $(ENV)
-	@echo "Starting in dev_mode"
-	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
-	@echo "VOICE-CHEF is running in dev_mode"
-
 # ── Production target ──────────────────────────────────────────────────────
 
 # Use this for VPS / CI-CD deployments. Builds all images from scratch
@@ -124,7 +119,7 @@ clean:
 	@echo "Stopping the app and removing containers + images..."
 	$(COMPOSE) down --rmi local --remove-orphans
 
-clean-nginx:
+clean-nginx: clean
 	@echo "Removing ALL Docker images (including nginx-proxy)..."
 	$(COMPOSE) stop nginx-proxy  || true	
 	$(COMPOSE) rm -f nginx-proxy

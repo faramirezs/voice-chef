@@ -17,7 +17,7 @@ from app.utils.api_key_utils import (
 
 # ─── Constants and Global Instances ───────────────────────────────────────────
 
-router = APIRouter(prefix="/api-keys", tags=["API Keys"])
+router = APIRouter(prefix="/api_keys", tags=["API Keys"])
 
 
 # ─── Helper Functions ────────────────────────────────────────────────────────

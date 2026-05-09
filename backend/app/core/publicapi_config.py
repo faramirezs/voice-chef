@@ -22,8 +22,7 @@ def configure_public_api_openapi(public_app):
         
         # Set the servers so Swagger knows where to send requests
         openapi_schema["servers"] = [
-            {"url": "/api/public", "description": "Public API"},
-            {"url": "http://localhost/api/public", "description": "Local development"}
+            {"url": "/api/public", "description": "Public API"}
         ]
         
         # Add API key security scheme
