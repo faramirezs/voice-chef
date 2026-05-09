@@ -4,11 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+# Load environment variables from .env
+if [ -f "$ROOT_DIR/.env" ]; then
+    set -a
+    source "$ROOT_DIR/.env"
+    set +a
+fi
+
 TMP_CONTAINER="vc_dump_regen_db"
 TMP_PORT="55432"
 DB_NAME="recipe_db"
 DB_USER="recipe_user"
-DB_PASS="recipe_pass123"
+DB_PASS="$POSTGRES_PASSWORD"
 DB_URL="postgresql+psycopg://${DB_USER}:${DB_PASS}@localhost:${TMP_PORT}/${DB_NAME}"
 
 cleanup() {

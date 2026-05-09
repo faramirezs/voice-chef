@@ -133,12 +133,12 @@ export function RecipeList() {
           >
             {viewMode === 'grid' ? 'List view' : 'Grid view'}
           </Button>
-          <Button variant="outline" type="button">
+          {/* <Button variant="outline" type="button">
             Import
           </Button>
           <Button variant="outline" type="button">
             Export
-          </Button>
+          </Button> */}
         </div>
       </div>
 
