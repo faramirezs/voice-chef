@@ -85,6 +85,12 @@ prod: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
+prod-fast: $(ENV)
+	@echo "Building fresh images and restarting in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) build
+	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
+	@echo "VOICE-CHEF is running in prod_mode"
+
 # ── Lifecycle targets ──────────────────────────────────────────────────────
 #   make down   Stop and remove containers (images + volumes are kept)
 #   make start  Start stopped containers (no rebuild)
