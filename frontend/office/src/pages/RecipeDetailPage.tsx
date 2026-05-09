@@ -186,12 +186,12 @@ export function RecipeDetailPage() {
             >
               Change status
             </Button>
-            <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
+            {/* <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
               Edit
             </Button>
             <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
               Duplicate
-            </Button>
+            </Button> */}
             <Button
               size="lg"
               variant="destructive"
