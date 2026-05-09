@@ -94,15 +94,7 @@ export function FilesPage() {
       setUploadBytesLoaded(0);
       setUploadProgress(0);
 
-      uploadMutation.mutate({
-        file,
-        onProgress: (progressEvent) => {
-          if (!progressEvent.total) return;
-          setUploadBytesLoaded(progressEvent.loaded);
-          setUploadBytesTotal(progressEvent.total);
-          setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
-        },
-      });
+      // wait for validation before uploading (progress handler attached below)
     }
     if (!file) return;
 
@@ -132,7 +124,17 @@ export function FilesPage() {
 
     setUploadError(null);
     validatePDF(file)
-      .then(() => uploadMutation.mutate(file))
+      .then(() =>
+        uploadMutation.mutate({
+          file,
+          onProgress: (progressEvent: any) => {
+            if (!progressEvent.total) return;
+            setUploadBytesLoaded(progressEvent.loaded);
+            setUploadBytesTotal(progressEvent.total);
+            setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
+          },
+        })
+      )
       .catch((err: any) => setUploadError(err?.message || String(err)))
       .finally(() => {
         if (fileInputRef.current) fileInputRef.current.value = '';
