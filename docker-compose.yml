@@ -90,7 +90,8 @@ services:
     environment:
       FASTAPI_INTERNAL_URL: http://backend:80
       RAG_SERVICE_URL: http://rag:8003
-      SEARCH_MIN_SCORE: ${SEARCH_MIN_SCORE:-0.45}
+      SEARCH_ABSOLUTE_FLOOR: ${SEARCH_ABSOLUTE_FLOOR:-0.20}
+      SEARCH_RELATIVE_FACTOR: ${SEARCH_RELATIVE_FACTOR:-0.55}
       AGENT_PROVIDER: ${AGENT_PROVIDER:-nvidia}
       AGENT_BASE_URL: ${AGENT_BASE_URL}
       AGENT_API_KEY: ${AGENT_API_KEY}
@@ -166,6 +167,11 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - embedding_models:/root/.cache/huggingface
+    # Cap rag at 2 CPUs. Sentence-transformers + BM25 inference is
+    # CPU-bound and PyTorch's BLAS pool can otherwise saturate the
+    # Docker VM during back-to-back searches, triggering thermal
+    # throttling on the host.
+    cpus: 2.0
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health').read()\""]
       interval: 10s
