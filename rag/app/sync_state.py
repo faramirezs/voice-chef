@@ -71,7 +71,10 @@ class SyncState:
             "items_total": self.items_total,
             "elapsed_seconds": int(elapsed) if elapsed else None,
             "eta_seconds": eta,
-            "last_error": self.last_error,
+            # Boolean only — full exception text stays in container logs
+            # via logger.exception() in sync.py. Avoids leaking internal
+            # paths/URLs/credentials through /status if it's ever exposed.
+            "errored": self.last_error is not None,
             "completed_at": self.completed_at,
         }
 

@@ -328,7 +328,10 @@ async def sync_collections(
     schema details.
     """
     async with _sync_lock:
-        state.start(phase="checking collections")
+        # The check pass below is read-only and fast (two count queries +
+        # two backend HEAD-style calls). Don't flip `running=true` for it,
+        # or every no-op startup would surface as an "indexing" notification
+        # to the agent/UI for the few seconds the check takes.
         try:
             headers = (
                 {"X-Internal-Secret": INTERNAL_SECRET} if INTERNAL_SECRET else {}
@@ -380,15 +383,17 @@ async def sync_collections(
 
                 if not rebuild:
                     logger.info("all collections in sync; nothing to do")
-                    state.finish()
                     return
+
+                # Now we know real rebuild work is happening — flip running=true.
+                state.start(phase="rebuilding")
+                state.set_total(aggregate_total)
 
                 # Drop + recreate the collections that need rebuilding.
                 await drop_and_recreate([n for n, _ in rebuild])
 
                 # Pass 2: backfill in order. items_done accumulates across
                 # collections so the snapshot ETA is global, not per-coll.
-                state.set_total(aggregate_total)
                 for name, expected in rebuild:
                     await _run_backfill(
                         http,
@@ -403,6 +408,10 @@ async def sync_collections(
             state.finish()
         except Exception as exc:
             logger.exception("sync_collections failed: %s", exc)
+            # If state.start() never ran (exception during the check pass),
+            # finish() still records the error and leaves running=False —
+            # consumers see `errored: true` via /status without a phantom
+            # "indexing" pulse.
             state.finish(error=str(exc))
 
 
