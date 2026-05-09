@@ -24,7 +24,7 @@ const data = {
   // },
   teams: [
     {
-      name: "Kitchen Inc",
+      name: "Default",
       logo: (
         <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} />
       ),
@@ -134,7 +134,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <div className="flex items-center px-4 py-2">
-          <Logo size="90%" className="text-muted-foreground" />
+          <Logo
+            size="90%"
+            className="text-muted-foreground transition-transform duration-400 ease-out hover:scale-103"
+          />
         </div>
       </SidebarHeader>
 

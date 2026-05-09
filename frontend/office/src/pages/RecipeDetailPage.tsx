@@ -133,8 +133,13 @@ export function RecipeDetailPage() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-3">
         <Button size="sm" onClick={() => navigate('/recipes')}>← Back</Button>
+        <div className="relative mb-6">
+          <span className={cn(badgeClass, 'absolute -top-12 right-0 z-20 px-4 py-2 text-base font-semibold capitalize')}>
+            {recipe.status}
+          </span>
+        </div>
         <div
-          className="h-72 w-full overflow-hidden rounded-xl border cursor-pointer relative hover:opacity-80 transition-opacity bg-muted flex items-center justify-center"
+          className="h-72 w-full overflow-hidden rounded-xl border cursor-pointer relative hover:opacity-80 transition-opacity bg-muted flex items-center justify-center group"
           onClick={handlePhotoClick}
         >
           {uploadPhoto.isPending && (
@@ -143,12 +148,17 @@ export function RecipeDetailPage() {
             </div>
           )}
           {recipe.photo_url ? (
-            <img
-              key={recipe.photo_url}
-              src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
-              alt={recipe.name}
-              className="w-full h-full object-cover"
-            />
+            <>
+              <img
+                key={recipe.photo_url}
+                src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
+                alt={recipe.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-white text-lg font-medium">Replace image</p>
+              </div>
+            </>
           ) : (
             <div className="text-center text-muted-foreground">
               <p className="text-lg font-medium">Click here to upload a picture</p>
@@ -170,9 +180,8 @@ export function RecipeDetailPage() {
             value={recipe.name}
             label=""
             className="w-full sm:w-auto sm:min-w-[28rem]"
-            displayClassName="text-2xl font-semibold"
+            displayClassName="text-2xl font-semibold break-words hyphens-auto"
           />
-          <span className={badgeClass}>{recipe.status}</span>
         </div>
         <div className="flex flex-wrap gap-3 justify-between">
           <div className="flex flex-wrap gap-3">

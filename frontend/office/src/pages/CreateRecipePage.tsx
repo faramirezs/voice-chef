@@ -36,7 +36,7 @@ export function CreateRecipePage() {
     data: autocompleteResults = [], 
     isLoading: isLoadingAutocomplete 
   } = useIngredientsAutocomplete(searchQuery);
-  const draftStatus = 'draft';
+  // const draftStatus = 'draft';
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -106,10 +106,10 @@ export function CreateRecipePage() {
     label: result.name,
   }));
 
-  const badgeClass = cn(
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
-    STATUS_STYLES[draftStatus] ?? 'bg-gray-100 text-gray-600',
-  );
+  // const badgeClass = cn(
+  //   'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
+  //   STATUS_STYLES[draftStatus] ?? 'bg-gray-100 text-gray-600',
+  // );
 
   return (
     <div className="space-y-5 max-w-10xl">
@@ -159,9 +159,9 @@ export function CreateRecipePage() {
                 />
                 {error && <p className="text-xs text-destructive">{error}</p>}
               </div>
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <span className={badgeClass}>{draftStatus}</span>
-              </div>
+              </div> */}
             </div>
           </Section>
         </div>

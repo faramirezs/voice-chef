@@ -1,7 +1,10 @@
 import type * as React from "react"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons"
 import {
   Field,
   FieldDescription,
@@ -112,6 +115,8 @@ export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const [showPasswords, setShowPasswords] = useState(false)
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
@@ -142,15 +147,40 @@ export function SignupForm({
                 <Field className="grid grid-cols-2 gap-4">
                   <Field>
                     <FieldLabel htmlFor="password">Password</FieldLabel>
-                    <Input id="password" name="password" type="password" required />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPasswords ? "text" : "password"}
+                      required
+                    />
                   </Field>
                   <Field>
                     <FieldLabel htmlFor="confirm-password">
                       Confirm Password
                     </FieldLabel>
-                    <Input id="confirm-password" name="confirm-password" type="password" required />
+                    <Input
+                      id="confirm-password"
+                      name="confirm-password"
+                      type={showPasswords ? "text" : "password"}
+                      required
+                    />
                   </Field>
                 </Field>
+                <div className="mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPasswords((prev) => !prev)}
+                    aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
+                  >
+                    <HugeiconsIcon
+                      icon={showPasswords ? ViewOffSlashIcon : ViewIcon}
+                      strokeWidth={2}
+                      className="size-4"
+                    />
+                    <span>{showPasswords ? "Hide passwords" : "Show passwords"}</span>
+                  </button>
+                </div>
                 <FieldDescription>
                   Your password must be at least 8 characters long and include a mix of letters, numbers, and symbols.
                 </FieldDescription>
@@ -207,7 +237,7 @@ export function SignupForm({
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="/terms">Terms of Service</a>{" "}
+        By creatin an account, you agree to our <a href="/terms">Terms of Service</a>{" "}
         and <a href="/privacy">Privacy Policy</a>.
       </FieldDescription>
     </div>

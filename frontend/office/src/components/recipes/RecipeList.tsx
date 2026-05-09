@@ -142,6 +142,52 @@ export function RecipeList() {
         </div>
       </div>
 
+      {!isInitialLoading && recipePage && visibleRecipes.length > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Showing {offset + 1}-{offset + visibleRecipes.length} of {recipePage?.meta.total ?? 0}
+          </p>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              Results per page
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value) as (typeof RESULTS_PER_PAGE_OPTIONS)[number]);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger aria-label="Results per page" className="w-24">
+                  <SelectValue placeholder={String(RESULTS_PER_PAGE_OPTIONS[0])} />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESULTS_PER_PAGE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={() => setPage((currentPage) => currentPage + 1)}
+                disabled={offset + pageSize >= (recipePage?.meta.total ?? 0)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isError && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load recipes:{' '}

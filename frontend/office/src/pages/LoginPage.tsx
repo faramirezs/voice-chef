@@ -4,7 +4,7 @@ import { Link } from "react-router-dom"
 
 export function LoginPage() {
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted p-6 md:p-10">
+    <div className="page-fade-in flex min-h-svh items-center justify-center bg-muted p-6 md:p-10">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border bg-background shadow-lg md:grid-cols-2">
         <div
           className="relative hidden min-h-[420px] bg-cover bg-center bg-no-repeat md:block"
