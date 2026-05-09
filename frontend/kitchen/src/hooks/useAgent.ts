@@ -116,6 +116,53 @@ export function useToolActivity(): ToolActivity[] {
   );
 }
 
+// --- Shared "last user query" store ---
+// Set when sendMessage runs; auto-cleared 4s after the stream ends so the
+// EmptyCanvas button can echo the in-flight / just-completed query without
+// growing stale. Cleared immediately on abort.
+let _lastUserQuery: string | null = null;
+let _lastUserQueryClearTimer: ReturnType<typeof setTimeout> | null = null;
+const _lastUserQueryListeners = new Set<() => void>();
+
+function _notifyLastUserQueryListeners() {
+  for (const fn of _lastUserQueryListeners) fn();
+}
+
+function _setLastUserQuery(value: string | null) {
+  if (_lastUserQueryClearTimer !== null) {
+    clearTimeout(_lastUserQueryClearTimer);
+    _lastUserQueryClearTimer = null;
+  }
+  _lastUserQuery = value;
+  _notifyLastUserQueryListeners();
+}
+
+function _scheduleLastUserQueryClear(ms: number = 4000) {
+  if (_lastUserQueryClearTimer !== null) clearTimeout(_lastUserQueryClearTimer);
+  _lastUserQueryClearTimer = setTimeout(() => {
+    _lastUserQuery = null;
+    _lastUserQueryClearTimer = null;
+    _notifyLastUserQueryListeners();
+  }, ms);
+}
+
+function _subscribeLastUserQuery(listener: () => void) {
+  _lastUserQueryListeners.add(listener);
+  return () => { _lastUserQueryListeners.delete(listener); };
+}
+
+export function useLastUserQuery(): string | null {
+  return useSyncExternalStore(
+    _subscribeLastUserQuery,
+    () => _lastUserQuery,
+  );
+}
+
+export function abortAgentRun(): void {
+  chefAgent.abortRun();
+  _setLastUserQuery(null);
+}
+
 // --- Stable sendMessage / reset getters ---
 // These are set by useAgent() once during mount, then callable from any component.
 let _sendMessage: ((text: string) => void) | null = null;
@@ -254,6 +301,7 @@ export function useAgent() {
 
       chefAgent.addMessage(userMsg);
       setMessages([...chefAgent.messages]);
+      _setLastUserQuery(text);
       setIsStreaming(true);
       _setIsStreaming(true);
       setToolActivity([]);
@@ -518,6 +566,7 @@ export function useAgent() {
       syncMessages();
       setIsStreaming(false);
       _setIsStreaming(false);
+      _scheduleLastUserQueryClear();
     },
     [syncMessages],
   );
@@ -530,6 +579,7 @@ export function useAgent() {
     setAgentState(null);
     _clearSharedAgentState();
     _setIsStreaming(false);
+    _setLastUserQuery(null);
     chefAgent.setState(DEFAULT_KITCHEN_STATE);
     threadIdRef.current = uuid();
   }, []);

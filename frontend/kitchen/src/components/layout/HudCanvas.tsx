@@ -1,6 +1,11 @@
 import { AgentSlotProvider } from "./AgentSlotProvider";
 import { SlotOutlet } from "./SlotOutlet";
-import { useAgent } from "@/hooks/useAgent";
+import {
+  useAgent,
+  useIsStreaming,
+  useLastUserQuery,
+  abortAgentRun,
+} from "@/hooks/useAgent";
 import { useAgentSlots } from "./AgentSlotProvider";
 import { HudStatusIndicator } from "./HudStatusIndicator";
 import { HudVoiceBar } from "./HudVoiceBar";
@@ -15,17 +20,46 @@ export function HudCanvas() {
   );
 }
 
-function EmptyCanvas({ onOpen }: { onOpen: () => void }) {
+const IDLE_LABEL = "Tap or press Cmd + K / Ctrl + K to open command palette.";
+
+function EmptyCanvas({
+  onOpen,
+  onAbort,
+  currentQuery,
+  isStreaming,
+}: {
+  onOpen: () => void;
+  onAbort: () => void;
+  currentQuery: string | null;
+  isStreaming: boolean;
+}) {
+  const showingQuery = currentQuery !== null;
+  const onClick = isStreaming ? onAbort : onOpen;
+  const label = isStreaming
+    ? `Cancel · ${currentQuery ?? ""}`
+    : showingQuery
+      ? (currentQuery as string)
+      : IDLE_LABEL;
+  const intentClass = isStreaming
+    ? "border-text-secondary/40 text-text"
+    : showingQuery
+      ? "border-text-secondary/15 text-text-secondary/70"
+      : "border-text-secondary/20 text-text-secondary";
+
   return (
     <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
       <p className="text-2xl text-text">Voice Chef</p>
       <div className="w-full max-w-lg px-4 flex items-center justify-center gap-2">
         <button
           type="button"
-          onClick={onOpen}
-          className="min-h-11 px-4 py-3 rounded-lg text-sm text-text-secondary border border-text-secondary/20 hover:bg-text-secondary/10 active:bg-text-secondary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary/40 transition-colors"
+          onClick={onClick}
+          aria-label={isStreaming ? "Cancel current query" : "Open command palette"}
+          className={`min-h-11 px-4 py-3 rounded-lg text-sm border ${intentClass} hover:bg-text-secondary/10 active:bg-text-secondary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary/40 transition-colors flex items-center gap-2 max-w-full`}
         >
-          Tap or press Cmd + K / Ctrl + K to open command palette.
+          {isStreaming && (
+            <span className="inline-block w-2 h-2 rounded-full bg-text animate-pulse flex-shrink-0" />
+          )}
+          <span className="line-clamp-2 text-left">{label}</span>
         </button>
       </div>
     </div>
@@ -41,6 +75,8 @@ function HudCanvasInner() {
 
   const { slots } = useAgentSlots();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const isStreaming = useIsStreaming();
+  const lastUserQuery = useLastUserQuery();
 
   const hasCanvas = slots.canvas !== undefined;
   const hasOverlay = slots.overlay !== undefined;
@@ -65,6 +101,20 @@ function HudCanvasInner() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // ESC aborts the in-flight agent run when the palette is closed.
+  // CommandPalette owns its own ESC behaviour while open, so we gate on
+  // !paletteOpen to avoid stealing that input.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !paletteOpen && isStreaming) {
+        e.preventDefault();
+        abortAgentRun();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [paletteOpen, isStreaming]);
+
   return (
     <div className="h-full flex flex-col relative overflow-hidden bg-surface/85 backdrop-blur-sm">
       {/* Sticky slot -- pinned top bar */}
@@ -77,7 +127,12 @@ function HudCanvasInner() {
         {hasCanvas ? (
           <SlotOutlet slot="canvas" />
         ) : (
-          <EmptyCanvas onOpen={() => setPaletteOpen(true)} />
+          <EmptyCanvas
+            onOpen={() => setPaletteOpen(true)}
+            onAbort={abortAgentRun}
+            currentQuery={lastUserQuery}
+            isStreaming={isStreaming}
+          />
         )}
       </div>
 
