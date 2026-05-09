@@ -67,6 +67,13 @@ export function CreateRecipePage() {
         onSuccess: (recipe) => {
           navigate(`/recipes/${recipe.id}`);
         },
+        onError: (error: any) => {
+          // Extract error message from validation response
+          const errorMessage = error.response?.data?.detail?.[0]?.msg
+            || error.message
+            || 'Failed to create recipe. Please try again.';
+          setError(errorMessage);
+        },
       },
     );
   };
@@ -187,10 +194,18 @@ export function CreateRecipePage() {
                       type="number"
                       value={ingredient.quantity || ''}
                       onChange={(e) => {
-                        setIngredients(ingredients.map(ing =>
-                          ing.id === ingredient.id ? { ...ing, quantity: e.target.value || null } : ing
-                        ));
+                        // HTML5 validation attributes
+                        const value = e.target.value;
+                        const numValue = parseFloat(value);
+                        // Only update if positive number
+                        if (numValue > 0) {
+                          setIngredients(ingredients.map(ing =>
+                            ing.id === ingredient.id ? { ...ing, quantity: e.target.value || null } : ing
+                          ));
+                        }
                       }}
+                      min="1"
+                      step="1"
                       placeholder="Qty"
                       className="w-24"
                     />

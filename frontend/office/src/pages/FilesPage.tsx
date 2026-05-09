@@ -1,7 +1,7 @@
 import { usePDFs, uploadPDF, deletePDF, getPDFUrl } from '@/api/pdfs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete02Icon } from '@hugeicons/core-free-icons';
@@ -17,14 +17,48 @@ function formatFileSize(bytes: number): string {
 export function FilesPage() {
   const { data: pdfs = [], isLoading, error } = usePDFs();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadSuccessTimerRef = useRef<number | null>(null);
   const queryClient = useQueryClient();
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadBytesLoaded, setUploadBytesLoaded] = useState<number>(0);
+  const [uploadBytesTotal, setUploadBytesTotal] = useState<number>(0);
+  const [uploadFileName, setUploadFileName] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (uploadSuccessTimerRef.current) {
+        window.clearTimeout(uploadSuccessTimerRef.current);
+      }
+    };
+  }, []);
 
   const uploadMutation = useMutation({
-    mutationFn: uploadPDF,
+    mutationFn: ({
+      file,
+      onProgress,
+    }: {
+      file: File;
+      onProgress?: Parameters<typeof uploadPDF>[1];
+    }) => uploadPDF(file, onProgress),
     onSuccess: () => {
       setUploadError(null);
+      setUploadSuccess('File uploaded successfully');
+      setUploadProgress(0);
+      setUploadBytesLoaded(0);
+      setUploadBytesTotal(0);
+      setUploadFileName(null);
+
+      if (uploadSuccessTimerRef.current) {
+        window.clearTimeout(uploadSuccessTimerRef.current);
+      }
+      uploadSuccessTimerRef.current = window.setTimeout(() => {
+        setUploadSuccess(null);
+        uploadSuccessTimerRef.current = null;
+      }, 3000);
+
       queryClient.invalidateQueries({ queryKey: ['pdfs'] });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -32,6 +66,11 @@ export function FilesPage() {
     },
     onError: (err: any) => {
       setUploadError(err?.response?.data?.detail || 'Failed to upload file');
+      setUploadSuccess(null);
+      setUploadProgress(0);
+      setUploadBytesLoaded(0);
+      setUploadBytesTotal(0);
+      setUploadFileName(null);
     },
   });
 
@@ -49,8 +88,57 @@ export function FilesPage() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      uploadMutation.mutate(file);
+      setUploadError(null);
+      setUploadFileName(file.name);
+      setUploadBytesTotal(file.size);
+      setUploadBytesLoaded(0);
+      setUploadProgress(0);
+
+      // wait for validation before uploading (progress handler attached below)
     }
+    if (!file) return;
+
+    const validatePDF = async (f: File) => {
+      const MAX_SIZE_MB = 100;
+      const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024; // 100MB
+      const allowedType = 'application/pdf';
+
+      if (f.size === 0) throw new Error('File is empty');
+      if (f.size > MAX_SIZE) throw new Error(`File size exceeds the limit of ${MAX_SIZE_MB}MB`);
+
+      // MIME type may be absent in some browsers; check both type and extension
+      const nameLower = f.name.toLowerCase();
+      if (f.type !== allowedType && !nameLower.endsWith('.pdf')) {
+        throw new Error('Only PDF files are allowed');
+      }
+
+      // Read first bytes to verify PDF header (%PDF-)
+      const headerSize = 5;
+      const buf = await f.slice(0, headerSize).arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const header = String.fromCharCode(...bytes);
+      if (!header.startsWith('%PDF-')) {
+        throw new Error('Invalid or corrupted PDF file');
+      }
+    };
+
+    setUploadError(null);
+    validatePDF(file)
+      .then(() =>
+        uploadMutation.mutate({
+          file,
+          onProgress: (progressEvent: any) => {
+            if (!progressEvent.total) return;
+            setUploadBytesLoaded(progressEvent.loaded);
+            setUploadBytesTotal(progressEvent.total);
+            setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
+          },
+        })
+      )
+      .catch((err: any) => setUploadError(err?.message || String(err)))
+      .finally(() => {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      });
   };
 
   const handleDelete = (filename: string) => {
@@ -82,6 +170,32 @@ export function FilesPage() {
           {uploadMutation.isPending ? 'Uploading...' : 'Upload PDF'}
         </Button>
       </div>
+
+      {uploadSuccess && (
+        <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700 border border-green-200">
+          {uploadSuccess}
+        </div>
+      )}
+
+      {uploadMutation.isPending && uploadFileName && (
+        <div className="space-y-2 rounded-lg border bg-muted/20 p-4">
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <div className="min-w-0">
+              <p className="font-medium truncate">Uploading {uploadFileName}</p>
+              <p className="text-muted-foreground">
+                {formatFileSize(uploadBytesLoaded)} / {formatFileSize(uploadBytesTotal)}
+              </p>
+            </div>
+            <p className="shrink-0 font-semibold">{uploadProgress}%</p>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-200 ease-out"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {uploadError && (
         <div className="p-4 bg-destructive/10 text-destructive rounded-md">

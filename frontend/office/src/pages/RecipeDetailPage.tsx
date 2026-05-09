@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   useDeleteRecipe, 
@@ -14,7 +14,6 @@ import { formatDatetime } from '../components/Format-Datetime.tsx';
 import { DetailRow } from '../components/Detail-row';
 import { Grid } from '../components/Grid';
 import { cn } from '@/lib/utils';
-import { useRef } from 'react';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -38,6 +37,7 @@ export function RecipeDetailPage() {
   const uploadPhoto = useUploadRecipePicture();
   const deletePhoto = useDeleteRecipePicture();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Navigate away immediately after successful deletion
   useEffect(() => {
@@ -76,12 +76,83 @@ export function RecipeDetailPage() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && recipe) {
-      uploadPhoto.mutate({ id: recipe.id, file });
-    }
-    // Reset input so the same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (!file) return;
+
+    const validateImage = (f: File) => {
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
+      const MAX_SIZE_MB = 1;
+      const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024; // 10MB
+      const MIN_DIM = 200;
+      const MAX_DIM = 6000;
+
+      return new Promise<void>((resolve, reject) => {
+        if (!ALLOWED_TYPES.includes(f.type)) {
+          reject('Only JPG, JPEG and PNG images are allowed');
+          return;
+        }
+
+        if (f.size === 0) {
+          reject('File is empty');
+          return;
+        }
+
+        if (f.size > MAX_SIZE) {
+          reject(`File size exceeds the limit of ${MAX_SIZE_MB}MB`);
+          return;
+        }
+
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => {
+          const { width, height } = img;
+          URL.revokeObjectURL(url);
+          if (width < MIN_DIM || height < MIN_DIM) {
+            reject(`Image dimensions too small. Minimum is ${MIN_DIM}x${MIN_DIM}px`);
+            return;
+          }
+          if (width > MAX_DIM || height > MAX_DIM) {
+            reject(`Image dimensions too large. Maximum is ${MAX_DIM}x${MAX_DIM}px`);
+            return;
+          }
+          // simple format verification by attempting to draw to canvas (detects some corruptions)
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              // if no context, still accept (uncommon)
+              resolve();
+              return;
+            }
+            ctx.drawImage(img, 0, 0);
+            // attempt to read a few pixels
+            ctx.getImageData(0, 0, 1, 1);
+            resolve();
+          } catch (err) {
+            reject('Invalid or corrupted image file');
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject('Invalid or corrupted image file');
+        };
+        img.src = url;
+      });
+    };
+
+    setUploadError(null);
+    if (recipe) {
+      validateImage(file)
+        .then(() => {
+          uploadPhoto.mutate({ id: recipe.id, file });
+        })
+        .catch((err) => {
+          setUploadError(typeof err === 'string' ? err : 'Invalid image file');
+        })
+        .finally(() => {
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        });
     }
   };
 
@@ -163,6 +234,11 @@ export function RecipeDetailPage() {
           className="hidden"
           disabled={uploadPhoto.isPending}
         />
+        {uploadError && (
+          <div className="mt-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {uploadError}
+          </div>
+        )}
         <div className="flex items-center gap-3 flex-wrap">
           <InlineEditableRecipeText
             recipeId={recipe.id}
