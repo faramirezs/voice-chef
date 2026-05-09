@@ -82,7 +82,7 @@ dev-back-office: $(ENV)
 prod: $(ENV)
 	@echo "Building fresh images and restarting in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
-	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
+	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
 # ── Lifecycle targets ──────────────────────────────────────────────────────
@@ -117,8 +117,9 @@ clean:
 	@echo "Stopping the app and removing containers + images..."
 	$(COMPOSE) down --rmi local --remove-orphans
 
-clean-nginx: clean
+clean-nginx:
 	@echo "Removing ALL Docker images (including nginx-proxy)..."
+	$(COMPOSE) stop nginx-proxy  || true	
 	$(COMPOSE) rm -f nginx-proxy
 	docker rmi voice-chef-nginx-proxy:latest
 	@echo "All images removed. Database volume preserved."

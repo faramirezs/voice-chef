@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from uuid import UUID
-from typing import Annotated, Optional, Tuple
+from typing import Annotated, Tuple
 
 from app.core.database import get_session
 from app.core.deps import DEFAULT_TENANT_ID
@@ -27,8 +27,8 @@ from app.schemas.recipe import (
     RecipeDetailResponse, RecipeFilters, RecipeSort
 )
 from app.utils.file_service_image_utils import delete_file
-from app.utils.api_key_utils import validate_api_key
-from app.limiter import limiter
+from app.utils.api_key_utils import require_api_key
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="", tags=["Public"])
 
@@ -87,9 +87,8 @@ def get_recipes(
 def get_recipe(
     request: Request,
     id: UUID,
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session),
-    api_key: Annotated[Tuple[UUID, str] | None, 
-                       Depends(validate_api_key)] = None,
 ):
     """
     Public endpoint to retrieve a single recipe.
@@ -118,8 +117,8 @@ def get_recipe(
 @limiter.limit("5/minute")
 def create_recipe(
     request: Request,
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     recipe: RecipeWrite,
-    api_key: Annotated[Tuple[UUID, str], Depends(validate_api_key)],
     session: Session = Depends(get_session),
 ):
     """
@@ -205,7 +204,7 @@ def update_recipe(
     request: Request,
     id: UUID, 
     recipe_update: RecipeUpdate, 
-    api_key: Annotated[Tuple[UUID, str], Depends(validate_api_key)],
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session)
 ):
     """
@@ -256,16 +255,13 @@ def update_recipe(
 def delete_recipe(
     request: Request,
     id: UUID, 
-    api_key: Annotated[Optional[Tuple[UUID, str]], Depends(validate_api_key)],
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session)
 ):
     """
     Public endpoint to delete a recipe.
     Requires API key authentication.
     """
-    if not api_key:
-        raise HTTPException(status_code=401, detail="API key required")
-    
     statement = select(Recipe).where(
         Recipe.id == id,
         Recipe.tenant_id == api_key[0]

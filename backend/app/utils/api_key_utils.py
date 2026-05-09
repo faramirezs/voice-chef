@@ -149,3 +149,21 @@ async def validate_api_key(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid API key"
     )
+
+
+async def require_api_key(
+    request: Request,
+) -> Tuple[UUID, str]:
+    """
+    Dependency that requires a valid API key.
+
+    Returns the validated (tenant_id, key_id) tuple or raises 401 if the
+    header is missing or invalid.
+    """
+    api_key = await validate_api_key(request)
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API key required",
+        )
+    return api_key

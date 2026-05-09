@@ -10,7 +10,7 @@ from app.api.routes.file_service_images import router as images_router
 from app.api.routes.file_service_pdfs import router as pdfs_router
 from app.api.routes.api_keys import router as api_keys_router
 from app.api.routes.public import router as public_router
-from app.limiter import limiter
+from app.core.limiter import limiter
 from app.core.config import settings
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
