@@ -189,24 +189,24 @@ refresh-env-agent: $(ENV)
 
 # ── Database targets ───────────────────────────────────────────────────────
 
+LOCAL_DB_URL = $$( \
+    USER=$$(grep POSTGRES_USER .env | cut -d= -f2); \
+    PASS=$$(grep POSTGRES_PASSWORD .env | cut -d= -f2); \
+    NAME=$$(grep POSTGRES_DB .env | cut -d= -f2); \
+    echo "postgresql+psycopg://$$USER:$$PASS@localhost:5432/$$NAME" \
+)
+
 # Run all four schema-drift gates locally (strict check).
 drift-gate-local: $(ENV)
-	@echo "Ensuring database is running..."
-	$(COMPOSE) -f $(PROD_FILE) up -d db
-	@sleep 2
 	@echo "Running local 4-gate schema drift check..."
 	@chmod +x db/scripts/run_local_drift_gate.sh
-	@DB_USER=$$(grep POSTGRES_USER .env | cut -d= -f2); \
-	DB_PASS=$$(grep POSTGRES_PASSWORD .env | cut -d= -f2); \
-	DB_NAME=$$(grep POSTGRES_DB .env | cut -d= -f2); \
-	export DATABASE_URL="postgresql+psycopg://$$DB_USER:$$DB_PASS@localhost:5432/$$DB_NAME"; \
-	./db/scripts/run_local_drift_gate.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/run_local_drift_gate.sh
 	@echo "Done: local schema drift gate passed"
 
 # Blast-test: wipe DB volume, re-initialize from dump, then run alembic upgrade.
 dump-blast-check:
-	chmod +x db/scripts/dump_upgrade_blast_check.sh
-	./db/scripts/dump_upgrade_blast_check.sh
+	@chmod +x db/scripts/dump_upgrade_blast_check.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/dump_upgrade_blast_check.sh
 
 # Regenerate db/init/01_dump.sql from the current migration head.
 dump-regen:

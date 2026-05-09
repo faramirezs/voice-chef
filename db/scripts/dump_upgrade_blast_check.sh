@@ -1,27 +1,18 @@
 #!/usr/bin/env bash
+# IMPORTANT: Run this test locally from Makefile
+
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
-
-# Load environment variables from .env
-if [ -f "$ROOT_DIR/.env" ]; then
-    set -a
-    source "$ROOT_DIR/.env"
-    set +a
-fi
 
 LOG_DIR="logs"
 LOG_FILE="$LOG_DIR/dump_upgrade_blast_check.log"
 
 mkdir -p "$LOG_DIR"
 
-# DATABASE_URL must be set (from .env)
-if [ -z "${DATABASE_URL:-}" ]; then
-  echo "ERROR: DATABASE_URL environment variable is not set"
-  exit 1
-fi
-DB_URL="$DATABASE_URL"
+# Provide DATABASE_URL
+export DATABASE_URL="${DATABASE_URL:-}"
 
 # Extract PostgreSQL credentials from environment
 DB_USER="${POSTGRES_USER:-recipe_user}"
@@ -71,9 +62,12 @@ for i in $(seq 1 40); do
   sleep 2
 done
 
+echo "[blast-check] additional 5 second wait for post-dump stabilization" | tee -a "$LOG_FILE"
+sleep 5
+
 echo "[blast-check] running alembic upgrade head against dump-initialized db" | tee -a "$LOG_FILE"
 set +e
-.venv/bin/alembic -c alembic.ini -x db_url="$DB_URL" upgrade head >> "$LOG_FILE" 2>&1
+.venv/bin/alembic -c alembic.ini -x db_url="$DATABASE_URL" upgrade head >> "$LOG_FILE" 2>&1
 ALEMBIC_EXIT=$?
 set -e
 
