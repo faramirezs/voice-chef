@@ -5,12 +5,14 @@ from pathlib import Path
 from fastapi import Depends, HTTPException, status, Request
 from typing import Optional, Tuple
 from uuid import UUID
+from datetime import datetime
 
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 API_KEY_PREFIX = "vchef_"
 API_KEY_LENGTH = 32  # Length of the random part
+API_KEYS_DIR = Path("/code/data/api_keys")
 
 
 # ─── Utility Functions ────────────────────────────────────────────────────────
@@ -54,6 +56,39 @@ def get_key_preview(api_key: str) -> str:
     return f"{api_key[:4]}...{api_key[-4:]}"
 
 
+def _ensure_api_keys_dir() -> None:
+    """Ensure the API keys directory exists."""
+    API_KEYS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _get_tenant_file(tenant_id: UUID) -> Path:
+    """Get the file path for a tenant's API keys."""
+    _ensure_api_keys_dir()
+    return API_KEYS_DIR / f"{tenant_id}.json"
+
+
+def _load_tenant_key(tenant_id: UUID) -> Optional[dict]:
+    """Load the API key for a tenant from file."""
+    file_path = _get_tenant_file(tenant_id)
+    if not file_path.exists():
+        return None
+    
+    try:
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return None
+
+
+def _save_tenant_key(tenant_id: UUID, key_data: dict) -> None:
+    """Save the API key for a tenant to file."""
+    file_path = _get_tenant_file(tenant_id)
+    _ensure_api_keys_dir()
+    
+    with open(file_path, 'w') as f:
+        json.dump(key_data, f, indent=2, default=str)
+
+
 async def validate_api_key(
     request: Request,
 ) -> Optional[Tuple[UUID, str]]:
@@ -82,10 +117,8 @@ async def validate_api_key(
     key_hash = hash_api_key(api_key_header)
     
     # Search through all tenant files
-    api_keys_dir = Path("data/api_keys")
-    
-    if api_keys_dir.exists():
-        for tenant_file in api_keys_dir.glob("*.json"):
+    if API_KEYS_DIR.exists():
+        for tenant_file in API_KEYS_DIR.glob("*.json"):
             try:
                 with open(tenant_file, 'r') as f:
                     key_data = json.load(f)
@@ -99,7 +132,6 @@ async def validate_api_key(
                     key_id = key_data.get('id', 'default')
                     
                     # Update last_used_at timestamp
-                    from datetime import datetime
                     key_data['last_used_at'] = datetime.utcnow().isoformat()
                     
                     try:

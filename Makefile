@@ -90,6 +90,10 @@ prod: $(ENV)
 #   make start  Start stopped containers (no rebuild)
 #   make stop   Stop running containers (no removal)
 
+up:  $(ENV)
+	@echo "Startin the APP..."
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
+
 down:
 	@echo "Stopping and removing the containers..."
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) down

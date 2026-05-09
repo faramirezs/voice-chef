@@ -70,7 +70,8 @@ services:
       DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
-      - uploads:/code/uploads
+      - backend_data:/code/data
+
 
   agent:
     build:
@@ -105,7 +106,7 @@ services:
 volumes:
   whisper_models:
   postgres_data:
-  uploads:
+  backend_data:
   nginx_ssl:
 
 networks:

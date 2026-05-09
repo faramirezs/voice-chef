@@ -20,7 +20,8 @@ from slowapi.errors import RateLimitExceeded
 async def lifespan(app: FastAPI):
     # Start-up phase:
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    
+    os.makedirs(settings.API_KEYS_DIR, exist_ok=True)
+
     yield # Runtime phase: FastAPI is fully running and serving requests
     
     # Shutdown Phase:
