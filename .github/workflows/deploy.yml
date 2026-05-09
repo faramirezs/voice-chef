@@ -47,7 +47,7 @@ jobs:
       - name: Add VPS to known hosts
         run: |
           ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
-      - name: Check VPS disk space
+      - name: Check VPS disk space (auto-clean if needed)
         run: |
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} "
             echo '=== Disk usage ===' && df -h / &&
@@ -55,8 +55,16 @@ jobs:
             FREE_GB=\$(df -BG / | tail -1 | awk '{print \$4}' | sed 's/G//') &&
             echo \"Free: \${FREE_GB}GB\" &&
             if [ \"\$FREE_GB\" -lt 5 ]; then
-              echo \"ERROR: Less than 5GB free (\${FREE_GB}GB) — aborting deploy\" &&
-              exit 1
+              echo 'Low disk — running docker system prune -a -f...' &&
+              docker system prune -a -f &&
+              echo '=== After cleanup ===' &&
+              df -h / &&
+              FREE_GB=\$(df -BG / | tail -1 | awk '{print \$4}' | sed 's/G//') &&
+              echo \"Free after cleanup: \${FREE_GB}GB\" &&
+              if [ \"\$FREE_GB\" -lt 5 ]; then
+                echo \"ERROR: Still less than 5GB free after cleanup (\${FREE_GB}GB) — aborting deploy\" &&
+                exit 1
+              fi
             fi"
 
       - name: Fix VPS git permissions (if needed)
