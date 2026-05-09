@@ -192,17 +192,31 @@ refresh-env-agent: $(ENV)
 
 # ── Database targets ───────────────────────────────────────────────────────
 
+LOCAL_DB_URL = $$( \
+    USER=$$(grep POSTGRES_USER .env | cut -d= -f2); \
+    PASS=$$(grep POSTGRES_PASSWORD .env | cut -d= -f2); \
+    NAME=$$(grep POSTGRES_DB .env | cut -d= -f2); \
+    echo "postgresql+psycopg://$$USER:$$PASS@localhost:5432/$$NAME" \
+)
+
 # Run all four schema-drift gates locally (strict check).
-drift-gate-local:
-	@bash -c 'cd backend && python -m pytest tests/test_drift_gate.py -v'
+drift-gate-local: $(ENV)
+	@echo "Running local 4-gate schema drift check..."
+	@chmod +x db/scripts/run_local_drift_gate.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/run_local_drift_gate.sh
+	@echo "Done: local schema drift gate passed"
 
 # Blast-test: wipe DB volume, re-initialize from dump, then run alembic upgrade.
 dump-blast-check:
-	@bash -c 'cd backend && python scripts/dump_blast_check.py'
+	@chmod +x db/scripts/dump_upgrade_blast_check.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/dump_upgrade_blast_check.sh
 
 # Regenerate db/init/01_dump.sql from the current migration head.
 dump-regen:
-	@bash -c 'cd backend && python scripts/dump_regenerate.py'
+	@echo "Regenerating db/init/01_dump.sql from migration head (isolated temp DB)..."
+	chmod +x db/scripts/regenerate_dump_from_head.sh
+	./db/scripts/regenerate_dump_from_head.sh
+	@echo "Done: db/init/01_dump.sql regenerated from migration head"
 
 # Open a psql shell inside the running db container.
 db-connect:
