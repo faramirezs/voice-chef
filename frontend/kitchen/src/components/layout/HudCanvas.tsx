@@ -22,8 +22,7 @@ function EmptyCanvas() {
       <img
         src="/voice-chef-logo.svg"
         alt="Voice Chef"
-        className="w-64 h-auto max-w-md opacity-80"
-      />
+        className="w-72 h-auto max-w-[85%] opacity-90"
       <div className="w-full max-w-lg px-4 flex items-center gap-2">
         <p className="flex-1 text-sm text-text-secondary">Use Cmd + K to open command palette.</p>
       </div>
