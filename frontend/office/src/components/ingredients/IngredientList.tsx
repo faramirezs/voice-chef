@@ -51,7 +51,7 @@ export function IngredientsList() {
             setPage(0);
           }}
         />
-        <Input
+        {/* <Input
           placeholder="Filter by source (e.g. standard, custom)..."
           className="max-w-sm"
           value={sourceFilter}
@@ -59,7 +59,7 @@ export function IngredientsList() {
             setSourceFilter(e.target.value);
             setPage(0);
           }}
-        />
+        /> */}
 
         {!isInitialLoading && ingredientPage && (
           <span className="text-sm text-muted-foreground">
@@ -75,12 +75,12 @@ export function IngredientsList() {
           >
             {viewMode === 'grid' ? 'List view' : 'Grid view'}
           </Button>
-          <Button variant="outline" type="button">
+          {/* <Button variant="outline" type="button">
             Import
           </Button>
           <Button variant="outline" type="button">
             Export
-          </Button>
+          </Button> */}
         </div>
       </div>
 
