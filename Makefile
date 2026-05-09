@@ -27,6 +27,7 @@ $(ENV):
 	@test -f $(ENV) || (cp .env.example $(ENV) && echo "Created $(ENV) from .env.example")
 
 # ── Development targets ────────────────────────────────────────────────────
+
 # Use these when working locally. They mount source code as volumes for
 # hot-reload and bind service ports directly to the host.
 #
@@ -37,6 +38,12 @@ $(ENV):
 #   make dev-back         Start only db + backend (for API-only work)
 #   make dev-back-office  Start db + backend + office-frontend
 #   make up               Start existing containers (no rebuild, fastest)
+
+# Dev mode access:
+# - Office: http://localhost:5173
+# - Kitchen: http://localhost:5174
+# - Backend API: http://localhost:8000
+
 dev: $(ENV)
 	@echo "Building and starting in dev_mode (cached)"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up --build
@@ -54,7 +61,9 @@ dev-back: $(ENV)
 dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+
 # ── Production target ──────────────────────────────────────────────────────
+
 # Use this for VPS / CI-CD deployments. Builds all images from scratch
 # (--no-cache) then recreates containers with zero-downtime rolling.
 #
@@ -95,13 +104,21 @@ stop:
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) stop
 
 # ── Clean-up targets ───────────────────────────────────────────────────────
-#   make clean    Remove containers + images (keeps volumes & data)
-#   make fclean   NUCLEAR OPTION: removes everything including volumes
-#                 (WARNING: this wipes the database and uploaded files)
+#   make clean       Remove containers + images (keeps volumes & data)
+#   make clean-nginx Remove ALL images including nginx (keeps database volume)
+#   make fclean      NUCLEAR OPTION: removes everything including volumes
+#                    (WARNING: this wipes the database and uploaded files)
 
 clean:
 	@echo "Stopping the app and removing containers + images..."
 	$(COMPOSE) down --rmi local
+
+clean-nginx:
+	@echo "Removing ALL Docker images (including nginx-proxy)..."
+	$(COMPOSE) down --rmi all --remove-orphans
+	$(COMPOSE) rm -f nginx-proxy
+	docker rmi voice-chef-nginx-proxy:latest
+	@echo "All images removed. Database volume preserved."
 
 fclean:
 	@echo "Stopping the app and removing containers + images + volumes..."
@@ -172,17 +189,31 @@ refresh-env-agent: $(ENV)
 
 # ── Database targets ───────────────────────────────────────────────────────
 
+LOCAL_DB_URL = $$( \
+    USER=$$(grep POSTGRES_USER .env | cut -d= -f2); \
+    PASS=$$(grep POSTGRES_PASSWORD .env | cut -d= -f2); \
+    NAME=$$(grep POSTGRES_DB .env | cut -d= -f2); \
+    echo "postgresql+psycopg://$$USER:$$PASS@localhost:5432/$$NAME" \
+)
+
 # Run all four schema-drift gates locally (strict check).
-drift-gate-local:
-	@bash -c 'cd backend && python -m pytest tests/test_drift_gate.py -v'
+drift-gate-local: $(ENV)
+	@echo "Running local 4-gate schema drift check..."
+	@chmod +x db/scripts/run_local_drift_gate.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/run_local_drift_gate.sh
+	@echo "Done: local schema drift gate passed"
 
 # Blast-test: wipe DB volume, re-initialize from dump, then run alembic upgrade.
 dump-blast-check:
-	@bash -c 'cd backend && python scripts/dump_blast_check.py'
+	@chmod +x db/scripts/dump_upgrade_blast_check.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/dump_upgrade_blast_check.sh
 
 # Regenerate db/init/01_dump.sql from the current migration head.
 dump-regen:
-	@bash -c 'cd backend && python scripts/dump_regenerate.py'
+	@echo "Regenerating db/init/01_dump.sql from migration head (isolated temp DB)..."
+	chmod +x db/scripts/regenerate_dump_from_head.sh
+	./db/scripts/regenerate_dump_from_head.sh
+	@echo "Done: db/init/01_dump.sql regenerated from migration head"
 
 # Open a psql shell inside the running db container.
 db-connect:
@@ -213,6 +244,7 @@ help:
 	@printf "     %-30s %s\n" "make down"        "Stop and remove containers"
 	@printf "     %-30s %s\n" "make stop"        "Stop containers (keep them)"
 	@printf "     %-30s %s\n" "make clean"       "Remove containers + images (keeps data)"
+	@printf "     %-30s %s\n" "make clean-nginx" "Remove ALL images including nginx (keeps DB)"
 	@printf "     %-30s %s\n" "make fclean"      "⚠️  NUCLEAR: removes everything including DB + uploads"
 	@printf "\n  🔧  PER-SERVICE REBUILDS\n"
 	@printf "     %-30s %s\n" "make agent-build-nocache"  "Rebuild agent from scratch"
@@ -232,6 +264,6 @@ help:
 # Catch-all for unrecognized targets.
 %:
 	@echo "Unknown target '$@'. Run 'make help' for available commands."
-.PHONY: all dev dev-re dev-back dev-back-office prod down re clean fclean status logs help build up start stop
+.PHONY: all dev dev-re dev-back dev-back-office prod down re clean clean-nginx fclean status logs help build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal

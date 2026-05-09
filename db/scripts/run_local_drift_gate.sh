@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# IMPORTANT: Run this test locally from Makefile
 
 set -u
 
@@ -9,6 +10,15 @@ cd "$ROOT_DIR"
 if [ -f "$ROOT_DIR/.venv/bin/activate" ]; then
     source "$ROOT_DIR/.venv/bin/activate"
 fi
+
+# DATABASE_URL must be set (in Makefile)
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "ERROR: DATABASE_URL environment variable is not set"
+  exit 1
+fi
+
+# Provide DATABASE_URL for drift_check.py and pytest conftest if not already set
+export DATABASE_URL="${DATABASE_URL:-}"
 
 if [ -x "$ROOT_DIR/.venv/bin/alembic" ]; then
     ALEMBIC="$ROOT_DIR/.venv/bin/alembic"
@@ -32,9 +42,6 @@ if [ -z "$ALEMBIC" ] || [ -z "$PYTHON" ] || [ -z "$PYTEST" ]; then
     echo "Missing required tools: alembic/python/pytest must be installed and discoverable on PATH." >&2
     exit 127
 fi
-
-# Provide DATABASE_URL for drift_check.py and pytest conftest if not already set
-export DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db}"
 
 LOG_FILE="${DRIFT_LOG_FILE:-logs/drift_gate_local.log}"
 PENDING_REV_ID="${PENDING_REV_ID:-pending_check_tmp_local}"
