@@ -117,9 +117,6 @@ STEP 2 — Activate the scaling editor:
     "halve" = original/2, "scale to 20" = 20.
   After one successful call, STOP. Confirm to the user. Do not call scale_recipe again.
 
-STEP 3 — Apply changes:
-  When the chef confirms "apply", call apply_recipe_changes with the final values.
-
 ADDITIONAL RULES:
 - NEVER pass an empty string as recipe_id to scale_recipe.
 - isDirty in STATE_SNAPSHOT means the widget has unsaved UI changes.
@@ -594,77 +591,77 @@ async def scale_recipe(
     )
 
 
-@agent.tool
-async def apply_recipe_changes(
-    ctx: RunContext[StateDeps[KitchenState]],
-    recipe_id: str,
-    portions: float | None = None,
-    total_raw_weight: float | None = None,
-    total_cooked_weight: float | None = None,
-    ingredients: list[dict[str, Any]] | None = None,
-) -> StateDeltaEvent:
-    """Apply scaled recipe changes to the database.
+# @agent.tool
+# async def apply_recipe_changes(
+#     ctx: RunContext[StateDeps[KitchenState]],
+#     recipe_id: str,
+#     portions: float | None = None,
+#     total_raw_weight: float | None = None,
+#     total_cooked_weight: float | None = None,
+#     ingredients: list[dict[str, Any]] | None = None,
+# ) -> StateDeltaEvent:
+#     """Apply scaled recipe changes to the database.
 
-    Persists the updated portions, weights, and ingredient quantities via
-    PUT /recipes/:id, then returns a STATE_DELTA confirming the clean state.
-    """
-    updates: dict[str, Any] = {}
-    if portions is not None:
-        updates["portions_count_resolved"] = portions
-    if total_raw_weight is not None:
-        updates["total_raw_weight_grams"] = total_raw_weight
-    if total_cooked_weight is not None:
-        updates["total_cooked_weight_grams"] = total_cooked_weight
+#     Persists the updated portions, weights, and ingredient quantities via
+#     PUT /recipes/:id, then returns a STATE_DELTA confirming the clean state.
+#     """
+#     updates: dict[str, Any] = {}
+#     if portions is not None:
+#         updates["portions_count_resolved"] = portions
+#     if total_raw_weight is not None:
+#         updates["total_raw_weight_grams"] = total_raw_weight
+#     if total_cooked_weight is not None:
+#         updates["total_cooked_weight_grams"] = total_cooked_weight
 
-    try:
-        resp = await _http_client.put(
-            f"{FASTAPI_URL}/recipes/{recipe_id}",
-            json=updates,
-            headers=_backend_headers(),
-            timeout=10,
-        )
-        resp.raise_for_status()
-    except Exception as exc:
-        return StateDeltaEvent(
-            type=EventType.STATE_DELTA,
-            delta=[
-                _PatchOp(
-                    op="replace",
-                    path="/error",
-                    value=f"Failed to save: {exc}",
-                ).model_dump()
-            ],
-        )
+#     try:
+#         resp = await _http_client.put(
+#             f"{FASTAPI_URL}/recipes/{recipe_id}",
+#             json=updates,
+#             headers=_backend_headers(),
+#             timeout=10,
+#         )
+#         resp.raise_for_status()
+#     except Exception as exc:
+#         return StateDeltaEvent(
+#             type=EventType.STATE_DELTA,
+#             delta=[
+#                 _PatchOp(
+#                     op="replace",
+#                     path="/error",
+#                     value=f"Failed to save: {exc}",
+#                 ).model_dump()
+#             ],
+#         )
 
-    delta_ops: list[dict[str, Any]] = [
-        _PatchOp(op="replace", path="/isDirty", value=False).model_dump()
-    ]
-    if portions is not None:
-        delta_ops.append(
-            _PatchOp(op="replace", path="/original/portions", value=portions).model_dump()
-        )
-    if total_raw_weight is not None:
-        delta_ops.append(
-            _PatchOp(op="replace", path="/original/totalRawWeight", value=total_raw_weight).model_dump()
-        )
-    if total_cooked_weight is not None:
-        delta_ops.append(
-            _PatchOp(op="replace", path="/original/totalCookedWeight", value=total_cooked_weight).model_dump()
-        )
-    if ingredients:
-        for i, ing in enumerate(ingredients):
-            delta_ops.append(
-                _PatchOp(
-                    op="replace",
-                    path=f"/ingredients/{i}/originalQuantity",
-                    value=ing.get("quantity"),
-                ).model_dump()
-            )
+#     delta_ops: list[dict[str, Any]] = [
+#         _PatchOp(op="replace", path="/isDirty", value=False).model_dump()
+#     ]
+#     if portions is not None:
+#         delta_ops.append(
+#             _PatchOp(op="replace", path="/original/portions", value=portions).model_dump()
+#         )
+#     if total_raw_weight is not None:
+#         delta_ops.append(
+#             _PatchOp(op="replace", path="/original/totalRawWeight", value=total_raw_weight).model_dump()
+#         )
+#     if total_cooked_weight is not None:
+#         delta_ops.append(
+#             _PatchOp(op="replace", path="/original/totalCookedWeight", value=total_cooked_weight).model_dump()
+#         )
+#     if ingredients:
+#         for i, ing in enumerate(ingredients):
+#             delta_ops.append(
+#                 _PatchOp(
+#                     op="replace",
+#                     path=f"/ingredients/{i}/originalQuantity",
+#                     value=ing.get("quantity"),
+#                 ).model_dump()
+#             )
 
-    return StateDeltaEvent(
-        type=EventType.STATE_DELTA,
-        delta=delta_ops,
-    )
+#     return StateDeltaEvent(
+#         type=EventType.STATE_DELTA,
+#         delta=delta_ops,
+#     )
 
 
 @agent.tool
