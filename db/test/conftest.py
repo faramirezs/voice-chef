@@ -5,10 +5,13 @@ from sqlalchemy.pool import NullPool
 from alembic.config import Config
 
 
-TEST_DB_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db",
-)
+# DATABASE_URL must be set (from .env or environment)
+TEST_DB_URL = os.environ.get("DATABASE_URL")
+if not TEST_DB_URL:
+    raise RuntimeError(
+        "DATABASE_URL environment variable is not set. "
+        "Please set it before running tests (e.g., from .env file)."
+    )
 
 
 @pytest.fixture(scope="session")

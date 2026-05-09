@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-export DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@db:5432/recipe_db}
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL environment variable is not set"
+  exit 1
+fi
 export PYTHONPATH=/code
 
 # Wait for the database to be ready, apply migrations, then start the application server
