@@ -18,7 +18,7 @@ export interface ScalingContext {
 }
 
 export interface LastAction {
-  type: "search" | "select" | "scale" | "apply" | "browse" | "clear";
+  type: "search" | "select" | "scale" | "apply" | "browse" | "clear" | "voice";
   timestamp: number;
 }
 

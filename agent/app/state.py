@@ -29,7 +29,7 @@ class ScalingContext(BaseModel):
 class LastAction(BaseModel):
     """Record of the last user action for agent reasoning."""
 
-    type: str  # "search" | "select" | "scale" | "apply" | "browse" | "clear"
+    type: str  # "search" | "select" | "scale" | "apply" | "browse" | "clear" | "voice"
     timestamp: int  # epoch ms
 
 
