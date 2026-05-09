@@ -2,8 +2,8 @@ services:
   nginx-proxy:
     build: ./nginx-proxy/
     ports:
-      - "8080:80"
-      - "4444:4444"
+      - "80:80"
+      - "443:443"
     depends_on:
       - office-frontend
       - kitchen-frontend
