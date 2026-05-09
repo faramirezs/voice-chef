@@ -227,9 +227,9 @@ export function CreateRecipePage() {
               <Button
                 variant="outline"
                 onClick={addIngredientRow}
-                className="border-black text-lg text-green-900 font-bold px-3 py-1 h-auto"
+                className="border-black text-sm text-green-900 font-bold px-3 py-1 h-auto"
               >
-                + Add Row
+                + Add Ingredient
               </Button>
             </div>
           </Section>
