@@ -123,7 +123,7 @@ export function RecipeChips(props: Record<string, unknown>) {
     return (
       <div
         ref={containerRef}
-        className="flex items-center gap-3 overflow-x-auto"
+        className="flex flex-col items-center gap-3 w-full"
         onKeyDown={handleKeyDown}
         role="listbox"
         aria-label="Recipe options"
@@ -135,7 +135,7 @@ export function RecipeChips(props: Record<string, unknown>) {
             type="button"
             role="option"
             className={cn(
-              "flex-shrink-0 flex items-center gap-3 rounded-xl p-2 pr-4 transition-all",
+              "flex items-center gap-3 rounded-xl p-2 pr-4 w-full max-w-sm transition-all",
               "bg-surface-alt/60 hover:bg-surface-alt border border-border/30 hover:border-border/60",
               "focus:outline-none focus:ring-2 focus:ring-primary/50",
               item.variant === "destructive" && "border-error/30 hover:border-error/60 hover:bg-error/10",
@@ -150,11 +150,11 @@ export function RecipeChips(props: Record<string, unknown>) {
               />
             )}
             <div className="flex flex-col items-start text-left min-w-0">
-              <span className="text-sm font-medium text-text truncate max-w-[140px]">
+              <span className="text-sm font-medium text-text">
                 {item.label}
               </span>
               {item.description && (
-                <span className="text-xs text-text-muted truncate max-w-[140px]">
+                <span className="text-xs text-text-muted">
                   {item.description}
                 </span>
               )}
@@ -162,9 +162,16 @@ export function RecipeChips(props: Record<string, unknown>) {
           </button>
         ))}
         {overflow > 0 && (
-          <span className="flex-shrink-0 text-sm text-text-muted px-2">
+          <button
+            type="button"
+            className="text-sm text-text-muted hover:text-text transition-colors px-2"
+            onClick={() => {
+              // Send a message to the agent requesting the full list.
+              handleAgentAction("show all matching recipes");
+            }}
+          >
             +{overflow} more
-          </span>
+          </button>
         )}
       </div>
     );
