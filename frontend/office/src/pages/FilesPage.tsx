@@ -94,16 +94,51 @@ export function FilesPage() {
       setUploadBytesLoaded(0);
       setUploadProgress(0);
 
-      uploadMutation.mutate({
-        file,
-        onProgress: (progressEvent) => {
-          if (!progressEvent.total) return;
-          setUploadBytesLoaded(progressEvent.loaded);
-          setUploadBytesTotal(progressEvent.total);
-          setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
-        },
-      });
+      // wait for validation before uploading (progress handler attached below)
     }
+    if (!file) return;
+
+    const validatePDF = async (f: File) => {
+      const MAX_SIZE_MB = 100;
+      const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024; // 100MB
+      const allowedType = 'application/pdf';
+
+      if (f.size === 0) throw new Error('File is empty');
+      if (f.size > MAX_SIZE) throw new Error(`File size exceeds the limit of ${MAX_SIZE_MB}MB`);
+
+      // MIME type may be absent in some browsers; check both type and extension
+      const nameLower = f.name.toLowerCase();
+      if (f.type !== allowedType && !nameLower.endsWith('.pdf')) {
+        throw new Error('Only PDF files are allowed');
+      }
+
+      // Read first bytes to verify PDF header (%PDF-)
+      const headerSize = 5;
+      const buf = await f.slice(0, headerSize).arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const header = String.fromCharCode(...bytes);
+      if (!header.startsWith('%PDF-')) {
+        throw new Error('Invalid or corrupted PDF file');
+      }
+    };
+
+    setUploadError(null);
+    validatePDF(file)
+      .then(() =>
+        uploadMutation.mutate({
+          file,
+          onProgress: (progressEvent: any) => {
+            if (!progressEvent.total) return;
+            setUploadBytesLoaded(progressEvent.loaded);
+            setUploadBytesTotal(progressEvent.total);
+            setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
+          },
+        })
+      )
+      .catch((err: any) => setUploadError(err?.message || String(err)))
+      .finally(() => {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      });
   };
 
   const handleDelete = (filename: string) => {
