@@ -19,6 +19,21 @@ ENV_FILE="/home/voice-chef/voice-chef/pi/.env"
 KIOSK_URL="https://${SERVER_HOST}/kitchen/?kiosk=1"
 KIOSK_PROFILE_DIR="/home/voice-chef/.kiosk-profile"
 
+# Wait for the server to be reachable before launching Chromium.
+# Without this, on a fresh boot Chromium can race ahead of Tailscale/network
+# readiness — the SPA's first /api/auth/me call fails with a network error
+# (treated identically to 401 by getCurrentUser), the SPA redirects to
+# /login, and the login page sees a valid cookie and bounces to office root.
+# Net effect: kiosk lands on the office start page instead of /kitchen/.
+echo "[kitchen-point] $(date -Iseconds) — waiting for ${SERVER_HOST} to respond"
+for i in $(seq 1 60); do
+    if curl -kfsS --max-time 3 "https://${SERVER_HOST}/kitchen/" >/dev/null 2>&1; then
+        echo "[kitchen-point] server reachable after ${i}×2s"
+        break
+    fi
+    sleep 2
+done
+
 echo "[kitchen-point] $(date -Iseconds) — launching Chromium kiosk → ${KIOSK_URL}"
 
 # --ignore-certificate-errors accepts both the server's self-signed cert
