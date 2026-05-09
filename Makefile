@@ -58,9 +58,15 @@ dev-re: $(ENV)
 dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
+
 dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+
+up: $(ENV)
+	@echo "Starting in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
+	@echo "VOICE-CHEF is running in dev_mode"
 
 # ── Production target ──────────────────────────────────────────────────────
 
@@ -80,7 +86,8 @@ dev-back-office: $(ENV)
 #   /openapi.json → backend
 
 prod: $(ENV)
-	@echo "Building fresh images and restarting in prod_mode"
+	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
 	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
@@ -131,7 +138,6 @@ fclean:
 	@echo "Nuclear cleanup complete. Database and uploads are gone."
 
 # ── Full reset + dev start ─────────────────────────────────────────────────
-#   make re   Shortcut for: make clean && make dev
 
 re: clean dev
 
@@ -157,8 +163,7 @@ status:
 		printf '\n'
 
 logs:
-	@echo "Fetching logs..."
-	@docker compose logs -f
+	@docker compose logs
 
 # ── Build target (no start) ────────────────────────────────────────────────
 #   make build   Build all images without starting containers.
