@@ -127,28 +127,31 @@ ADDITIONAL RULES:
 COMPONENT GUIDE:
 * 'placeholder' (any slot): test card. Args: message.
 * 'recipe_detail' (canvas slot): unified recipe card with detail + scaling. Args: recipe_id.
-* 'confirmation_chips' (chips slot): action buttons. Args: actions.
+* 'confirmation_chips' (chips slot): action buttons or rich recipe cards. Args: actions (legacy) or items (rich).
 * 'notification' (notifications slot): toast. Args: message, level, duration.
 
 SLOT GUIDE:
 'canvas' = primary content area (center)
 'sticky' = pinned top bar
-'chips' = bottom bar for transient actions
+'chips' = floating panel over canvas for transient actions and recipe selection
 'notifications' = top-right toasts
 'overlay' = full-screen modal
-
 After placing a component, STATE_SNAPSHOT from other tools will populate its state.
 Do not duplicate data in render_component args.
 
 TRANSIENT UI TOOLS:
 * show_notification(message, level='info', duration=5000): show auto-dismiss toast.
   Levels: info, success, warning, error.
-* show_chip(actions=[{label, message, variant?}]): show action buttons in chips bar.
+* show_chip(actions=[...]): show action buttons in chips bar (legacy).
   Each action sends its message back to you when clicked.
+* show_chip(items=[...], total_count=N): show rich recipe cards in chips bar.
+  Each item: {id, label, message, image_url?, description?, variant?, action_type?, action_payload?}.
+  action_type: "agent" (default) sends message back; "dispatch" renders directly.
+  Capped at 6 items; pass total_count for overflow indicator.
 * clear_slot(slot): remove content from a slot.
 
 Use show_notification for status updates (saved, errors, completion confirmations).
-Use show_chip when you need explicit user confirmation before an action.
+Use show_chip when you need explicit user confirmation or recipe selection.
 
 ERROR & EMPTY STATE HANDLING:
 If get_recipes_list returns 0 results → call show_notification(level='warning') and STOP.
@@ -442,25 +445,55 @@ async def show_notification(
 @agent.tool
 async def show_chip(
     ctx: RunContext[StateDeps[KitchenState]],
-    actions: list[dict[str, str]],
+    actions: list[dict[str, str]] | None = None,
+    items: list[dict[str, Any]] | None = None,
+    total_count: int = 0,
 ) -> ToolReturn:
-    """Show action confirmation buttons in the chips bar.
+    """Show action buttons or rich recipe cards in the chips bar.
 
-    Each action has: label (button text), message (sent to agent on click).
-    Optional: variant ("default" | "ghost" | "destructive").
+    MODE 1 — Legacy actions (backward-compatible):
+      actions: list of {label, message, variant?}.
+      Each action sends its message back to the agent on click.
+      Example: [{"label": "Apply", "message": "confirm apply", "variant": "default"}]
 
-    Example: [{"label": "Apply", "message": "confirm apply scaling", "variant": "default"}]
+    MODE 2 — Rich items (for recipe selection):
+      items: list of dicts with:
+        id (str): recipe id
+        label (str): recipe name
+        message (str): text sent to agent on click
+        image_url (str|None): thumbnail URL
+        description (str|None): short description
+        variant ("default"|"ghost"|"destructive")
+        action_type ("agent"|"dispatch"|"navigate"): default "agent"
+          - "agent": sends message back to agent (current behavior)
+          - "dispatch": renders component directly from action_payload
+          - "navigate": updates KitchenState via agent.setState
+        action_payload (dict|None): e.g. {"slot": "canvas", "component": "recipe_detail", "props": {...}}
+      total_count: total matching recipes (if > len(items), shows "+N more").
+      Capped at 6 items; pass total_count for overflow indicator.
     """
-    value = {
+    payload: dict[str, Any] = {
         "type": "ui.render",
         "version": "1",
         "component": "confirmation_chips",
         "slot": "chips",
-        "actions": actions,
     }
+    if items:
+        # Rich mode: cap at 6 items.
+        payload["items"] = items[:6]
+        if total_count > len(items):
+            payload["total_count"] = total_count
+    elif actions:
+        payload["actions"] = actions
+    else:
+        return ToolReturn(
+            return_value={"status": "error", "message": "Provide either actions or items"},
+            metadata=[],
+        )
+
     return ToolReturn(
         return_value={"status": "ok"},
-        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.render", value=value)],
+        metadata=[CustomEvent(type=EventType.CUSTOM, name="ui.render", value=payload)],
     )
 
 

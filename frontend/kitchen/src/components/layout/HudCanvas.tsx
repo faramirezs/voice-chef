@@ -7,6 +7,7 @@ import { HudVoiceBar } from "./HudVoiceBar";
 
 import { CommandPalette } from "@/components/overlay/CommandPalette";
 import { useEffect, useState } from "react";
+
 export function HudCanvas() {
   return (
     <AgentSlotProvider>
@@ -18,7 +19,11 @@ export function HudCanvas() {
 function EmptyCanvas() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-      <p className="text-2xl text-text">Voice Chef</p>
+      <img
+        src="/voice-chef-logo.svg"
+        alt="Voice Chef"
+        className="w-64 h-auto max-w-md opacity-80"
+      />
       <div className="w-full max-w-lg px-4 flex items-center gap-2">
         <p className="flex-1 text-sm text-text-secondary">Use Cmd + K to open command palette.</p>
       </div>
@@ -38,6 +43,7 @@ function HudCanvasInner() {
 
   const hasCanvas = slots.canvas !== undefined;
   const hasOverlay = slots.overlay !== undefined;
+  const hasChips = slots.chips !== undefined;
 
   // Auto-close palette when canvas content arrives so user can see the card.
   useEffect(() => {
@@ -67,11 +73,20 @@ function HudCanvasInner() {
       </div>
 
       {/* Canvas -- primary content area */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col relative">
         {hasCanvas ? (
           <SlotOutlet slot="canvas" />
         ) : (
           <EmptyCanvas />
+        )}
+
+        {/* Chips -- floating panel overlay at bottom of canvas */}
+        {hasChips && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 transition-all duration-200 ease-out">
+            <div className="bg-surface/80 backdrop-blur-md border border-border/30 rounded-2xl shadow-lg px-4 py-3">
+              <SlotOutlet slot="chips" />
+            </div>
+          </div>
         )}
       </div>
 
@@ -80,18 +95,11 @@ function HudCanvasInner() {
         <HudStatusIndicator />
       </div>
 
-
       {/* Voice bar -- bottom center, above status */}
       <div className="flex-shrink-0 flex justify-center">
         <HudVoiceBar />
       </div>
 
-      {/* Chips -- bottom bar for action confirmations */}
-      <div className="flex-shrink-0">
-        <SlotOutlet slot="chips" />
-      </div>
-
-      {/* Notifications -- top-right corner */}
       {/* Notifications -- top-right corner, above overlays */}
       <div className="absolute top-4 right-4 z-50">
         <SlotOutlet slot="notifications" />

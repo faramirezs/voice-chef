@@ -120,6 +120,8 @@ export function useToolActivity(): ToolActivity[] {
 // These are set by useAgent() once during mount, then callable from any component.
 let _sendMessage: ((text: string) => void) | null = null;
 let _reset: (() => void) | null = null;
+// Per-run AbortController for cancelling agent runs.
+let _abortController: AbortController | null = null;
 
 export function getSendMessage(): (text: string) => void {
   if (!_sendMessage) throw new Error("Agent not initialized");
@@ -129,6 +131,32 @@ export function getSendMessage(): (text: string) => void {
 export function getReset(): () => void {
   if (!_reset) throw new Error("Agent not initialized");
   return _reset;
+}
+
+/** Abort the currently running agent run (if any). */
+export function getAbortAgent(): () => void {
+  return () => {
+    if (_abortController) {
+      _abortController.abort();
+    }
+    // Fallback: tell the agent client itself.
+    try { chefAgent.abortRun(); } catch { /* not running */ }
+  };
+}
+
+/** Dispatch a synthetic canvas loading skeleton. */
+function dispatchCanvasLoading(): void {
+  emitEnvelope({
+    type: "ui.render",
+    version: "1",
+    component: "canvas_loading",
+    slot: "canvas",
+  });
+}
+
+/** Clear the canvas slot via synthetic envelope. */
+function clearCanvasSlot(): void {
+  emitEnvelope({ type: "ui.clear", version: "1", slot: "canvas" });
 }
 
 function emitEnvelope(raw: string | Record<string, unknown>): void {
@@ -259,6 +287,14 @@ export function useAgent() {
       setToolActivity([]);
       _setToolActivity([]);
 
+
+      // Clear old canvas content and show loading skeleton.
+      clearCanvasSlot();
+      dispatchCanvasLoading();
+
+      // Create a fresh AbortController for this run.
+      const ctrl = new AbortController();
+      _abortController = ctrl;
       if (debugStream) {
         console.log("[agent-debug] run:start", {
           at: new Date().toISOString(),
@@ -456,16 +492,23 @@ export function useAgent() {
             syncMessages();
           }
           if (event.type === EventType.RUN_ERROR) {
-            setToolActivity((prev) =>
-              prev.map((item) =>
-                item.status === "running" ? { ...item, status: "failed" } : item
-              )
-            );
-            _setToolActivity((prev) =>
-              prev.map((item) =>
-                item.status === "running" ? { ...item, status: "failed" } : item
-              )
-            );
+            const errEvent = event as { code?: string };
+            if (errEvent.code === "abort") {
+              // Clean cancellation — do not mark tools as failed.
+              _setToolActivity([]);
+              clearCanvasSlot();
+            } else {
+              setToolActivity((prev) =>
+                prev.map((item) =>
+                  item.status === "running" ? { ...item, status: "failed" } : item
+                )
+              );
+              _setToolActivity((prev) =>
+                prev.map((item) =>
+                  item.status === "running" ? { ...item, status: "failed" } : item
+                )
+              );
+            }
           }
         },
       };
@@ -477,7 +520,7 @@ export function useAgent() {
 
       try {
         const result: RunAgentResult = await chefAgent.runAgent(
-          { runId: uuid() },
+          { runId: uuid(), abortController: ctrl },
           subscriber,
         );
         if (debugStream) {
@@ -489,25 +532,31 @@ export function useAgent() {
 
         void result;
       } catch (err) {
-        console.error("Agent run failed:", err);
-        const errorMsg: Message = {
-          id: uuid(),
-          role: "assistant",
-          content:
-            "Sorry, something went wrong reaching the kitchen assistant. Please try again.",
-        };
-        chefAgent.addMessage(errorMsg);
-        setToolActivity((prev) =>
-          prev.map((item) =>
-            item.status === "running" ? { ...item, status: "failed" } : item,
-          ),
-        );
-        _setToolActivity((prev) =>
-          prev.map((item) =>
-            item.status === "running" ? { ...item, status: "failed" } : item,
-          ),
-        );
+        // Suppress error handling for intentional aborts.
+        if (ctrl.signal.aborted) {
+          // Already handled in RUN_ERROR subscriber.
+        } else {
+          console.error("Agent run failed:", err);
+          const errorMsg: Message = {
+            id: uuid(),
+            role: "assistant",
+            content:
+              "Sorry, something went wrong reaching the kitchen assistant. Please try again.",
+          };
+          chefAgent.addMessage(errorMsg);
+          setToolActivity((prev) =>
+            prev.map((item) =>
+              item.status === "running" ? { ...item, status: "failed" } : item,
+            ),
+          );
+          _setToolActivity((prev) =>
+            prev.map((item) =>
+              item.status === "running" ? { ...item, status: "failed" } : item,
+            ),
+          );
+        }
       } finally {
+        _abortController = null;
         if (debugStream) {
           console.log("[agent-debug] run:end", {
             at: new Date().toISOString(),

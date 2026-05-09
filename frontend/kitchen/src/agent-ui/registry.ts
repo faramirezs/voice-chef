@@ -36,6 +36,20 @@ const ConfirmationChips = lazy(() =>
   }))
 );
 
+// Canvas loading skeleton.
+const CanvasLoadingState = lazy(() =>
+  import("@/components/layout/CanvasLoadingState").then((m) => ({
+    default: m.CanvasLoadingState,
+  }))
+);
+
+// Rich recipe chips (replaces ConfirmationChips).
+const RecipeChips = lazy(() =>
+  import("@/components/chips/RecipeChips").then((m) => ({
+    default: m.RecipeChips,
+  }))
+);
+
 // Notification toast for the notifications slot.
 const NotificationToast = lazy(() =>
   import("@/components/notifications/NotificationToast").then((m) => ({
@@ -67,8 +81,14 @@ registry.set("recipe_detail", {
   defaultSlot: "canvas",
 });
 
+
+registry.set("canvas_loading", {
+  component: CanvasLoadingState as ComponentType<Record<string, unknown>>,
+  defaultSlot: "canvas",
+});
+
 registry.set("confirmation_chips", {
-  component: ConfirmationChips as ComponentType<Record<string, unknown>>,
+  component: RecipeChips as ComponentType<Record<string, unknown>>,
   defaultSlot: "chips",
 });
 
