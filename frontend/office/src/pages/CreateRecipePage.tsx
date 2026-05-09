@@ -6,13 +6,13 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Section } from '@/components/Section';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils';
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-yellow-100 text-yellow-800',
-  active: 'bg-green-100 text-green-800',
+// const STATUS_STYLES: Record<string, string> = {
+//   draft: 'bg-yellow-100 text-yellow-800',
+//   active: 'bg-green-100 text-green-800',
 
-};
+// };
 
 
 export function CreateRecipePage() {
