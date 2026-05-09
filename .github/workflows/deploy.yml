@@ -36,10 +36,10 @@ jobs:
           echo "Schema drift gate failed — aborting deploy"
           exit 1
 
-      - name: Check VPS disk space
-        run: |
-          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "echo '=== Disk usage ===' && df -h / && echo '=== Docker disk usage ===' && docker system df"
+      # - name: Check VPS disk space
+      #   run: |
+      #     ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+      #       "echo '=== Disk usage ===' && df -h / && echo '=== Docker disk usage ===' && docker system df"
       - name: Set deploy mode
         id: mode
         run: echo "mode=${{ github.event.inputs.mode || 'prod' }}" >> $GITHUB_OUTPUT
