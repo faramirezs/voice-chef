@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { KButton } from "@/components/ui/KButton";
 import { getSendMessage } from "@/hooks/useAgent";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
+import type { SlotId } from "@/agent-ui/types";
 import { cn } from "@/lib/utils";
 
 // --- Legacy chip action (backward-compatible) ---
@@ -96,8 +97,9 @@ export function RecipeChips(props: Record<string, unknown>) {
       const slot = (payload.slot as string) || "canvas";
       const component = (payload.component as string) || "";
       const componentProps = (payload.props as Record<string, unknown>) || {};
-      if (component) {
-        dispatch(slot, component, componentProps);
+      const validSlots: Set<string> = new Set(["canvas", "sticky", "chips", "notifications", "overlay"]);
+      if (component && validSlots.has(slot)) {
+        dispatch(slot as SlotId, component, componentProps);
       }
       clear("chips");
     },

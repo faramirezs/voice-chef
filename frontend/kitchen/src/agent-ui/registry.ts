@@ -29,12 +29,6 @@ const RecipeDetailCard = lazy(() =>
   }))
 );
 
-// Confirmation chips for the chips slot.
-const ConfirmationChips = lazy(() =>
-  import("@/components/chips/ConfirmationChips").then((m) => ({
-    default: m.ConfirmationChips,
-  }))
-);
 
 // Canvas loading skeleton.
 const CanvasLoadingState = lazy(() =>
