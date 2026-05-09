@@ -15,12 +15,18 @@ export function HudCanvas() {
   );
 }
 
-function EmptyCanvas() {
+function EmptyCanvas({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
       <p className="text-2xl text-text">Voice Chef</p>
-      <div className="w-full max-w-lg px-4 flex items-center gap-2">
-        <p className="flex-1 text-sm text-text-secondary">Use Cmd + K to open command palette.</p>
+      <div className="w-full max-w-lg px-4 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="min-h-11 px-4 py-3 rounded-lg text-sm text-text-secondary border border-text-secondary/20 hover:bg-text-secondary/10 active:bg-text-secondary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-secondary/40 transition-colors"
+        >
+          Tap or press Cmd + K / Ctrl + K to open command palette.
+        </button>
       </div>
     </div>
   );
@@ -71,7 +77,7 @@ function HudCanvasInner() {
         {hasCanvas ? (
           <SlotOutlet slot="canvas" />
         ) : (
-          <EmptyCanvas />
+          <EmptyCanvas onOpen={() => setPaletteOpen(true)} />
         )}
       </div>
 
