@@ -4,16 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KCard } from "@/components/ui/KCard";
 import { KInput } from "@/components/ui/KInput";
 import { VoiceInput } from "@/components/chat/VoiceInput";
-import { getSendMessage, useEnvelope, useIsStreaming, setSharedAgentState } from "@/hooks/useAgent";
+import { getSendMessage, useEnvelope, useIsStreaming, setSharedAgentState, getAbortAgent } from "@/hooks/useAgent";
 import { useAgentSlots } from "@/components/layout/AgentSlotProvider";
 import { cn } from "@/lib/utils";
 import { chefAgent } from "@/lib/agent";
 import { useRecipeScaling } from "@/hooks/useRecipeScaling";
 import { type KitchenState } from "@/types/agent-state";
-
-interface CommandPaletteProps {
-  onClose: () => void;
-}
+import { closePalette } from "@/lib/palette-state";
 
 interface CommandItem {
   id: string;
@@ -21,7 +18,7 @@ interface CommandItem {
   action: () => void;
 }
 
-export function CommandPalette({ onClose }: CommandPaletteProps) {
+export function CommandPalette() {
   const { dispatch, clear } = useAgentSlots();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Array<{ id: string; name: string }>>([]);
@@ -48,7 +45,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
           };
           chefAgent.setState(ks);
           dispatch("canvas", "recipe_list", {});
-          onClose();
         },
       },
       {
@@ -63,7 +59,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
               duration: 4000,
             });
           }
-          onClose();
         },
       },
       {
@@ -78,11 +73,11 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
             scaling: null,
             last_action: { type: "clear", timestamp: Date.now() },
           });
-          onClose();
+          closePalette();
         },
       },
     ],
-    [dispatch, clear, onClose, activateScaling]
+    [dispatch, clear, activateScaling]
   );
   const filteredCommands = useMemo(() => {
     if (!isCommandMode) return [];
@@ -95,16 +90,19 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     inputRef.current?.focus();
   }, []);
 
-  // Escape closes palette
+  // Escape closes palette; aborts agent if streaming.
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        if (isStreaming) {
+          getAbortAgent()();
+        }
+        closePalette();
       }
     };
     document.addEventListener("keydown", handleGlobalKeyDown);
     return () => document.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [onClose]);
+  }, [isStreaming]);
 
   // Subscribe to recipes.list envelopes
   useEnvelope("recipes.list", (envelope) => {
@@ -141,9 +139,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       };
       chefAgent.setState(ks);
       getSendMessage()(`show recipe ${result.id}`);
-      onClose();
     },
-    [onClose]
+    []
   );
 
   const handleInputKeyDown = useCallback(
@@ -176,15 +173,12 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
             }
           }
         } else if (!isStreaming && query.trim() && !isCommandMode) {
-          const ks: KitchenState = {
-            view: "empty",
-            selected_recipe: null,
-            scaling: null,
-            last_action: { type: "search", timestamp: Date.now() },
-          };
+          const currentState = chefAgent.state as KitchenState | null;
+          const ks: KitchenState = currentState && typeof currentState.view === "string"
+            ? { ...currentState, last_action: { type: "search", timestamp: Date.now() } }
+            : { view: "empty", selected_recipe: null, scaling: null, last_action: { type: "search", timestamp: Date.now() } };
           chefAgent.setState(ks);
           getSendMessage()(query.trim());
-          onClose();
           setResults([]);
           setSelectedIndex(0);
         }
@@ -198,7 +192,6 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       isStreaming,
       query,
       handleSelectResult,
-      onClose,
     ]
   );
 
@@ -228,13 +221,12 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
 
   const showNoResults =
     !isStreaming && query.trim() && activeItems.length === 0;
-  const showSearching = isStreaming && query.trim() && !isCommandMode;
 
   return (
     <KCard className="w-full max-w-lg flex flex-col overflow-hidden">
       {/* Input row */}
       <div className="relative flex items-center gap-2 p-4">
-        <div className="relative flex-1">
+        <div className="relative flex-1 flex items-center gap-2">
           <KInput
             ref={inputRef}
             value={query}
@@ -248,15 +240,13 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
             disabled={isStreaming}
           />
           {isStreaming && (
-            <svg
-              className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
+            <button
+              type="button"
+              onClick={() => getAbortAgent()()}
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
             >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
+              Stop
+            </button>
           )}
         </div>
         <VoiceInput
@@ -272,17 +262,20 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto max-h-64 px-4 pb-2 relative">
-        {showSearching && (
-          <div className="flex items-center justify-center gap-2 py-4 text-text-muted">
-            <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <span>Searching...</span>
+        {/* Streaming thinking indicator */}
+        {isStreaming && (
+          <div className="flex items-center justify-center gap-3 py-6">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+            </span>
+            <span className="text-text font-medium">Thinking...</span>
           </div>
         )}
-        {isStreaming && !showSearching && activeItems.length > 0 && (
-          <div className="absolute inset-0 bg-surface/40 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg" />
+
+        {/* Blur overlay over results during streaming */}
+        {isStreaming && activeItems.length > 0 && (
+          <div className="absolute inset-0 bg-surface/40 backdrop-blur-sm z-10 rounded-lg" />
         )}
 
 
@@ -292,7 +285,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
           </div>
         )}
 
-        {activeItems.length > 0 && (
+        {activeItems.length > 0 && !isStreaming && (
           <ul className="space-y-1">
             {activeItems.map((item, index) => (
               <li

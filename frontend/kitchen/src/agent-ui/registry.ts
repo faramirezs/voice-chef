@@ -29,14 +29,6 @@ const RecipeDetailCard = lazy(() =>
   }))
 );
 
-
-// Canvas loading skeleton.
-const CanvasLoadingState = lazy(() =>
-  import("@/components/layout/CanvasLoadingState").then((m) => ({
-    default: m.CanvasLoadingState,
-  }))
-);
-
 // Rich recipe chips (replaces ConfirmationChips).
 const RecipeChips = lazy(() =>
   import("@/components/chips/RecipeChips").then((m) => ({
@@ -72,12 +64,6 @@ registry.set("recipe_list", {
 
 registry.set("recipe_detail", {
   component: RecipeDetailCard as ComponentType<Record<string, unknown>>,
-  defaultSlot: "canvas",
-});
-
-
-registry.set("canvas_loading", {
-  component: CanvasLoadingState as ComponentType<Record<string, unknown>>,
   defaultSlot: "canvas",
 });
 

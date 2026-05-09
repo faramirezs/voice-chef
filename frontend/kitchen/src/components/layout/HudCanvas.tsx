@@ -4,9 +4,9 @@ import { useAgent } from "@/hooks/useAgent";
 import { useAgentSlots } from "./AgentSlotProvider";
 import { HudStatusIndicator } from "./HudStatusIndicator";
 import { HudVoiceBar } from "./HudVoiceBar";
-
 import { CommandPalette } from "@/components/overlay/CommandPalette";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { usePaletteOpen, togglePalette } from "@/lib/palette-state";
 
 export function HudCanvas() {
   return (
@@ -39,26 +39,18 @@ function HudCanvasInner() {
   useAgent();
 
   const { slots } = useAgentSlots();
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const isPaletteOpen = usePaletteOpen();
 
   const hasCanvas = slots.canvas !== undefined;
   const hasOverlay = slots.overlay !== undefined;
   const hasChips = slots.chips !== undefined;
-
-  // Auto-close palette when canvas content arrives so user can see the card.
-  useEffect(() => {
-    if (hasCanvas && paletteOpen) {
-      setPaletteOpen(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCanvas]);
 
   // Cmd+K toggles the command palette.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setPaletteOpen((prev) => !prev);
+        togglePalette();
       }
     };
     window.addEventListener("keydown", handler);
@@ -106,9 +98,9 @@ function HudCanvasInner() {
       </div>
 
       {/* Overlay -- fullscreen modal (command palette or agent overlay) */}
-      {paletteOpen ? (
+      {isPaletteOpen ? (
         <div className="absolute inset-0 z-40 bg-black/50 flex items-start justify-center pt-[15vh]">
-          <CommandPalette onClose={() => setPaletteOpen(false)} />
+          <CommandPalette />
         </div>
       ) : hasOverlay ? (
         <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center">

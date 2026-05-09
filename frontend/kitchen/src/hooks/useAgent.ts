@@ -11,6 +11,7 @@ import {
 } from "@ag-ui/client";
 import { chefAgent } from "@/lib/agent";
 import { DEFAULT_KITCHEN_STATE, type KitchenState } from "@/types/agent-state";
+import { closePalette } from "@/lib/palette-state";
 
 // --- Envelope subscription system ---
 // Module-level subscriber map shared between useAgent and useEnvelope.
@@ -144,20 +145,6 @@ export function getAbortAgent(): () => void {
   };
 }
 
-/** Dispatch a synthetic canvas loading skeleton. */
-function dispatchCanvasLoading(): void {
-  emitEnvelope({
-    type: "ui.render",
-    version: "1",
-    component: "canvas_loading",
-    slot: "canvas",
-  });
-}
-
-/** Clear the canvas slot via synthetic envelope. */
-function clearCanvasSlot(): void {
-  emitEnvelope({ type: "ui.clear", version: "1", slot: "canvas" });
-}
 
 function emitEnvelope(raw: string | Record<string, unknown>): void {
   let parsed: unknown;
@@ -288,10 +275,6 @@ export function useAgent() {
       _setToolActivity([]);
 
 
-      // Clear old canvas content and show loading skeleton.
-      clearCanvasSlot();
-      dispatchCanvasLoading();
-
       // Create a fresh AbortController for this run.
       const ctrl = new AbortController();
       _abortController = ctrl;
@@ -309,19 +292,22 @@ export function useAgent() {
         const agentState = chefAgent.state as Record<string, unknown> | null;
         const looksLikeKitchenState = agentState != null && typeof agentState.view === "string";
 
-        if (looksLikeKitchenState) {
+        if (looksLikeKitchenState && agentState.selected_recipe != null) {
           return {
             view: agentState.view as KitchenState["view"],
-            selected_recipe: (agentState.selected_recipe as KitchenState["selected_recipe"]) ?? null,
+            selected_recipe: agentState.selected_recipe as KitchenState["selected_recipe"],
             scaling: (agentState.scaling as KitchenState["scaling"]) ?? null,
             last_action: { type: "search", timestamp: Date.now() },
           };
-        } else {
-          const currentState = _agentState as Record<string, unknown> | null;
+        }
+
+        // Fallback: derive from scaling widget state if available.
+        const currentState = _agentState as Record<string, unknown> | null;
+        const isScaling = currentState && (currentState as { widget?: string }).widget === "recipe.scaling";
+
+        if (isScaling) {
           return {
-            view: currentState && (currentState as { widget?: string }).widget === "recipe.scaling"
-              ? "scaling"
-              : (_agentState ? "recipe_detail" : "empty"),
+            view: "scaling",
             selected_recipe: currentState && (currentState as { recipeId?: string }).recipeId
               ? {
                   id: String((currentState as { recipeId: unknown }).recipeId),
@@ -332,17 +318,23 @@ export function useAgent() {
                   yield_mode: String((currentState as { original?: { yieldMode?: unknown } }).original?.yieldMode ?? "count"),
                 }
               : null,
-            scaling: currentState && (currentState as { widget?: string }).widget === "recipe.scaling"
-              ? {
-                  target_portions: typeof (currentState as { current?: { portions?: unknown } }).current?.portions === "number"
-                    ? (currentState as { current: { portions: number } }).current.portions
-                    : null,
-                  is_dirty: Boolean((currentState as { isDirty?: unknown }).isDirty),
-                }
-              : null,
+            scaling: {
+              target_portions: typeof (currentState as { current?: { portions?: unknown } }).current?.portions === "number"
+                ? (currentState as { current: { portions: number } }).current.portions
+                : null,
+              is_dirty: Boolean((currentState as { isDirty?: unknown }).isDirty),
+            },
             last_action: { type: "search", timestamp: Date.now() },
           };
         }
+
+        // Truly empty.
+        return {
+          view: "empty",
+          selected_recipe: null,
+          scaling: null,
+          last_action: { type: "search", timestamp: Date.now() },
+        };
       })();
 
       const subscriber: AgentSubscriber = {
@@ -496,7 +488,6 @@ export function useAgent() {
             if (errEvent.code === "abort") {
               // Clean cancellation — do not mark tools as failed.
               _setToolActivity([]);
-              clearCanvasSlot();
             } else {
               setToolActivity((prev) =>
                 prev.map((item) =>
@@ -562,6 +553,7 @@ export function useAgent() {
             at: new Date().toISOString(),
           });
         }
+        closePalette();
       }
 
       syncMessages();
