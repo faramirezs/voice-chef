@@ -69,14 +69,19 @@ jobs:
 
       - name: Fix VPS git permissions (if needed)
         run: |
-          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && \
-             if ! touch .git/objects/.write-test 2>/dev/null; then \
-               echo 'Permissions broken on .git/objects — attempting fix...'; \
-               sudo chown -R \$(whoami):\$(whoami) .git || echo 'sudo failed — fix manually on VPS: sudo chown -R \$USER:\$USER .git'; \
-             else \
-               rm -f .git/objects/.write-test; \
-             fi"
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} "
+            cd ${{ secrets.HETZNER_DEPLOY_PATH }} &&
+            if find .git -not -user \$(whoami) -print -quit 2>/dev/null | grep -q .; then
+              echo 'Root-owned files found in .git — attempting fix...' &&
+              if sudo -n chown -R \$(whoami):\$(whoami) .git 2>/dev/null; then
+                echo 'Permissions fixed.'
+              else
+                echo 'sudo failed. Fix manually on VPS as root:' &&
+                echo '  chown -R deployer:deployer /home/deployer/voice-chef/.git' &&
+                echo 'Aborting — cannot proceed with root-owned git files.' &&
+                exit 1
+              fi
+            fi"
       - name: Pull latest code on VPS
         run: |
           DEPLOY_BRANCH="${{ github.event_name == 'workflow_run' && 'main' || github.ref_name }}"
