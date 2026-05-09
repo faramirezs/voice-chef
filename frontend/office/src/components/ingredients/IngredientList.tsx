@@ -20,18 +20,18 @@ function IngredientSkeleton() {
 }
 
 export function IngredientsList() {
-  const [sourceFilter, setSourceFilter] = useState('');
+  // const [sourceFilter, setSourceFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const offset = page * PAGE_SIZE;
   const normalizedNameFilter = nameFilter.trim();
-  const normalizedSourceFilter = sourceFilter.trim();
+  // const normalizedSourceFilter = sourceFilter.trim();
 
   const { data: ingredientPage, isLoading, isError, error } = useIngredients({
     ...(normalizedNameFilter ? { search: normalizedNameFilter } : {}),
-    ...(normalizedSourceFilter ? { source: normalizedSourceFilter } : {}),
+    // ...(normalizedSourceFilter ? { source: normalizedSourceFilter } : {}),
     offset,
     limit: PAGE_SIZE,
   });
