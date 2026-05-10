@@ -183,13 +183,9 @@ services:
 volumes:
   whisper_models:
   postgres_data:
-<<<<<<< HEAD
   qdrant_storage:
   embedding_models:
-  uploads:
-=======
   backend_data:
->>>>>>> main
   nginx_ssl:
 
 networks:
