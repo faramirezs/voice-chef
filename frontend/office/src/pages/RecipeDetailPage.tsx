@@ -304,46 +304,54 @@ export function RecipeDetailPage() {
       {/* 1 column */}
       <div className="lg:col-span-3">
        <Section title="PREP TIME">
-        {recipe.preparation_time_minutes}
-        {(!recipe.preparation_time_minutes || recipe.preparation_time_minutes === 0) && (
-          <p className="text-sm text-muted-foreground italic">No preparation time minutes added yet.</p>
-          )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="preparation_time_minutes"
+          value={recipe.preparation_time_minutes}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
 
       {/* column 2 */}
       <div className="lg:col-span-3">
        <Section title="COOK TIME">
-        {recipe.cooking_time_minutes}
-        {(!recipe.cooking_time_minutes || recipe.cooking_time_minutes === 0) && (
-          <p className="text-sm text-muted-foreground italic">No cooking time minutes added yet.</p>
-          )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="cooking_time_minutes"
+          value={recipe.cooking_time_minutes}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
       {/* column 3 */}
       <div className="lg:col-span-3">
        <Section title="SERVINGS">
-        {/* Ternary operator for conditional rendering to ensure the math 
-        only happens if a valid value exists. */}
-        {recipe.portions_count_resolved ? (
-          // Only render the number if portion_size_grams is not null or empty
-          Math.round(Number(recipe.portions_count_resolved))
-        ) : (
-          // Fallback message if it is null, 0, or an empty string
-          <p className="text-sm text-muted-foreground italic">No portions count resolved added yet.</p>
-        )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="portions_count_resolved"
+          value={recipe.portions_count_resolved}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
       {/* column 4 */}
       <div className="lg:col-span-3">
        <Section title="PORTION SIZE">
-        {recipe.portion_size_grams ? (
-          Math.round(Number(recipe.portion_size_grams))
-        ) : (
-          <p className="text-sm text-muted-foreground italic">
-            No portion size grams resolved added yet.
-          </p>
-        )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="portion_size_grams"
+          value={recipe.portion_size_grams}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
     </div>
@@ -404,16 +412,6 @@ export function RecipeDetailPage() {
        </Section>
       </div>
     </div>
-
-         {/* ── Identity ───────────────────────────────────────── */}
-      <Section title="Identity">
-        <Grid>
-          <DetailRow label="ID" value={recipe.id} />
-          <DetailRow label="Is component" value={recipe.is_component} />
-          <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
-          <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
-        </Grid>
-      </Section>
       {/* <Section title="yield_mode">
         yield_mode
       </Section> */}
@@ -426,11 +424,39 @@ export function RecipeDetailPage() {
       {/* ── Yield & Weights ────────────────────────────────── */}
       <Section title="Yield & Weights">
           <Grid>
-            {/* <DetailRow label="Yield" value={recipe.yield_amount != null ? `${recipe.yield_amount}${recipe.yield_unit ? ` ${recipe.yield_unit}` : ''}` : null} /> */}
-            {/* <DetailRow label="Reduction factor" value={recipe.reduction_factor} /> */}
-            <DetailRow label="Total cooked weight (g)" value={recipe.total_cooked_weight_grams} />
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total raw weight (g)</p>
+              <InlineEditableRecipeText
+                recipeId={recipe.id}
+                field="total_raw_weight_grams"
+                value={recipe.total_raw_weight_grams}
+                label=""
+                type="number"
+                displayClassName="text-sm"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total cooked weight (g)</p>
+              <InlineEditableRecipeText
+                recipeId={recipe.id}
+                field="total_cooked_weight_grams"
+                value={recipe.total_cooked_weight_grams}
+                label=""
+                type="number"
+                displayClassName="text-sm"
+              />
+            </div>
           </Grid>
         </Section>
+                 {/* ── Identity ───────────────────────────────────────── */}
+      <Section title="Identity">
+        <Grid>
+          <DetailRow label="ID" value={recipe.id} />
+          <DetailRow label="Is component" value={recipe.is_component} />
+          <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
+          <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
+        </Grid>
+      </Section>
     </div>
   );
 }
