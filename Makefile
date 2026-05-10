@@ -17,8 +17,8 @@ COMPOSE = docker compose
 PROD_FILE = docker-compose.yml
 DEV_FILE = docker-compose.override.yml
 ENV = .env
-ENV_SRC = /home/mekundur/.env
-ENV_DST = srcs/.env
+ENV_SRC = /home/$(USER)/.env
+ENV_DST = .env
 
 # ── Default target ─────────────────────────────────────────────────────────
 all: help
