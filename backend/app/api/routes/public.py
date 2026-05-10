@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlmodel import Session, select
-from sqlalchemy.orm import selectinload
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from uuid import UUID
-from typing import Annotated
+from typing import Annotated, Optional, Tuple
 
-from app.core.database import get_session, engine
+from app.core.database import get_session
+from app.core.deps import DEFAULT_TENANT_ID
 from app.core.pagination import (
     pagination_params, PaginationParams, paginate
 )
@@ -26,41 +27,45 @@ from app.schemas.recipe import (
     RecipeDetailResponse, RecipeFilters, RecipeSort
 )
 from app.utils.file_service_image_utils import delete_file
+from app.utils.api_key_utils import require_api_key
+from app.utils.api_key_utils import validate_api_key
+from app.core.limiter import limiter
 
-# -----------------------------------------------------------------------------
-# Constants and Global Instances
-# -----------------------------------------------------------------------------
-
-router = APIRouter(prefix="/recipes", tags=["Recipes"])
-
+router = APIRouter(prefix="", tags=["Public"])
 
 
-# ─── Routes ──────────────────────────────────────────────────────────────────
-
-@router.get("", response_model=PaginatedResponse[RecipeSummaryResponse])
-def retrieve_recipes(
-    current_user: Annotated[Users, Depends(get_current_user)],
+@router.get("/recipes", response_model=PaginatedResponse[RecipeSummaryResponse])
+@limiter.limit("5/minute")
+def get_recipes(
+    request: Request,
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session),
     pagination: PaginationParams = Depends(pagination_params),
-    filters: RecipeFilters = Depends()
+    filters: RecipeFilters = Depends(),
 ):
     """
-    List recipes for authenticated tenant
+    Public endpoint to list recipes from the tenant's API key.
+    Requires API key authentication.
     """
-    tenant_id = current_user.tenant_id
-
+    tenant_id = api_key[0]
     query = select(Recipe).where(Recipe.tenant_id == tenant_id)
+
+    # Public list can be narrowed explicitly with ?status=draft|active.
+    # If omitted, return both so seeded draft data is visible in non-prod setups.
     if filters.status:
         query = query.where(Recipe.status == filters.status.strip())
+    else:
+        query = query.where(Recipe.status.in_(["draft", "active"]))
 
-    # Apply broad "search" across name and description for user-facing search bars.
     if filters.search:
         term = f"%{filters.search.strip()}%"
-        query = query.where(or_(
-            Recipe.name.ilike(term), 
-            Recipe.description.ilike(term)))
+        query = query.where(
+            or_(
+                Recipe.name.ilike(term),
+                Recipe.description.ilike(term),
+            )
+        )
 
-    # Apply precise "name" filter for exact matching or programmatic filtering.
     if filters.name:
         term = f"%{filters.name.strip()}%"
         query = query.where(Recipe.name.ilike(term))
@@ -73,34 +78,33 @@ def retrieve_recipes(
         RecipeSort.created_at_asc: (Recipe.created_at.asc(), Recipe.id.asc()),
         RecipeSort.created_at_desc: (Recipe.created_at.desc(), Recipe.id.desc()),
     }
-
-    selected_sort = sort_options.get(
-        filters.sort_by,
-        sort_options[RecipeSort.updated_at_desc]
-    )
-    query = query.order_by(*selected_sort)
+    query = query.order_by(*sort_options.get(filters.sort_by, sort_options[RecipeSort.updated_at_desc]))
 
     paginated = paginate(query, session, pagination)
-    
-    # Convert recipes using helper function
-    paginated["items"] = [to_recipe_summary(r) for r in paginated["items"]]
-    
+    paginated["items"] = [to_recipe_summary(recipe) for recipe in paginated["items"]]
     return paginated
 
 
-@router.get("/{id}", response_model=RecipeDetailResponse)
-def retrieve_recipe(
-    current_user: Annotated[Users, Depends(get_current_user)],
-    id: UUID, 
+@router.get("/recipes/{id}", response_model=RecipeDetailResponse)
+@limiter.limit("10/minute")
+def get_recipe(
+    request: Request,
+    id: UUID,
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session),
 ):
+    """
+    Public endpoint to retrieve a single recipe.
+    Requires API key authentication.
+    """
+    # Use API key's tenant if provided, otherwise use default tenant
+    tenant_id = api_key[0] if api_key else DEFAULT_TENANT_ID
+    
     statement = (
         select(Recipe)
-        .where(Recipe.id == id, Recipe.tenant_id == current_user.tenant_id)
+        .where(Recipe.id == id, Recipe.tenant_id == tenant_id)
         .options(
-            # Eagerly load the related RecipeIngredient objects in a separate query.
             selectinload(Recipe.recipe_ingredients) 
-            # For each RecipeIngredient, also eagerly load its related Ingredient.
             .selectinload(RecipeIngredient.ingredient) 
         )
     )
@@ -112,15 +116,19 @@ def retrieve_recipe(
     return to_recipe_detail(recipe)
 
 
-# This function creates the many-to-many relationship between a recipe 
-# and its ingredients
-@router.post("", response_model=RecipeDetailResponse, status_code=201)
+@router.post("/recipes", response_model=RecipeDetailResponse, status_code=201)
+@limiter.limit("5/minute")
 def create_recipe(
+    request: Request,
     recipe: RecipeWrite,
-    current_user: Annotated[Users, Depends(get_current_user)],
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session),
 ):
-    tenant_id = current_user.tenant_id
+    """
+    Public endpoint to create a recipe.
+    Requires API key authentication.
+    """
+    tenant_id = api_key[0]
     ensure_unique_recipe_name(session, recipe.name, tenant_id)
     validate_recipe_business_rules(recipe)
     validate_ingredient_sort_order(recipe)
@@ -160,7 +168,6 @@ def create_recipe(
         session.refresh(new_recipe, ["recipe_ingredients"])
         
         # Eagerly load ingredients for response
-        # This loads: Recipe → RecipeIngredient → Ingredient
         statement = (
             select(Recipe)
             .where(Recipe.id == new_recipe.id)
@@ -180,7 +187,7 @@ def create_recipe(
             detail="Recipe name already exists or constraint violation"
         )
     except HTTPException:
-        raise  # Re-raise HTTPException (ingredient not found, 404)
+        raise
     except SQLAlchemyError as e:
         session.rollback()
         raise HTTPException(
@@ -193,26 +200,28 @@ def create_recipe(
             status_code=500, 
             detail="Internal server error"
         )
-
-
+    
 @router.patch("/{id}", response_model=RecipeSummaryResponse)
+@limiter.limit("5/minute")
 def update_recipe(
-    current_user: Annotated[Users, Depends(get_current_user)],
+    request: Request,
     id: UUID, 
     recipe_update: RecipeUpdate, 
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session)
 ):
     """
-    Update recipe fields with partial merge semantics
+    Public endpoint to update a recipe.
+    Requires API key authentication.
     """
+    tenant_id = api_key[0]
     query = select(Recipe).where(
         Recipe.id == id, 
-        Recipe.tenant_id == current_user.tenant_id)
+        Recipe.tenant_id == tenant_id)
     recipe = session.exec(query).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    # NOTE: mpeshko - Convert the input to a dict, EXCLUDING fields not sent by the client
     updates = recipe_update.model_dump(exclude_unset=True)
 
     # If name is being changed, validate uniqueness first
@@ -221,9 +230,6 @@ def update_recipe(
 
     for key, value in updates.items():
         setattr(recipe, key, value)
-    
-    # Validate business rules after applying updates
-    # validate_recipe_business_rules(recipe)
     
     try:
         session.add(recipe)
@@ -248,14 +254,21 @@ def update_recipe(
 
 
 @router.delete("/{id}", status_code=204)
+@limiter.limit("5/minute")
 def delete_recipe(
-    current_user: Annotated[Users, Depends(get_current_user)],
+    request: Request,
     id: UUID, 
+    api_key: Annotated[Tuple[UUID, str], Depends(require_api_key)],
     session: Session = Depends(get_session)
 ):
+    """
+    Public endpoint to delete a recipe.
+    Requires API key authentication.
+    """
+    
     statement = select(Recipe).where(
         Recipe.id == id,
-        Recipe.tenant_id == current_user.tenant_id
+        Recipe.tenant_id == api_key[0]
     )
     recipe = session.exec(statement).first()
     if not recipe:

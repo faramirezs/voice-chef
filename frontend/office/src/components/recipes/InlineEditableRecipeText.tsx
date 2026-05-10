@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useUpdateRecipe } from '@/hooks/useRecipes';
 import type { RecipeDetail } from '@/types/recipe';
 
-type EditableRecipeField = 'name' | 'description' | 'instructions';
+type EditableRecipeField = 'name' | 'description' | 'instructions' | 'preparation_time_minutes' | 'cooking_time_minutes' | 'portion_size_grams' | 'portions_count_resolved' | 'total_raw_weight_grams' | 'total_cooked_weight_grams' | 'yield_mode';
 
 export function InlineEditableRecipeText({
   recipeId,
@@ -16,23 +16,25 @@ export function InlineEditableRecipeText({
   multiline = false,
   className,
   displayClassName,
+  type = 'text',
 }: {
   recipeId: string;
   field: EditableRecipeField;
-  value: string | null | undefined;
+  value: string | number | null | undefined;
   label: string;
   multiline?: boolean;
   className?: string;
   displayClassName?: string;
+  type?: 'text' | 'number';
 }) {
   const updateRecipe = useUpdateRecipe();
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? '');
+  const [draft, setDraft] = useState(String(value ?? ''));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isEditing) {
-      setDraft(value ?? '');
+      setDraft(String(value ?? ''));
       setValidationError(null);
     }
   }, [isEditing, value]);
@@ -47,10 +49,21 @@ export function InlineEditableRecipeText({
 
     setValidationError(null);
 
-    const payload =
-      field === 'name'
-        ? ({ id: recipeId, name: nextValue } as Partial<RecipeDetail> & { id: string })
-        : ({ id: recipeId, [field]: nextValue || null } as Partial<RecipeDetail> & { id: string });
+    let payload: Partial<RecipeDetail> & { id: string };
+    
+    if (type === 'number') {
+      const numValue = nextValue === '' ? null : Number(nextValue);
+      if (nextValue !== '' && isNaN(numValue!)) {
+        setValidationError('Please enter a valid number.');
+        return;
+      }
+      payload = { id: recipeId, [field]: numValue } as Partial<RecipeDetail> & { id: string };
+    } else {
+      payload =
+        field === 'name'
+          ? ({ id: recipeId, name: nextValue } as Partial<RecipeDetail> & { id: string })
+          : ({ id: recipeId, [field]: nextValue || null } as Partial<RecipeDetail> & { id: string });
+    }
 
     updateRecipe.mutate(payload, {
         onSuccess: () => {
@@ -60,6 +73,8 @@ export function InlineEditableRecipeText({
       },
     );
   };
+
+  const displayValue = value ? (type === 'number' ? Math.round(Number(value)) : value) : null;
 
   return (
     <div className={cn('space-y-1', className)}>
@@ -80,6 +95,7 @@ export function InlineEditableRecipeText({
           ) : (
             <Input
               value={draft}
+              type={type}
               className={cn(field === 'name' && 'h-12 text-2xl font-semibold')}
               onChange={(event) => {
                 setDraft(event.target.value);
@@ -106,7 +122,7 @@ export function InlineEditableRecipeText({
               variant="outline"
               type="button"
               onClick={() => {
-                setDraft(value ?? '');
+                setDraft(String(value ?? ''));
                 setValidationError(null);
                 setIsEditing(false);
               }}
@@ -115,16 +131,16 @@ export function InlineEditableRecipeText({
             </Button>
           </div>
         </div>
-      ) : value ? (
+      ) : displayValue ? (
         <button
           type="button"
           onClick={() => setIsEditing(true)}
           className="block w-full text-left rounded-lg border border-transparent px-2 py-1 -mx-2 -my-1 hover:border-border hover:bg-muted/40 transition-colors"
         >
           {multiline ? (
-            <p className={cn('text-sm leading-relaxed whitespace-pre-line', displayClassName)}>{value}</p>
+            <p className={cn('text-sm leading-relaxed whitespace-pre-line', displayClassName)}>{displayValue}</p>
           ) : (
-            <p className={cn('text-sm font-medium', displayClassName)}>{value}</p>
+            <p className={cn('text-sm font-medium', displayClassName)}>{displayValue}</p>
           )}
         </button>
       ) : (

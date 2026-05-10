@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-export DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://recipe_user:recipe_pass123@db:5432/recipe_db}
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL environment variable is not set"
+  exit 1
+fi
 export PYTHONPATH=/code
 
 # Wait for the database to be ready, apply migrations, then start the application server
@@ -11,8 +14,16 @@ until alembic upgrade head; do
   sleep 2
 done
 
-echo "Running seed image linker..."
-python -m scripts.link_photos
+# Run seed image linker only on first initialization
+SEED_MARKER="/code/data/.seed_images_linked"
+if [ ! -f "$SEED_MARKER" ]; then
+  echo "Running seed image linker (first run only)..."
+  python -m scripts.link_photos
+  mkdir -p /code/data
+  touch "$SEED_MARKER"
+else
+  echo "Seed images already linked (skipping)."
+fi
 
 echo "Starting FastAPI..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 80 --reload

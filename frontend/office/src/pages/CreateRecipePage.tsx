@@ -6,13 +6,13 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Section } from '@/components/Section';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils';
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-yellow-100 text-yellow-800',
-  active: 'bg-green-100 text-green-800',
+// const STATUS_STYLES: Record<string, string> = {
+//   draft: 'bg-yellow-100 text-yellow-800',
+//   active: 'bg-green-100 text-green-800',
 
-};
+// };
 
 
 export function CreateRecipePage() {
@@ -36,7 +36,7 @@ export function CreateRecipePage() {
     data: autocompleteResults = [], 
     isLoading: isLoadingAutocomplete 
   } = useIngredientsAutocomplete(searchQuery);
-  const draftStatus = 'draft';
+  // const draftStatus = 'draft';
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -66,6 +66,13 @@ export function CreateRecipePage() {
       {
         onSuccess: (recipe) => {
           navigate(`/recipes/${recipe.id}`);
+        },
+        onError: (error: any) => {
+          // Extract error message from validation response
+          const errorMessage = error.response?.data?.detail?.[0]?.msg
+            || error.message
+            || 'Failed to create recipe. Please try again.';
+          setError(errorMessage);
         },
       },
     );
@@ -99,10 +106,10 @@ export function CreateRecipePage() {
     label: result.name,
   }));
 
-  const badgeClass = cn(
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
-    STATUS_STYLES[draftStatus] ?? 'bg-gray-100 text-gray-600',
-  );
+  // const badgeClass = cn(
+  //   'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize',
+  //   STATUS_STYLES[draftStatus] ?? 'bg-gray-100 text-gray-600',
+  // );
 
   return (
     <div className="space-y-5 max-w-10xl">
@@ -152,9 +159,9 @@ export function CreateRecipePage() {
                 />
                 {error && <p className="text-xs text-destructive">{error}</p>}
               </div>
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <span className={badgeClass}>{draftStatus}</span>
-              </div>
+              </div> */}
             </div>
           </Section>
         </div>
@@ -187,10 +194,18 @@ export function CreateRecipePage() {
                       type="number"
                       value={ingredient.quantity || ''}
                       onChange={(e) => {
-                        setIngredients(ingredients.map(ing =>
-                          ing.id === ingredient.id ? { ...ing, quantity: e.target.value || null } : ing
-                        ));
+                        // HTML5 validation attributes
+                        const value = e.target.value;
+                        const numValue = parseFloat(value);
+                        // Only update if positive number
+                        if (numValue > 0) {
+                          setIngredients(ingredients.map(ing =>
+                            ing.id === ingredient.id ? { ...ing, quantity: e.target.value || null } : ing
+                          ));
+                        }
                       }}
+                      min="1"
+                      step="1"
                       placeholder="Qty"
                       className="w-24"
                     />
@@ -212,9 +227,9 @@ export function CreateRecipePage() {
               <Button
                 variant="outline"
                 onClick={addIngredientRow}
-                className="border-black text-lg text-green-900 font-bold px-3 py-1 h-auto"
+                className="border-black text-sm text-green-900 font-bold px-3 py-1 h-auto"
               >
-                + Add Row
+                + Add Ingredient
               </Button>
             </div>
           </Section>

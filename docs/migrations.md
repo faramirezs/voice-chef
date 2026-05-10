@@ -24,11 +24,22 @@ Use this section for fast schema parity checks before/after model changes.
 
 ### 1) Prerequisites
 
+Ensure you have a Python virtual environment set up with all dependencies installed:
+
 ```bash
-docker compose up -d db
+python3 -m venv .venv
 source .venv/bin/activate
-export DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db
-```
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Ensure pytest and pytest-alembic are installed and up-to-date (required for drift gate)
+pip install -U pytest pytest-alembic
+
+# Start database service
+docker compose up -d db
+
+**Important:** The `.venv/bin/activate` must be sourced in your current shell session before running any `make` commands. If you get "Missing required tools: alembic/python/pytest", it means the venv is not activated.
 
 ### 2) Full gate (all metadata)
 
@@ -49,25 +60,33 @@ Manual equivalent:
 1. Migration state check:
 
 ```bash
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
 .venv/bin/alembic -c alembic.ini -x db_url="$DATABASE_URL" current
 ```
 
 2. Programmatic drift check:
 
 ```bash
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
 .venv/bin/python db/scripts/drift_check.py
 ```
 
 3. Pytest drift suite:
 
 ```bash
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
 .venv/bin/pytest db/test/test_schema_drift.py --test-alembic -q
 ```
 
 4. Pending-autogenerate check (manual review):
 
 ```bash
-DATABASE_URL="$DATABASE_URL" .venv/bin/alembic -c alembic.ini revision --autogenerate -m "drift_check_tmp"
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic -c alembic.ini revision --autogenerate -m "drift_check_tmp"
 ```
 
 If the generated revision contains no operations, pending drift is effectively zero. Delete the temporary revision after review.
@@ -85,6 +104,8 @@ Note:
 Check only Users/Tenants/Recipes:
 
 ```bash
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
 .venv/bin/python db/scripts/drift_check.py --class Users --class Tenants --class Recipes
 .venv/bin/pytest db/test/test_schema_drift.py --test-alembic --drift-class Users --drift-class Tenants --drift-class Recipes -q
 ```
@@ -92,6 +113,8 @@ Check only Users/Tenants/Recipes:
 Check one table only:
 
 ```bash
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
 .venv/bin/python db/scripts/drift_check.py --table users
 ```
 
@@ -116,7 +139,9 @@ If scope is small but many files are listed, that is expected. Only `Effective s
 
 1. Create migration file (after model change):
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic revision -m "describe_change"
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic revision -m "describe_change"
 ```
 
 2. Edit the new file under:
@@ -124,12 +149,12 @@ DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/reci
 
 3. Apply locally:
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade head
+.venv/bin/alembic upgrade head
 ```
 
 4. Verify current revision:
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic current
+.venv/bin/alembic current
 ```
 
 5. Rebuild/restart app when requirements or startup behavior changed:
@@ -144,7 +169,7 @@ docker compose exec -T db pg_dump -U recipe_user -d recipe_db > db/backups/pre_c
 
 7. Roll back one step if needed:
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic downgrade -1
+.venv/bin/alembic downgrade -1
 ```
 
 ## How container stays up to date now
@@ -294,7 +319,9 @@ Use this flow on legacy databases restored from dump files where canonical 002 f
 1. Apply reconciliation migration:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 004
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 004
 ```
 
 2. Run canonical backfill (quantity_grams, price_per_gram, recipe totals):
@@ -326,7 +353,9 @@ Rules used by the view:
 Apply migration:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 005
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 005
 ```
 
 Example usage:
@@ -347,7 +376,9 @@ If you need to override these defaults with your own business values, use the sc
 Apply migration:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 006
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 006
 ```
 
 1. Fill grams-per-piece values for the exact 7 unresolved ingredients:
@@ -384,7 +415,9 @@ What it preserves:
 Apply migration:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 007
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 007
 ```
 
 Verify canonical rows and moved price history:
@@ -405,7 +438,9 @@ preserving all links and metadata.
 Apply migration:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 008
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 008
 ```
 
 Verify canonical rows and moved price history:
@@ -426,8 +461,10 @@ for ingredients with existing recipes.
 1. Apply migrations:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 009
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 010
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 009
+.venv/bin/alembic upgrade 010
 ```
 
 2. Review price policy and backfill scripts in `db/scripts/`:
@@ -457,13 +494,17 @@ Alembic `011` applies the approved cleanup scope:
 Apply migration:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic upgrade 011
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic upgrade 011
 ```
 
 Rollback this cleanup only:
 
 ```bash
-DATABASE_URL=postgresql+psycopg://recipe_user:recipe_pass123@localhost:5432/recipe_db .venv/bin/alembic downgrade 010
+source .env
+export DATABASE_URL="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
+.venv/bin/alembic downgrade 010
 ```
 
 Notes:

@@ -58,9 +58,15 @@ dev-re: $(ENV)
 dev-back: $(ENV)
 	@echo "Building and running db and backend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend
+
 dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
+
+up: $(ENV)
+	@echo "Starting in dev_mode"
+	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
+	@echo "VOICE-CHEF is running in dev_mode"
 
 # ── Production target ──────────────────────────────────────────────────────
 
@@ -80,9 +86,10 @@ dev-back-office: $(ENV)
 #   /openapi.json → backend
 
 prod: $(ENV)
-	@echo "Building fresh images and restarting in prod_mode"
+	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
-	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
+	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
 # ── Lifecycle targets ──────────────────────────────────────────────────────
@@ -104,13 +111,21 @@ stop:
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) stop
 
 # ── Clean-up targets ───────────────────────────────────────────────────────
-#   make clean    Remove containers + images (keeps volumes & data)
-#   make fclean   NUCLEAR OPTION: removes everything including volumes
-#                 (WARNING: this wipes the database and uploaded files)
+#   make clean       Remove containers + images (keeps volumes & data)
+#   make clean-nginx Remove ALL images including nginx (keeps database volume)
+#   make fclean      NUCLEAR OPTION: removes everything including volumes
+#                    (WARNING: this wipes the database and uploaded files)
 
 clean:
 	@echo "Stopping the app and removing containers + images..."
-	$(COMPOSE) down --rmi local
+	$(COMPOSE) down --rmi local --remove-orphans
+
+clean-nginx: clean
+	@echo "Removing ALL Docker images (including nginx-proxy)..."
+	$(COMPOSE) stop nginx-proxy  || true	
+	$(COMPOSE) rm -f nginx-proxy
+	docker rmi voice-chef-nginx-proxy:latest
+	@echo "All images removed. Database volume preserved."
 
 fclean:
 	@echo "Stopping the app and removing containers + images + volumes..."
@@ -119,7 +134,6 @@ fclean:
 	@echo "Nuclear cleanup complete. Database and uploads are gone."
 
 # ── Full reset + dev start ─────────────────────────────────────────────────
-#   make re   Shortcut for: make clean && make dev
 
 re: clean dev
 
@@ -143,10 +157,9 @@ status:
 			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
 	) | column -t; \
 		printf '\n'
-	@echo "Docker compose containers status:"
+
 logs:
-	@echo "Fetching logs..."
-	@docker compose logs -f
+	@docker compose logs
 
 # ── Build target (no start) ────────────────────────────────────────────────
 #   make build   Build all images without starting containers.
@@ -181,17 +194,31 @@ refresh-env-agent: $(ENV)
 
 # ── Database targets ───────────────────────────────────────────────────────
 
+LOCAL_DB_URL = $$( \
+    USER=$$(grep POSTGRES_USER .env | cut -d= -f2); \
+    PASS=$$(grep POSTGRES_PASSWORD .env | cut -d= -f2); \
+    NAME=$$(grep POSTGRES_DB .env | cut -d= -f2); \
+    echo "postgresql+psycopg://$$USER:$$PASS@localhost:5432/$$NAME" \
+)
+
 # Run all four schema-drift gates locally (strict check).
-drift-gate-local:
-	@bash -c 'cd backend && python -m pytest tests/test_drift_gate.py -v'
+drift-gate-local: $(ENV)
+	@echo "Running local 4-gate schema drift check..."
+	@chmod +x db/scripts/run_local_drift_gate.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/run_local_drift_gate.sh
+	@echo "Done: local schema drift gate passed"
 
 # Blast-test: wipe DB volume, re-initialize from dump, then run alembic upgrade.
 dump-blast-check:
-	@bash -c 'cd backend && python scripts/dump_blast_check.py'
+	@chmod +x db/scripts/dump_upgrade_blast_check.sh
+	@DATABASE_URL=$(LOCAL_DB_URL) ./db/scripts/dump_upgrade_blast_check.sh
 
 # Regenerate db/init/01_dump.sql from the current migration head.
 dump-regen:
-	@bash -c 'cd backend && python scripts/dump_regenerate.py'
+	@echo "Regenerating db/init/01_dump.sql from migration head (isolated temp DB)..."
+	chmod +x db/scripts/regenerate_dump_from_head.sh
+	./db/scripts/regenerate_dump_from_head.sh
+	@echo "Done: db/init/01_dump.sql regenerated from migration head"
 
 # Open a psql shell inside the running db container.
 db-connect:
@@ -222,6 +249,7 @@ help:
 	@printf "     %-30s %s\n" "make down"        "Stop and remove containers"
 	@printf "     %-30s %s\n" "make stop"        "Stop containers (keep them)"
 	@printf "     %-30s %s\n" "make clean"       "Remove containers + images (keeps data)"
+	@printf "     %-30s %s\n" "make clean-nginx" "Remove ALL images including nginx (keeps DB)"
 	@printf "     %-30s %s\n" "make fclean"      "⚠️  NUCLEAR: removes everything including DB + uploads"
 	@printf "\n  🔧  PER-SERVICE REBUILDS\n"
 	@printf "     %-30s %s\n" "make agent-build-nocache"  "Rebuild agent from scratch"
@@ -241,6 +269,6 @@ help:
 # Catch-all for unrecognized targets.
 %:
 	@echo "Unknown target '$@'. Run 'make help' for available commands."
-.PHONY: all dev dev-re dev-back dev-back-office prod down re clean fclean status logs help build up start stop
+.PHONY: all dev dev-re dev-back dev-back-office prod down re clean clean-nginx fclean status logs help build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal
