@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Voice-Chef
+GenericName=Voice Chef kiosk relaunch
+Comment=Restart the Voice Chef kitchen kiosk
+Exec=systemctl restart kitchen-point.service
+Icon=preferences-desktop-display
+Terminal=false
+Categories=System;Utility;
+StartupNotify=false

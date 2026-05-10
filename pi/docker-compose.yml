@@ -1,0 +1,43 @@
+services:
+  # Local Whisper transcription. Pi-local STT means audio never leaves the
+  # device for the transcription step — sub-100ms latency vs. an
+  # over-network round-trip.
+  stt:
+    image: voice-chef-stt:latest
+    build:
+      context: ../stt/
+    networks:
+      - pi-network
+    environment:
+      STT_MODEL: ${STT_MODEL:-small}
+      STT_LANGUAGE: ${STT_LANGUAGE:-}
+      STT_DEVICE: cpu
+    volumes:
+      - whisper_models:/models
+    restart: unless-stopped
+
+  # Tiny TLS shim in front of STT. The kitchen SPA loads from
+  # https://${SERVER_HOST}/kitchen/ on the server — calling
+  # http://localhost:8002 from that origin would fail mixed-content checks.
+  # Exposing STT on https://localhost/ avoids that without modifying the
+  # STT image. Self-signed cert generated on the host by start-kitchen.sh
+  # (uses the host's openssl rather than installing it inside this image).
+  stt-tls:
+    image: nginx:1.28-alpine
+    networks:
+      - pi-network
+    ports:
+      - "443:443"
+    depends_on:
+      - stt
+    volumes:
+      - ./nginx/stt.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    restart: unless-stopped
+
+volumes:
+  whisper_models:
+
+networks:
+  pi-network:
+    driver: bridge

@@ -1,0 +1,23 @@
+[Unit]
+Description=Voice Chef — Kitchen Point
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=voice-chef
+Group=voice-chef
+ExecStart=/usr/local/bin/kitchen-point-start.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=120
+
+# Wayland session for kiosk Chromium. %U resolves to the service user's
+# numeric UID at unit start, so XDG_RUNTIME_DIR points at the right
+# /run/user/<uid> directory regardless of how the user was provisioned.
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+
+[Install]
+WantedBy=graphical.target
