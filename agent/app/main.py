@@ -38,6 +38,11 @@ app.add_middleware(
 )
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "service": "agent"}
+
+
 @app.post("/")
 async def run_agent(request: Request) -> Response:
     started = time.perf_counter()

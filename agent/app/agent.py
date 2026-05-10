@@ -8,12 +8,43 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.ui import StateDeps
 from ag_ui.core import CustomEvent, EventType, StateSnapshotEvent, StateDeltaEvent
 from .state import KitchenState
-from .context import get_auth_headers, mark_notification_shown
+from .context import (
+    SEARCH_CALL_LIMIT,
+    bump_search_call,
+    get_auth_headers,
+    mark_canvas_rendered,
+    mark_indexing_observed,
+    mark_no_match_notification_shown,
+    mark_notification_shown,
+    mark_search_succeeded,
+    was_canvas_rendered,
+    was_indexing_observed,
+    was_no_match_notification_shown,
+    was_search_succeeded,
+)
 
 logger = logging.getLogger("voice-chef.agent")
 
 _BACKEND_URL = os.getenv("FASTAPI_INTERNAL_URL", "http://backend:80")
 FASTAPI_URL = f"{_BACKEND_URL}/api"
+
+_RAG_URL = os.getenv("RAG_SERVICE_URL", "http://rag:8003")
+
+# Dynamic threshold for /search results: keep items whose score is at least
+# `top_score * RELATIVE_FACTOR`, but never below `ABSOLUTE_FLOOR`. The floor
+# rejects pure noise; the relative factor scales the bar with the strength
+# of the top hit, so a verbose query that lands a marginal top-1 still
+# yields multiple candidates while a strong top-1 keeps a tight cluster.
+SEARCH_ABSOLUTE_FLOOR = float(os.getenv("SEARCH_ABSOLUTE_FLOOR", "0.20"))
+SEARCH_RELATIVE_FACTOR = float(os.getenv("SEARCH_RELATIVE_FACTOR", "0.55"))
+
+
+def _filter_by_dynamic_threshold(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if not items:
+        return []
+    top = max((it.get("score") or 0) for it in items)
+    cutoff = max(SEARCH_ABSOLUTE_FLOOR, top * SEARCH_RELATIVE_FACTOR)
+    return [it for it in items if (it.get("score") or 0) >= cutoff]
 
 AGENT_MODEL = os.getenv("AGENT_MODEL", "meta/llama-3.3-70b-instruct")
 
@@ -95,6 +126,106 @@ Example: User: "show chimichurri"
 → get_recipes_list(query="chimichurri") → extract id
 → get_recipe_detail(recipe_id=<uuid>) → ui.render fires
 → NO TEXT RESPONSE. The card is the answer.
+
+SEMANTIC SEARCH RULES:
+For descriptive, fuzzy, or multilingual queries:
+- search_recipes(query, k=5): semantic recipe search. Returns a recipes.list
+  envelope; the card renders automatically. Stay silent after.
+- search_ingredients(query, k=10): ingredient knowledge. Returns plain data
+  for your reasoning — call show_notification(level: "info") with a brief
+  summary based on the items. Do NOT recommend recipes from ingredient
+  results; ingredients alone don't render as recipe cards.
+
+QUERY EXTRACTION (CRITICAL):
+The `query` argument to search_recipes / search_ingredients must be the
+DISH or INGREDIENT NOUN(S) ONLY. Strip every other word — questions,
+imperatives, articles, filler. Function words inflate the BM25 score
+of unrelated recipes that happen to contain "Rezept", "Rezepte", "the",
+"recipe", etc. and pollute the results.
+
+Examples:
+  User: "show me the lasagna recipe"
+    → search_recipes(query="lasagna")     -- NOT "show me the lasagna recipe"
+  User: "haben wir ein Rezept für Lasagne"
+    → search_recipes(query="Lasagne")     -- NOT "haben wir ein Rezept für Lasagne"
+  User: "do you have something with chickpeas"
+    → search_recipes(query="chickpeas")
+  User: "what's a good vegan main course"
+    → search_recipes(query="vegan main course")
+  User: "Hähnchen Rezept bitte"
+    → search_recipes(query="Hähnchen")
+  User: "what spices go with beef"
+    → search_ingredients(query="spices for beef")
+
+Keep adjectives that describe the dish ("vegan", "spicy", "creamy"). Drop
+question/request scaffolding ("show me", "do we have", "haben wir", "ein
+Rezept für", "the … recipe", "what is", "bitte"). Preserve the user's
+original spelling and language — do not translate or autocorrect.
+
+When to use which:
+- search_recipes: ANY question phrasing ("do you have", "show me",
+  "what's a"), fuzzy descriptions ("something with chickpeas", "creamy
+  soup", "spicy"), multilingual or transliterated queries ("vegane
+  Hauptspeise", "tajine recipe", "haehnchen recipe")
+- get_recipes_list: ONLY when the user gives a literal exact recipe
+  name verbatim (e.g., "Chimichurri")
+- get_recipe_detail: ONLY for known UUIDs
+When in doubt between search_recipes and get_recipes_list, prefer search_recipes.
+
+VERIFY SEMANTIC MATCH (after search_recipes returns a recipes.list):
+Before acting on the result, judge whether the top recipe's name plausibly
+relates to what the user asked for. The score threshold is permissive on
+purpose; YOU make the relevance call.
+
+Match across languages and orthographies. The recipe database is mostly
+in German; the user often speaks English. Treat as match: lasagna ≈
+Lasagne, chicken ≈ Hähnchen, eggplant ≈ Aubergine, zucchini ≈ Zucchini,
+pumpkin ≈ Kürbis, beef ≈ Rind/Rindfleisch. Prefer match when names share
+a clear cognate or translation, even if the database name is in a
+different language than the query.
+
+- Match (related): call get_recipe_detail(<top recipe id>) ONLY, then STOP.
+  That single tool both fetches and renders. Make NO other tool calls
+  afterward — no show_notification, no render_component, no follow-up
+  search. The recipe card is the full answer.
+  Examples:
+    "chickpeas"  → "Hummus Bowl"                                       → match (hummus IS chickpeas)
+    "spicy"      → "Chili Soße"                                        → match
+    "soup"       → "Köttbullar Rahmsauce"                              → match (rahmsauce is creamy)
+    "lasagna"    → "CW Hausgemachte Lasagne mit Rinder-Bolognese"      → match (Lasagne IS lasagna in German)
+    "chicken"    → "Hähnchenbrust mit Gemüse"                          → match (Hähnchen IS chicken)
+    "eggplant"   → "Parmigiana di Melanzane"                           → match (Melanzane/Aubergine IS eggplant)
+
+- Mismatch: call show_notification(level: "info", message: "No recipe
+  found for <query>.") and STOP. Make no further tool calls of any kind
+  in this run. Do NOT call show_notification again. Do NOT call
+  get_recipe_detail. Do NOT call search_recipes again with the same
+  query.
+  Examples:
+    "borscht"   → "Roasted Cauliflower"   → mismatch (unrelated dishes)
+    "tiramisu"  → "Hummus Bowl"           → mismatch
+    "cake"      → "Stir fried Five-Spices" → mismatch
+
+When unsure, prefer mismatch. An honest "no match" is better than
+confidently recommending the wrong recipe.
+
+If a search tool returns an error envelope (no strong match found):
+- DO NOT retry the same query — the search already failed for it.
+- DO NOT call get_recipes_list as a fallback.
+- Call show_notification(level: "info") explaining no match was found.
+- Then STOP. Do not call additional tools in this run.
+
+INDEX-REBUILDING NOTICE:
+If a search_recipes or search_ingredients result has meta.indexing == true,
+the recipe/ingredient index is currently rebuilding and the result set may
+be incomplete or stale. After your normal response (rendering the recipe
+card, scaling, etc.), call show_notification(level: "info", message:
+"Recipe index is rebuilding — results may be incomplete.") ONCE in this
+run. Do not block or refuse the user's request — render the result you got
+and add the notification on top. If indexing is false or absent, ignore
+this rule.
+
+Do NOT invent recipes or recommend irrelevant items.
 
 SCALING RULE:
 When a chef asks to scale a recipe, edit portions, or adjust ingredient quantities:
@@ -336,13 +467,30 @@ async def get_recipe_detail(
             "message": str(exc),
         }
 
-    return {
+    mark_canvas_rendered()
+    envelope = {
         "type": "ui.render",
         "version": "1",
         "component": "recipe_detail",
         "slot": "canvas",
         "recipe": payload,
     }
+    # If a "No recipe found" notification fired earlier in this run
+    # (because the LLM ignored STOP and tried again, eventually finding
+    # one), dismiss it now so the user doesn't see a stale "no match"
+    # toast next to a successfully rendered card.
+    extra_events: list[CustomEvent] = []
+    if was_no_match_notification_shown():
+        extra_events.append(
+            CustomEvent(
+                type=EventType.CUSTOM,
+                name="ui.clear",
+                value={"type": "ui.clear", "version": "1", "slot": "notifications"},
+            )
+        )
+    if extra_events:
+        return ToolReturn(return_value=envelope, metadata=extra_events)
+    return envelope
 
 
 VALID_COMPONENTS = ("placeholder", "recipe_detail", "confirmation_chips", "notification")
@@ -412,6 +560,35 @@ async def show_notification(
     Levels: "info", "success", "warning", "error".
     Duration is in milliseconds (default 5000).
     """
+    # Server-side truth gates against known LLM failure modes:
+    #
+    # 1. "No recipe / no match" emitted in parallel with a successful
+    #    search or render. Detected via either was_search_succeeded()
+    #    (set early in search_recipes/_ingredients before the parallel
+    #    show_notification can finish) or was_canvas_rendered().
+    #
+    # 2. "Recipe index is rebuilding…" emitted from conversation memory
+    #    even though the current request's rag response had
+    #    indexing: false. Detected via was_indexing_observed().
+    #
+    # Legit notifications (status updates, errors, real "rebuilding"
+    # while indexing IS observed) pass through untouched.
+    msg_lower = message.lstrip().lower()
+    contradicts_search = (
+        was_search_succeeded() or was_canvas_rendered()
+    ) and msg_lower.startswith("no ")
+    contradicts_indexing = (
+        not was_indexing_observed() and "rebuilding" in msg_lower
+    )
+    if contradicts_search or contradicts_indexing:
+        return ToolReturn(
+            return_value={
+                "status": "suppressed",
+                "instruction": "STOP. The notification contradicted the current run state and was suppressed. Do not call any more tools. Output no text.",
+            },
+            metadata=[],
+        )
+
     # Deduplicate: if this exact notification was already shown in the
     # current request, return early so the LLM does not loop.
     cache_key = f"{level}:{message}"
@@ -423,6 +600,12 @@ async def show_notification(
             },
             metadata=[],
         )
+
+    # Track when a real "No …" notification fires. If a render later
+    # succeeds in the same run, get_recipe_detail will emit a ui.clear
+    # for the notifications slot to remove this stale message.
+    if msg_lower.startswith("no "):
+        mark_no_match_notification_shown()
 
     value = {
         "type": "ui.render",
@@ -712,3 +895,190 @@ async def suggest_recipe_improvements(ctx: RunContext[StateDeps[KitchenState]], 
             ).model_dump()
         ],
     )
+
+
+# --- Semantic search via the rag service -----------------------------------
+
+
+@agent.tool
+async def search_recipes(
+    ctx: RunContext[StateDeps[KitchenState]],
+    query: str,
+    k: int = 5,
+) -> dict[str, Any]:
+    """Semantic recipe search via the rag service.
+
+    Use for descriptive, fuzzy, or multilingual recipe queries that do not
+    match an existing recipe name (e.g., "something with chickpeas",
+    "creamy soup", "vegane Hauptspeise"). For exact-name lookups, prefer
+    get_recipes_list. For UUID lookups, use get_recipe_detail.
+
+    Returns a recipes.list envelope (renders as a card) or an error
+    envelope when no strong match is found.
+
+    Args:
+        query: Natural-language search query.
+        k: Number of results to return (1-10).
+    """
+    k = max(1, min(k, 10))
+    if bump_search_call("search_recipes") > SEARCH_CALL_LIMIT:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_recipes",
+            "message": (
+                f"Search budget exhausted ({SEARCH_CALL_LIMIT} attempts). "
+                "Render the best result already returned, or notify the "
+                "user that no recipe was found. Do not call search_recipes "
+                "or get_recipes_list again in this run."
+            ),
+            "instruction": "STOP. Do not call any search tool again in this run.",
+        }
+    try:
+        resp = await _http_client.post(
+            f"{_RAG_URL}/search/recipes",
+            json={"query": query, "k": k},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_recipes",
+            "message": f"search service unavailable: {exc}",
+            "instruction": "STOP. Call show_notification(level: 'error') once with the message above and make no further tool calls.",
+        }
+
+    raw_items = payload.get("items", []) or []
+    confident = _filter_by_dynamic_threshold(raw_items)
+    if bool(payload.get("indexing", False)):
+        mark_indexing_observed()
+    if not confident:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_recipes",
+            "message": f"No strong match for '{query}'.",
+            "instruction": "STOP. Call show_notification(level: 'info') once with the message above and make no further tool calls.",
+        }
+
+    mark_search_succeeded()
+    list_items: list[dict[str, Any]] = []
+    for it in confident:
+        p = it.get("payload") or {}
+        list_items.append(
+            {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "status": p.get("status"),
+                "yield_unit": p.get("yield_unit"),
+                "preparation_time_minutes": p.get("preparation_time_minutes"),
+            }
+        )
+
+    return {
+        "type": "recipes.list",
+        "version": "1",
+        "items": list_items,
+        "meta": {
+            "limit": k,
+            "offset": 0,
+            "total": len(list_items),
+            # Surface the rag service's index-rebuilding state so the LLM
+            # can react via show_notification (see SYSTEM_PROMPT). False
+            # when the rag response doesn't include the field (older
+            # builds).
+            "indexing": bool(payload.get("indexing", False)),
+        },
+        "query": query,
+        "search": "semantic",
+    }
+
+
+@agent.tool
+async def search_ingredients(
+    ctx: RunContext[StateDeps[KitchenState]],
+    query: str,
+    k: int = 10,
+) -> dict[str, Any]:
+    """Semantic ingredient search via the rag service.
+
+    Use for ingredient knowledge questions ("what vegan proteins do you
+    have?", "alternatives to feta", "is paprika spicy?"). The result is
+    plain data for your reasoning — render the response by calling
+    show_notification with a brief summary. Do not invent ingredients
+    not in the result.
+
+    Args:
+        query: Natural-language ingredient query.
+        k: Number of results to return (1-20).
+    """
+    k = max(1, min(k, 20))
+    if bump_search_call("search_ingredients") > SEARCH_CALL_LIMIT:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_ingredients",
+            "message": (
+                f"Search budget exhausted ({SEARCH_CALL_LIMIT} attempts). "
+                "Notify the user with the best ingredient match already "
+                "returned, or that no match was found. Do not call "
+                "search_ingredients again in this run."
+            ),
+            "instruction": "STOP. Do not call any search tool again in this run.",
+        }
+    try:
+        resp = await _http_client.post(
+            f"{_RAG_URL}/search/ingredients",
+            json={"query": query, "k": k},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as exc:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_ingredients",
+            "message": f"search service unavailable: {exc}",
+            "instruction": "STOP. Call show_notification(level: 'error') once with the message above and make no further tool calls.",
+        }
+
+    raw_items = payload.get("items", []) or []
+    confident = _filter_by_dynamic_threshold(raw_items)
+    if bool(payload.get("indexing", False)):
+        mark_indexing_observed()
+    if not confident:
+        return {
+            "type": "error",
+            "version": "1",
+            "source": "search_ingredients",
+            "message": f"No strong ingredient match for '{query}'.",
+            "instruction": "STOP. Call show_notification(level: 'info') once with the message above and make no further tool calls.",
+        }
+
+    mark_search_succeeded()
+    list_items: list[dict[str, Any]] = []
+    for it in confident:
+        p = it.get("payload") or {}
+        list_items.append(
+            {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "name_english": p.get("name_english"),
+                "bls_key": p.get("bls_key"),
+            }
+        )
+
+    return {
+        "type": "ingredients.search.result",
+        "version": "1",
+        "query": query,
+        "items": list_items,
+        "meta": {
+            # Same indexing flag pattern as search_recipes — see SYSTEM_PROMPT.
+            "indexing": bool(payload.get("indexing", False)),
+        },
+    }

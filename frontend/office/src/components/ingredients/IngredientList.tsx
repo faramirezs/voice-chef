@@ -84,6 +84,29 @@ export function IngredientsList() {
         </div>
       </div>
 
+      {!isInitialLoading && ingredientPage && visibleIngredients.length > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Showing {offset + 1}-{offset + visibleIngredients.length} of {ingredientPage?.meta.total ?? 0}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPage((currentPage) => Math.max(0, currentPage - 1))}
+              disabled={page === 0}
+            >
+              Previous
+            </Button>
+            <Button
+              onClick={() => setPage((currentPage) => currentPage + 1)}
+              disabled={offset + PAGE_SIZE >= (ingredientPage?.meta.total ?? 0)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
       {isError && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load ingredients: {error instanceof Error ? error.message : 'Unknown error'}

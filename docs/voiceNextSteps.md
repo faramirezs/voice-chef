@@ -30,7 +30,9 @@ After completing the STT container (Phase 1), agent integration (Phase 3), four-
 
 **Goal:** Improve speech recognition accuracy through vocabulary priming, user corrections, and voice self-correction.
 
-### Tier 1: Vocabulary Priming (do first)
+### Tier 1: Vocabulary Priming (do first — confirmed top priority 2026-05-01)
+
+**Why this is now top priority:** RAG retrieval testing on 2026-05-01 (after the rag search endpoints landed) showed that pure dense embedding fails on common voice-input edge cases — typos, transliterations, EN/DE keyboard variants. Hybrid retrieval helps as a downstream safety net, but **fixing the input at the source via Whisper's vocabulary priming has higher ROI for the voice path**: it prevents most of the fuzz from existing in the first place. See "Quality observations" in the RAG plan for concrete failures (`tagine` → `Tajine`, `haehnchen` → `Hähnchen`). Hybrid retrieval and STT priming are complementary layers.
 
 **What:** Load recipe names, ingredient names, and kitchen vocabulary into Whisper's `initial_prompt` parameter before each transcription.
 
@@ -115,6 +117,17 @@ Agent calls search_recipes(query)
 
 **Files:** `docker-compose.yml`, `agent/app/agent.py`, `agent/app/rag.py` (new), `agent/requirements.txt`
 
+**Status update 2026-05-01:** infrastructure delivered (Qdrant + rag + backfill + search endpoints) on branch `rag`. Vector store is **Qdrant**, not ChromaDB (decision documented in commit history). Hybrid retrieval (Phase A.5) is the next step before agent integration — pure dense fails on typos and transliterations. Detailed plan in `~/.claude/plans/3-let-s-look-precious-noodle.md`.
+
+### Deferred query-rewriter (Layer 3) — defer until needed
+
+A separate query-rewriting layer (translate `eggplant` → `Aubergine`, normalize abbreviations) was discussed. Three model options if/when needed:
+- **Static EN↔DE kitchen-vocabulary lookup** (recommended start) — bounded vocab, deterministic, ~50–100 term pairs cover ~95% of cross-lingual queries
+- **Small LLM piggybacking on Ollama** (when Topic 1 lands) — `qwen2.5:1.5b` is a natural fit, marginal cost ~zero alongside the agent's main model
+- **Skip entirely** — STT priming + hybrid retrieval may make this layer unnecessary
+
+Reactive only — don't preemptively build the service; revisit after seeing what slips through priming + hybrid in real usage.
+
 ---
 
 ## Topic 4: Microservices Architecture
@@ -155,14 +168,86 @@ Agent calls search_recipes(query)
 
 ---
 
+## Topic 5: Authentication Architecture
+
+**Goal:** Decide how the agent, rag, STT, and frontends authenticate so multi-tenant isolation is enforced consistently. Aligns RAG queries with the existing tenant-scoped backend.
+
+**Decision (after research and group discussion 2026-04-30):** Mixed pattern — industry standard for multi-tenant RAG (Confluence, Notion AI, Glean, Copilot Workspace).
+
+| Layer | Auth pattern | Reason |
+|-------|-------------|--------|
+| **rag indexer** | Service account (Pattern A) | Indexer must read everything to build the vector store; can't run "as every user." Stores `tenant_id` in vector payload. |
+| **rag search endpoints** | User's JWT (Pattern B) | Decode JWT → extract `tenant_id` → add Qdrant filter at query time |
+| **Agent** | User's JWT (Pattern B) | Frontend forwards JWT in AG-UI request; agent attaches it to every backend + rag call |
+| **STT** | None | Stateless audio→text utility; no user data lives there |
+| **Kitchen frontend** | Defined "kitchen user" with limited scope | Shared tablet, GDPR-friendly, gets scoped permissions: read recipes, scale temporarily — NOT delete, update, destroy |
+| **Office frontend** | Per-user JWT (existing) | Already in place; delete/update/destroy require this |
+
+### Voice biometrics — not for auth
+
+Voice recognition as a *login* mechanism is GDPR-sensitive (special-category biometric data, Art. 9) and far too imprecise for a noisy kitchen environment.
+
+**Allowed use of voice ID:** *attribution/personalization only*, for security-uncritical features.
+- Example: "What's next on my list?" → voice ID picks the right todo list. If misidentified, user just says "I'm not Alejo, I'm Nico" — no harm done.
+- Implementation hint: a small `voice-id` service mirroring `rag` (Resemblyzer or ECAPA-TDNN embeddings, match against enrolled chef voices).
+
+### Wake word
+
+Separate concern from auth. Pure UX trigger (Porcupine, OpenWakeWord, Snowboy). Add independently when the kitchen UX needs hands-free activation.
+
+**Files (when implemented):** new helper in `agent/app/auth.py`, new login flow in `rag/app/auth.py`, frontend JWT-forwarding in kitchen `useAgent.ts`.
+
+---
+
+## Topic 6: Pi WiFi onboarding (provisioning at first boot)
+
+**Goal:** Let a kitchen-pi connect to a new WiFi network without SSH or a keyboard. Required for any deployment scenario where the device moves between locations (school evaluation, demo, customer site) — currently the WiFi credentials are baked into the SD-card image at flash time, which means re-imaging to change networks.
+
+**Pattern (industry standard):**
+1. On boot, Pi tries to connect to the saved WiFi.
+2. If no saved network or all saved networks fail within a timeout, Pi switches to AP (access-point) mode and broadcasts its own SSID (e.g. `kitchen-pi-setup`).
+3. User joins that AP from a phone or laptop. A captive portal / web UI on the Pi shows nearby networks and accepts SSID + password.
+4. Pi saves credentials, drops AP mode, reconnects to the chosen network. AP comes back automatically if the connection fails again.
+
+**Recommended tool: [`comitup`](https://davesteele.github.io/comitup/)** — Debian package designed for exactly this. Headless-Pi friendly, integrates with NetworkManager/wpa_supplicant, has a built-in captive portal. Apache-2.0 licensed.
+
+Alternatives evaluated:
+- **`RaspAP`** — full router admin UI, overkill for "just join a WiFi."
+- **Custom `hostapd` + `wpa_supplicant` script** — works but a bunch of edge cases (network switching, race conditions on NetworkManager); reinventing comitup poorly.
+
+**Implementation outline:**
+1. `apt install comitup` on the Pi (one-time during image preparation).
+2. Configure `/etc/comitup.conf` — set the AP SSID prefix, captive-portal port, optional preshared password.
+3. Update `pi/README.md` provisioning checklist to remove the wpa_supplicant.conf step and add the AP-on-first-boot flow.
+4. Verify the kiosk auto-start (`kitchen-point.service`) doesn't fight comitup's network state — comitup typically pauses graphical services during AP-mode setup; we need to confirm the kitchen UI degrades gracefully (already does — silent re-login + error toast).
+5. Smoke test: flash a fresh SD card, boot, see the AP SSID, join it, configure WiFi, watch Pi connect.
+
+**Files (when implemented):** `pi/README.md` (provisioning section), possibly `pi/scripts/configure-wifi-onboarding.sh` (one-shot installer that runs `apt install comitup` + drops the config file in place), and a documentation note in `docs/kitchen-pi-design.md` about the boot-state machine.
+
+**Effort:** half-day for the integration + testing on a real Pi (most of which is verifying the kiosk service plays nicely with comitup's network-state transitions).
+
+---
+
+## Known issues / coordinate with backend owner
+
+- ~~**Agent's `get_recipes_list` is broken on `main`** since the tenant-auth refactor.~~ **Resolved by PR #181** (merged into main 2026-05-01): `agent/app/agent.py` now forwards `Authorization` + cookie headers from the frontend to backend calls via a request-scoped `ContextVar` (`agent/app/context.py`). Backend's `get_current_user` also adds a Docker-internal-IP bypass returning a synthetic admin user — both ends of the auth chain are addressed.
+- ~~**API responses do not expose `tenant_id`.**~~ **Resolved differently by PR #181:** the indexer doesn't need `tenant_id` on responses anymore because the backend now defaults to `DEFAULT_TENANT_ID` env var for internal Docker requests (`backend/app/core/deps.py`). Multi-tenant isolation will instead be wired via JWT forwarding when the kitchen frontend sends the user's token end-to-end. Tenant filtering on the rag service stays a placeholder until that wiring is complete.
+- **Investigate change of agent model.** Llama 3.3 70B doesn't reliably honor "stop after one tool call" / "exactly once" instructions in the system prompt. PR #181 added tool-level dedup (per-request `(level, message)` cache for `show_notification`) which catches *identical* repeats, but the LLM still bypasses it by generating *different* messages each time. Symptom (observed 2026-05-01 post-merge): even on the chickpeas *positive* path where the recipe renders correctly, the LLM appends 5+ varied `show_notification` calls before hitting `tool_calls_limit=10`. Bounded in cost; cosmetic in UX. Worth A/B-ing: DeepSeek V4 Flash, Qwen 2.5 72B, and a local Ollama model once Topic 1 lands.
+
+---
+
 ## Implementation Priority
 
 | Priority | Topic | Effort | Impact |
 |----------|-------|--------|--------|
-| 1 | Topic 2 Tier 1 (vocabulary priming) | Small | Immediate transcription improvement |
-| 2 | Topic 1 (Ollama local model) | Small-Medium | Independence from rate limits |
-| 3 | Topics 3+4 (RAG + Valkey + microservices) | Large | Subject requirements, implement together |
-| 4 | Topic 2 Tier 2 (office corrections) | Medium | Accuracy improvement over time |
-| 5 | Topic 2 Tier 3 (voice self-correction) | Medium-Large | Advanced, depends on Tier 2 |
+| 1 | Topic 6 (Pi WiFi onboarding via comitup) | Half-day | Unblocks deployments at any new location without re-imaging |
+| 2 | Topic 2 Tier 1 (vocabulary priming) | Small | Immediate transcription improvement |
+| 3 | Topic 1 (Ollama local model) | Small-Medium | Independence from rate limits |
+| 4 | Topics 3+4 (RAG + Valkey + microservices) | Large | Subject requirements, implement together |
+| 5 | Topic 5 (Auth: mixed pattern + kitchen-user scope) | Medium | Required before production-readiness for multi-tenant |
+| 6 | Investigate alternative agent model (DeepSeek/Qwen/Ollama) | Small | Better prompt-following on negative-path scenarios |
+| 7 | Topic 2 Tier 2 (office corrections) | Medium | Accuracy improvement over time |
+| 8 | Topic 2 Tier 3 (voice self-correction) | Medium-Large | Advanced, depends on Tier 2 |
+| 9 | Voice-ID service (attribution only, not auth) | Medium | UX nicety — personalization, audit trails |
 
 Note: Topics 3 and 4 are intertwined — Valkey is needed for RAG incremental updates. Implement them together.

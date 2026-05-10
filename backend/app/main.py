@@ -35,6 +35,11 @@ app = FastAPI(
     # openapi_url="/openapi.json",
 )
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok", "service": "backend"}
+
+
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
 api_router.include_router(user_router)

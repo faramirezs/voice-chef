@@ -39,7 +39,6 @@ jobs:
       - name: Set deploy mode
         id: mode
         run: echo "mode=${{ github.event.inputs.mode || 'prod' }}" >> $GITHUB_OUTPUT
-
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -48,7 +47,41 @@ jobs:
       - name: Add VPS to known hosts
         run: |
           ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
+      - name: Check VPS disk space (auto-clean if needed)
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} "
+            echo '=== Disk usage ===' && df -h / &&
+            echo '=== Docker disk usage ===' && docker system df &&
+            FREE_GB=\$(df -BG / | tail -1 | awk '{print \$4}' | sed 's/G//') &&
+            echo \"Free: \${FREE_GB}GB\" &&
+            if [ \"\$FREE_GB\" -lt 5 ]; then
+              echo 'Low disk — running docker system prune -a -f...' &&
+              docker system prune -a -f &&
+              echo '=== After cleanup ===' &&
+              df -h / &&
+              FREE_GB=\$(df -BG / | tail -1 | awk '{print \$4}' | sed 's/G//') &&
+              echo \"Free after cleanup: \${FREE_GB}GB\" &&
+              if [ \"\$FREE_GB\" -lt 5 ]; then
+                echo \"ERROR: Still less than 5GB free after cleanup (\${FREE_GB}GB) — aborting deploy\" &&
+                exit 1
+              fi
+            fi"
 
+      - name: Fix VPS git permissions (if needed)
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} "
+            cd ${{ secrets.HETZNER_DEPLOY_PATH }} &&
+            if find .git -not -user \$(whoami) -print -quit 2>/dev/null | grep -q .; then
+              echo 'Root-owned files found in .git — attempting fix...' &&
+              if sudo -n chown -R \$(whoami):\$(whoami) .git 2>/dev/null; then
+                echo 'Permissions fixed.'
+              else
+                echo 'sudo failed. Fix manually on VPS as root:' &&
+                echo '  chown -R deployer:deployer /home/deployer/voice-chef/.git' &&
+                echo 'Aborting — cannot proceed with root-owned git files.' &&
+                exit 1
+              fi
+            fi"
       - name: Pull latest code on VPS
         run: |
           DEPLOY_BRANCH="${{ github.event_name == 'workflow_run' && 'main' || github.ref_name }}"
@@ -59,7 +92,7 @@ jobs:
         run: |
           ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
             "cd ${{ secrets.HETZNER_DEPLOY_PATH }} && make ${{ steps.mode.outputs.mode }}"
-        timeout-minutes: 15
+        timeout-minutes: 25
 
       - name: Run Alembic migrations
         run: |

@@ -1,193 +1,210 @@
-# Microservices Module — Voice Chef
+# Microservices Architecture — Voice Chef
 
-## Subject Requirement
+## What Voice Chef is, and why microservices fits
 
-> "Major: Backend as microservices.
-> Design loosely-coupled services with clear interfaces.
-> Use REST APIs or message queues for communication.
-> Each service should have a single responsibility."
+Voice Chef is an AI-driven kitchen assistant. It combines a tenant-scoped data
+API for recipes and ingredients, a tool-calling LLM agent that orchestrates
+work on the user's behalf, on-device speech-to-text for hands-free input, a
+hybrid (dense + sparse) vector index for semantic search over the recipe
+catalog, and two distinct frontends — an office UI for recipe authoring and a
+kitchen UI optimized for greasy-hands voice interaction.
 
-## Current State
+These responsibilities have meaningfully different runtime profiles. The STT
+service loads a Whisper checkpoint into memory; the RAG service holds a
+multilingual sentence-transformer model; the agent streams responses via SSE
+with bounded tool-call budgets; the backend serves CRUD plus static uploads
+from a Postgres-backed store. They scale, restart, and fail differently. A
+microservice shape is the natural fit: each concern lives behind a clear,
+narrow interface, and the platform composes them via Docker Compose with a
+single shared bridge network.
 
-### What already satisfies the requirement
+## Service map
 
-Voice Chef is already a multi-service Docker Compose application with clear service boundaries:
+All services run inside the `app-network` Docker bridge defined in the root
+`docker-compose.yml` and reach each other by service name.
 
-| Service | Responsibility | Interface | Status |
-|---------|---------------|-----------|--------|
-| `backend` | Data API (CRUD, auth) | REST `/api/...` | Running |
-| `agent` | AI reasoning + tool calling | AG-UI (REST/SSE) | Running |
-| `stt` | Speech-to-text transcription | REST `/transcribe`, `/health` | Running |
-| `db` | Data persistence | Postgres protocol | Running |
-| `office-frontend` | Office UI | HTTP (static) | Running |
-| `kitchen-frontend` | Kitchen/voice UI | HTTP (static) | Running |
+| Service | Responsibility | Interface | Repo location |
+|---|---|---|---|
+| `backend` | Tenant-scoped CRUD for recipes, ingredients, users, file uploads, and JWT-based auth. | REST under `/api/...`; static files at `/uploads/...`; OpenAPI at `/docs`; `GET /health`. | `backend/` (Dockerfile at `backend/Dockerfile`, app entry at `backend/app/main.py`) |
+| `agent` | Pydantic-AI tool-calling LLM agent. Orchestrates calls to `backend` (recipes, ingredients) and `rag` (semantic search) on behalf of the kitchen frontend. | AG-UI streaming protocol over `POST /` (SSE); OpenAPI at `/docs`; `GET /health`. | `agent/` (`agent/Dockerfile`, `agent/app/main.py`) |
+| `stt` | Stateless audio-to-text transcription using a local Whisper model. | REST `POST /transcribe` (multipart upload); OpenAPI at `/docs`; `GET /health`. | `stt/` (`stt/Dockerfile`, `stt/app/main.py`) |
+| `rag` | Vector indexer + hybrid (dense + sparse BM25) search over recipes and ingredients. Backfills from `backend` on startup and polls for changes. | REST `POST /search/recipes`, `POST /search/ingredients`; OpenAPI at `/docs`; `GET /health`. | `rag/` (`rag/Dockerfile`, `rag/app/main.py`) |
+| `qdrant` | Vector store backing the `rag` service. | Qdrant HTTP API on 6333, gRPC on 6334. | Image `qdrant/qdrant:latest` (no source in repo) |
+| `db` | Persistent storage for backend data; the only stateful service besides Qdrant. | PostgreSQL 17 wire protocol on 5432. | Image `postgres:17.8`; init scripts in `db/init/` |
+| `office-frontend` | React/Vite SPA for recipe authoring and management; talks to `backend`. | Static HTTP served by nginx on container port 80 (host 8080). | `frontend/office/` |
+| `kitchen-frontend` | React/Vite SPA for the kitchen tablet; talks to `agent` over AG-UI and to `stt` for voice input. | Static HTTP served by nginx on container port 80 (host 8082). | `frontend/kitchen/` |
 
-- 6 services, each with a single responsibility
-- REST APIs for inter-service communication
-- Docker Compose networking for service discovery
-- Services are independently buildable and deployable
+## Why REST instead of a message queue
 
-### What's missing
+The 42 subject permits either REST APIs or message queues. We chose REST for
+three reasons.
 
-| Gap | Description | Effort |
-|-----|-------------|--------|
-| **Health endpoints** | `backend` and `agent` lack `/health` endpoints. Only `stt` has one. | Small |
-| **Docker healthchecks** | Only `db` has a healthcheck in `docker-compose.yml`. Backend, agent, and stt need them. | Small |
-| **Message queue** | No event-driven communication. All inter-service calls are synchronous REST. | Medium |
-| **API documentation** | FastAPI auto-generates OpenAPI/Swagger docs but accessibility not verified. | Small |
+First, every current inter-service interaction is request/response. The agent
+calls the backend for recipe data and the rag service for semantic hits; the
+kitchen frontend uploads audio to STT and waits for the transcript; the office
+frontend reads and writes through the backend. None of these flows is
+naturally pub/sub.
 
----
+Second, FastAPI gives us OpenAPI schema generation, request validation, and an
+interactive `/docs` page for free. The interfaces are self-describing for both
+reviewers and the frontend developers — no separate IDL to maintain.
 
-## Changes Required to Existing Code
+Third, a synchronous HTTP boundary is one less moving part to operate compared
+to running and monitoring a broker.
 
-### 1. Add `/health` endpoint to backend
+A pub/sub layer (Valkey, the open-source Redis fork) is on the roadmap
+specifically for event-driven re-indexing of the RAG vector store — when a
+recipe is created or updated in the backend, an event would tell `rag` to
+re-embed only that record. Today `rag` solves the same problem more bluntly:
+its lifespan handler runs a backfill on startup when the Qdrant collections
+are empty, and it polls thereafter (`EMBEDDING_POLL_SECONDS`, default 30s).
+Polling is good enough at the current data volume; the broker is a future
+optimization, not load-bearing.
 
-**File:** `backend/app/main.py`
+## Loose coupling in practice
 
-Add a simple health check endpoint:
-```python
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+Each service has its own image, its own Dockerfile, and its own port mapping
+in `docker-compose.yml`. Concretely:
+
+- `docker compose stop agent` leaves the office frontend, backend, rag, and
+  STT fully operational. Only the kitchen voice flow degrades.
+- `docker compose stop rag` is intended to leave the agent's exact-match
+  tooling against the backend functional; only semantic search would be
+  unavailable. Graceful degradation here depends on the agent's HTTP
+  error handling and isn't yet exercised by an automated test.
+- Each Python service has its own `requirements.txt` and can be exercised in
+  isolation against mocked dependencies. The agent's tools are registered via
+  pydantic-ai's tool registry rather than direct imports of backend code.
+- Deployments are per-service: swapping the Whisper model size by rebuilding
+  the `stt` image does not touch the agent or the backend; switching the
+  agent's underlying LLM provider is an environment-variable change
+  (`AGENT_PROVIDER`) on a single service.
+
+## Interfaces and discovery
+
+Every FastAPI service (`backend`, `agent`, `stt`, `rag`) exposes its OpenAPI
+schema and a Swagger UI at `/docs`. A reviewer or new contributor can inspect
+the public surface of any service without reading code.
+
+The agent additionally speaks the AG-UI streaming protocol on `POST /` for
+the kitchen frontend's chat UX, with usage limits enforced server-side
+(request and tool-call budgets in `agent/app/main.py`).
+
+Inside the Compose network, services address each other by DNS name —
+`http://backend:80`, `http://rag:8003`, `http://qdrant:6333` — driven by the
+`BACKEND_URL`, `RAG_SERVICE_URL`, `QDRANT_URL` environment variables wired in
+`docker-compose.yml`. For the kitchen-pi deployment scenario, where the
+kitchen tablet may run on a different host than the rest of the stack,
+Tailscale provides cross-host service discovery so the same service-name
+addressing continues to work.
+
+## TLS / encrypted transport
+
+The system uses **perimeter TLS**: the only HTTPS termination is at the
+shared `nginx-proxy` (PR #216). Every browser-facing path
+(`https://localhost/`, `/kitchen/`, `/api/`, `/agent/`, `/stt/`, `/uploads/`,
+`/docs`) is served over HTTPS via the proxy's self-signed certificate.
+Inter-service traffic on the internal Docker bridge network is plain HTTP
+(`http://backend:80`, `http://agent:8001`, `http://rag:8003`,
+`http://qdrant:6333`).
+
+This matches the standard production pattern for a single-host Compose
+deployment: the network boundary is the host, the encryption boundary is
+the proxy, and the internal Docker network is treated as trusted because
+it is not exposed beyond the host. Adding TLS to every service-to-service
+call (mTLS, separate certificates per container, qdrant TLS mode) would
+require meaningful cert management with no real-world threat reduction
+in this topology.
+
+When the deployment moves to a multi-host or cluster topology — where
+inter-service traffic crosses untrusted networks — the right next step is
+service mesh / mTLS rather than ad-hoc per-service TLS. Tracked as a
+future hardening item.
+
+## Operational endpoints
+
+Each FastAPI service exposes `GET /health` returning
+`{"status": "ok", "service": "<name>"}`. The endpoints are
+unauthenticated liveness probes — usable for `curl` checks from outside
+the network and as the test target for Docker Compose `healthcheck:`
+directives in a future hardening pass.
+
+Today only the `db` service has a Compose-level `healthcheck` block.
+Extending the pattern to backend, agent, stt, and rag — and converting
+`depends_on` to use `condition: service_healthy` — is tracked but not done.
+
+The `rag` service additionally exposes:
+- `GET /status` — current sync/reindex progress snapshot (`indexing`,
+  `items_done`, `items_total`, `eta_seconds`, `phase`). Used by the
+  agent's search responses (which surface the `indexing` flag for a
+  light-tier UX notification) and ready for a future kitchen-frontend
+  banner that polls this endpoint for richer progress UI.
+- `POST /reindex` — drops both qdrant collections and re-embeds from
+  scratch. Auth-gated by the same `INTERNAL_SECRET` header pattern the
+  agent uses against backend. Runs in the background; poll `/status`
+  for completion.
+
+Sync behavior at startup: rag compares each collection's qdrant point
+count against the backend's total. Empty → full backfill; matches → skip;
+mismatch → drop, recreate, re-embed. The startup sync runs as a
+background task, so the service starts serving (with whatever vectors
+are currently in qdrant) immediately rather than blocking for the
+several minutes a full backfill takes.
+
+### Testing and reindex commands
+
+All commands assume the working directory is the repo root, where
+`.env` lives. The rag service listens on `localhost:8003`.
+
+Health and progress (no auth):
+
+```bash
+# Liveness probe
+curl -s http://localhost:8003/health
+
+# Full sync/reindex progress snapshot
+curl -s http://localhost:8003/status
 ```
 
-### 2. Add `/health` endpoint to agent
+Search smoke tests (no auth on search; tenant filtering is a future item):
 
-**File:** `agent/app/main.py`
+```bash
+curl -s -X POST http://localhost:8003/search/recipes \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "chickpeas and lemon", "k": 3}'
 
-```python
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+curl -s -X POST http://localhost:8003/search/ingredients \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "Aubergine", "k": 5}'
 ```
 
-### 3. Add Docker healthchecks
+Manual reindex (drops both collections, re-embeds from scratch, runs in
+the background — returns immediately):
 
-**File:** `docker-compose.yml`
-
-Add healthcheck blocks to `backend`, `agent`, and `stt` services:
-
-```yaml
-backend:
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
-
-agent:
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
-
-stt:
-  healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
+```bash
+curl -s -X POST http://localhost:8003/reindex \
+  -H "X-Internal-Secret: $(grep ^INTERNAL_SECRET= .env | cut -d= -f2-)"
 ```
 
-Update `depends_on` blocks to use `condition: service_healthy` where appropriate.
+Note the `-f2-` (with trailing dash) on `cut`. The secret is base64 and
+ends with `=`, so plain `-f2` truncates the trailing `=` and produces a
+401. After kicking off the reindex, poll `/status` to watch progress;
+`indexing` flips back to `false` when done. A full reindex of the seed
+corpus takes ~5–6 minutes.
 
-### 4. Verify API documentation
+Rotating the shared secret (`INTERNAL_SECRET` is shared between agent
+and rag):
 
-**File:** `backend/app/main.py`
+```bash
+# Generate a new secret
+openssl rand -base64 32
 
-FastAPI generates OpenAPI docs automatically at `/docs` (Swagger UI) and `/redoc`. Verify these are accessible and not disabled. No code change expected — just confirmation.
-
-### 5. Add Valkey message queue
-
-**New service in `docker-compose.yml`:**
-```yaml
-valkey:
-  image: valkey/valkey:latest
-  ports:
-    - "6379"
-  networks:
-    - app-network
-  healthcheck:
-    test: ["CMD", "valkey-cli", "ping"]
-    interval: 10s
-    timeout: 5s
-    retries: 3
+# Edit .env, then restart the services that load it
+docker compose up -d agent rag
 ```
 
-**Backend changes:**
+## Reference
 
-| File | Change |
-|------|--------|
-| `backend/requirements.txt` | Add `valkey` or `redis` Python client |
-| `backend/app/core/events.py` (new) | Valkey connection + publish helper |
-| `backend/app/api/routes/recipe.py` | Publish `recipe.created`, `recipe.updated`, `recipe.deleted` events after CRUD operations |
-
-**Environment:**
-
-| File | Change |
-|------|--------|
-| `docker-compose.yml` | Add `VALKEY_URL: valkey://valkey:6379` to backend and agent environments |
-| `.env.example` | Add `VALKEY_URL=valkey://valkey:6379` |
-
-### 6. Event subscribers (consumers)
-
-Services that need to react to events subscribe to Valkey channels:
-
-| Subscriber | Event | Action |
-|------------|-------|--------|
-| Embedding service / ChromaDB indexer | `recipe.created`, `recipe.updated` | Re-index recipe in vector store |
-| STT service (future, Tier 3) | `correction.submitted` | Load new correction pair |
-
----
-
-## Target Architecture (after all changes)
-
-```
-┌─────────────┐  ┌──────────────┐  ┌──────────────┐
-│   Office    │  │   Kitchen    │  │  Raspi/ESP32  │
-│  Frontend   │  │  Frontend    │  │  (future)     │
-└──────┬──────┘  └──────┬───────┘  └──────┬────────┘
-       │                │                  │
-       │ REST           │ REST+AG-UI       │ REST
-       ▼                ▼                  ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│   Backend    │  │    Agent     │  │     STT      │
-│  /api/...    │  │  AG-UI SSE   │  │ /transcribe  │
-│  /health     │  │  /health     │  │ /health      │
-└──────┬───────┘  └──────┬───────┘  └──────────────┘
-       │                 │
-       │ pub             │ query
-       ▼                 ▼
-┌──────────────┐  ┌──────────────┐
-│    Valkey    │  │   ChromaDB   │
-│  pub/sub     │  │  vectors     │
-└──────┬───────┘  └──────────────┘
-       │ sub
-       ▼
-┌──────────────┐  ┌──────────────┐
-│  Embedding   │  │    Ollama    │
-│  Indexer     │  │  local LLM   │
-└──────────────┘  └──────────────┘
-       │
-       ▼
-┌──────────────┐
-│  PostgreSQL  │
-│  /health     │
-└──────────────┘
-```
-
-### Service count: 9
-
-All services communicate via REST APIs or Valkey pub/sub. Each has a single responsibility and a health endpoint. Services are independently deployable.
-
----
-
-## Implementation Order
-
-1. **Health endpoints + Docker healthchecks** — smallest change, immediate compliance
-2. **Valkey service + backend event publishing** — enables event-driven communication
-3. **ChromaDB + embedding indexer** — subscribes to Valkey events (part of RAG implementation)
-4. **Ollama** — local LLM service (part of local model implementation)
-
-Steps 2-4 are covered in detail in `docs/voiceNextSteps.md`.
+Planned improvements — Valkey pub/sub for event-driven RAG re-indexing and
+formal Compose `healthcheck:` wiring on all FastAPI services — are described
+in `docs/voiceNextSteps.md` under Topic 4 ("Microservices Architecture").

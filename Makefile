@@ -87,10 +87,19 @@ up: $(ENV)
 
 prod: $(ENV)
 	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
+	@echo "Building rag (heavy) first..."
+	$(COMPOSE) -f $(PROD_FILE) build rag
 	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
 	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
+
+prod-fresh: $(ENV)
+	@echo "Building all images from scratch (--no-cache)..."
+	$(COMPOSE) -f $(PROD_FILE) build --no-cache rag
+	$(COMPOSE) -f $(PROD_FILE) build --no-cache
+	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
+	@echo "VOICE-CHEF is running in prod_mode (fresh build)"
 
 # ── Lifecycle targets ──────────────────────────────────────────────────────
 #   make down   Stop and remove containers (images + volumes are kept)
@@ -241,6 +250,7 @@ help:
 	@printf "     %-30s %s\n" "make dev"         "Full dev stack (cached build, fast)"
 	@printf "     %-30s %s\n" "make dev-re"      "Full dev stack (clean build, --no-cache)"
 	@printf "     %-30s %s\n" "make prod"        "Production mode (nginx SSL proxy, no direct host ports)"
+	@printf "     %-30s %s\n" "make prod-fresh"  "Production mode from scratch (--no-cache)"
 	@printf "     %-30s %s\n" "make up"          "Restart existing dev containers (no rebuild)"
 	@printf "\n  🧩  PARTIAL DEV (lightweight)\n"
 	@printf "     %-30s %s\n" "make dev-back"          "Only db + backend"
@@ -269,6 +279,6 @@ help:
 # Catch-all for unrecognized targets.
 %:
 	@echo "Unknown target '$@'. Run 'make help' for available commands."
-.PHONY: all dev dev-re dev-back dev-back-office prod down re clean clean-nginx fclean status logs help build up start stop
+.PHONY: all dev dev-re dev-back dev-back-office prod prod-fresh down re clean clean-nginx fclean status logs help build up start stop
 .PHONY: agent-build agent-build-nocache agent-recreate stt-build stt-build-nocache stt-recreate
 .PHONY: refresh-env-agent dump-blast-check dump-regen drift-gate-local db-connect agent-terminal

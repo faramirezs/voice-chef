@@ -50,6 +50,15 @@ services:
     volumes:
       - ./stt/app:/app/app
 
+  qdrant:
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+
+  rag:
+    ports:
+      - "8003:8003"
+
 volumes:
   postgres_data:
   whisper_models:
