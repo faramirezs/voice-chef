@@ -1,5 +1,4 @@
 import logging
-from typing import Iterable
 
 from fastembed import SparseTextEmbedding
 from qdrant_client.http.models import SparseVector

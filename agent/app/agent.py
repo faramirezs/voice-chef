@@ -581,6 +581,11 @@ async def show_notification(
         not was_indexing_observed() and "rebuilding" in msg_lower
     )
     if contradicts_search or contradicts_indexing:
+        reason = "contradicts_search" if contradicts_search else "contradicts_indexing"
+        logger.info(
+            "show_notification suppressed (reason=%s level=%s message=%r)",
+            reason, level, message,
+        )
         return ToolReturn(
             return_value={
                 "status": "suppressed",
