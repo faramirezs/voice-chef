@@ -6,7 +6,10 @@
 #
 # Wipes:
 #   - The Chromium kiosk profile (cookie, localStorage, IndexedDB, cache)
-#   - The local containers (STT + stt-tls) and their volumes
+#   - The local containers (STT + stt-tls); the named volumes (whisper
+#     model cache) are intentionally kept so the next start-kitchen.sh
+#     doesn't have to re-download ~250 MB. To wipe them too, follow up
+#     with `docker compose down --volumes` from pi/.
 #   - The auto-start of the kiosk systemd unit
 #
 # Does NOT touch:
