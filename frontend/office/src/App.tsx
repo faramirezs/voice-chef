@@ -16,6 +16,7 @@ import { TimersPage } from '@/pages/TimersPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { FilesPage } from '@/pages/FilesPage';
 import { APIKeysPage } from '@/pages/APIKeysPage';
+import { useAuth } from '@/hooks/useAuth';
 
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
@@ -23,12 +24,12 @@ import { TermsOfServicePage } from '@/pages/TermsOfServicePage';
 import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage';
 
 function PublicOnlyRoute({ children }: { children: ReactNode }) {
-  const isLoggedIn = Boolean(localStorage.getItem('token'));
+  const { isLoggedIn } = useAuth();
   return isLoggedIn ? <Navigate to="/" replace /> : children;
 }
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const isLoggedIn = Boolean(localStorage.getItem('token'));
+  const { isLoggedIn } = useAuth();
   return isLoggedIn ? children : <Navigate to="/login" replace />;
 }
 
