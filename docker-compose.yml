@@ -181,16 +181,12 @@ services:
       start_period: 60s
 
 volumes:
+  nginx_ssl:
   whisper_models:
-  postgres_data:
-<<<<<<< HEAD
   qdrant_storage:
   embedding_models:
-  uploads:
-=======
   backend_data:
->>>>>>> main
-  nginx_ssl:
+  postgres_data:
 
 networks:
   app-network:
