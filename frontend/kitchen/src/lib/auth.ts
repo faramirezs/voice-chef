@@ -30,5 +30,16 @@ export function redirectToOfficeLogin(): void {
 
 export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+  // Drop the SWR catalog cache so a different user signing in on the same
+  // kiosk doesn't see the previous user's recipes/ingredients while the
+  // background revalidation is in flight. Cache name must match
+  // vite.config.ts → workbox.runtimeCaching → cacheName.
+  if (typeof caches !== "undefined") {
+    try {
+      await caches.delete("voice-chef-api-cache");
+    } catch {
+      // Cache API unavailable (private mode, http context) — nothing to clear.
+    }
+  }
   redirectToOfficeLogin();
 }
