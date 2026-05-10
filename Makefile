@@ -17,14 +17,20 @@ COMPOSE = docker compose
 PROD_FILE = docker-compose.yml
 DEV_FILE = docker-compose.override.yml
 ENV = .env
+ENV_SRC = /home/$(USER)/.env
+ENV_DST = .env
 
 # ── Default target ─────────────────────────────────────────────────────────
 all: help
 
 # ── Environment bootstrap ──────────────────────────────────────────────────
 # Copy-creates .env from .env.example if it does not exist.
+# $(ENV):
+# 	@test -f $(ENV) || (cp .env.example $(ENV) && echo "Created $(ENV) from .env.example")
+
+# Copy-creates .env from ~/ dir.
 $(ENV):
-	@test -f $(ENV) || (cp .env.example $(ENV) && echo "Created $(ENV) from .env.example")
+	@test -f $(ENV) || (cp $(ENV_SRC) $(ENV) && echo "Created $(ENV) from $(ENV_SRC)")
 
 # ── Development targets ────────────────────────────────────────────────────
 
@@ -89,7 +95,7 @@ prod: $(ENV)
 	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
-	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
+	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
 # ── Lifecycle targets ──────────────────────────────────────────────────────
@@ -118,13 +124,14 @@ stop:
 
 clean:
 	@echo "Stopping the app and removing containers + images..."
-	$(COMPOSE) down --rmi local
+	$(COMPOSE) down --rmi local --remove-orphans
 
 clean-nginx:
 	@echo "Removing ALL Docker images (including nginx-proxy)..."
-	$(COMPOSE) down --rmi all --remove-orphans
+	$(COMPOSE) stop nginx-proxy  || true	
 	$(COMPOSE) rm -f nginx-proxy
 	docker rmi voice-chef-nginx-proxy:latest
+	$(COMPOSE) down --rmi local --remove-orphans
 	@echo "All images removed. Database volume preserved."
 
 fclean:
@@ -157,7 +164,7 @@ status:
 			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
 	) | column -t; \
 		printf '\n'
-	@echo "Docker compose containers status:"
+
 logs:
 	@docker compose logs
 
