@@ -105,11 +105,13 @@ export function useUpdateRecipe() {
       const { data } = await updateRecipe(id, updates);
       return data;
     },
-    onSuccess: (updatedRecipe) => {
+    onSuccess: (updatedRecipe, variables) => {
       queryClient.setQueryData([RECIPES_KEY, updatedRecipe.id], (oldData: any) => ({
         ...oldData,
+        ...variables,
         ...updatedRecipe,
       }));
+      queryClient.invalidateQueries({ queryKey: [RECIPES_KEY, updatedRecipe.id] });
       queryClient.invalidateQueries({
         queryKey: [RECIPES_KEY],
         predicate: (query) => typeof query.queryKey[1] === 'object',

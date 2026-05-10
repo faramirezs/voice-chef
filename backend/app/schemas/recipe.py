@@ -74,6 +74,8 @@ class RecipeUpdate(SQLModel):
     name: str | None = Field(default=None, min_length=1)
     description: str | None = None
     instructions: str | None = None
+    preparation_time_minutes: int | None = Field(default=None)
+    cooking_time_minutes: int | None = Field(default=None)
 
     status: str | None = None
     yield_mode: str | None = None
