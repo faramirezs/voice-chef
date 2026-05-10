@@ -1,9 +1,12 @@
 import { Outlet, Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppSidebar } from '@/components/app-sidebar';
 
 export function AppLayout() {
+  const location = useLocation();
+
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -18,7 +21,9 @@ export function AppLayout() {
             </div>
           </header>
           <main className="flex-1 p-8">
-            <Outlet />
+            <div key={location.pathname} className="page-fade-in">
+              <Outlet />
+            </div>
           </main>
         </SidebarInset>
       </SidebarProvider>
