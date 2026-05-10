@@ -12,9 +12,10 @@ SQLAlchemy==2.0.48
 sqlmodel==0.0.37
 typing-inspection==0.4.2
 typing_extensions==4.15.0
-slowapi==0.1.7
-setuptools>=70.0.0
-packaging>=24.0
+slowapi==0.1.8
+limits>=3.0
+#setuptools>=70.0.0
+#packaging>=24.0
 
 inflect==7.5.0
 more_itertools==10.8.0
