@@ -168,11 +168,11 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - embedding_models:/root/.cache/huggingface
-    # Cap rag at 2 CPUs. Sentence-transformers + BM25 inference is
-    # CPU-bound and PyTorch's BLAS pool can otherwise saturate the
-    # Docker VM during back-to-back searches, triggering thermal
-    # throttling on the host.
-    cpus: 2.0
+    # # Cap rag at 2 CPUs. Sentence-transformers + BM25 inference is
+    # # CPU-bound and PyTorch's BLAS pool can otherwise saturate the
+    # # Docker VM during back-to-back searches, triggering thermal
+    # # throttling on the host.
+    # cpus: 2.0
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8003/health').read()\""]
       interval: 10s
