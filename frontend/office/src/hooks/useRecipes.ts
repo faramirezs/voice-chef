@@ -106,7 +106,10 @@ export function useUpdateRecipe() {
       return data;
     },
     onSuccess: (updatedRecipe) => {
-      queryClient.setQueryData([RECIPES_KEY, updatedRecipe.id], updatedRecipe);
+      queryClient.setQueryData([RECIPES_KEY, updatedRecipe.id], (oldData: any) => ({
+        ...oldData,
+        ...updatedRecipe,
+      }));
       queryClient.invalidateQueries({
         queryKey: [RECIPES_KEY],
         predicate: (query) => typeof query.queryKey[1] === 'object',
