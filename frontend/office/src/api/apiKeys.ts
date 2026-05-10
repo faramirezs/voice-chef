@@ -9,16 +9,16 @@ import type {
 } from '@/types/apiKeys';
 
 export const listAPIKeys = () =>
-  api.get<APIKeyListResponse[]>('/api-keys');
+  api.get<APIKeyListResponse[]>('/api_keys');
 
 export const getAPIKey = (id: string) => 
-  api.get<APIKeyListResponse>(`/api-keys/${id}`);
+  api.get<APIKeyListResponse>(`/api_keys/${id}`);
 
 export const createAPIKey = (data: APIKeyCreate) => 
-  api.post<APIKeyCreateResponse>('/api-keys', data);
+  api.post<APIKeyCreateResponse>('/api_keys', data);
 
 export const updateAPIKey = (id: string, data: APIKeyUpdate) => 
-  api.patch<APIKeyListResponse>(`/api-keys/${id}`, data);
+  api.patch<APIKeyListResponse>(`/api_keys/${id}`, data);
 
 export const deleteAPIKey = (id: string) => 
-  api.delete<void>(`/api-keys/${id}`);
+  api.delete<void>(`/api_keys/${id}`);
