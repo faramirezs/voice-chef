@@ -1,5 +1,6 @@
 import axios from "axios"
 import { getValidToken } from "@/hooks/useAuth"
+import { clearAuthData } from "@/hooks/useAuth"
 
 export const api = axios.create({
   baseURL: "/api",
@@ -37,8 +38,7 @@ api.interceptors.response.use(
       
       if (!isLoginPage) {
         console.warn("Unauthorized! Redirecting to login...");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        clearAuthData();
         window.location.href = "/login";
       }
     }
