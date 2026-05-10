@@ -88,16 +88,15 @@ up: $(ENV)
 prod: $(ENV)
 	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
 	@echo "Building rag (heavy) first..."
-	$(COMPOSE) -f $(PROD_FILE) build rag
 	$(COMPOSE) -f $(PROD_FILE) down
+	$(COMPOSE) -f $(PROD_FILE) build rag
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
 	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
 prod-fresh: $(ENV)
 	@echo "Building all images from scratch (--no-cache)..."
-	$(COMPOSE) -f $(PROD_FILE) build --no-cache rag
-	$(COMPOSE) -f $(PROD_FILE) build --no-cache
+	$(COMPOSE) -f $(PROD_FILE) build
 	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode (fresh build)"
 
