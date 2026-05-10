@@ -16,7 +16,8 @@ export function StartingPage() {
       <div className="grid flex-1 gap-4 md:grid-cols-3">
         <NavLink
           to="/recipes"
-          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
+          className="card-stagger-in group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
+          style={{ animationDelay: "120ms" }}
         >
           <div
             className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
@@ -30,7 +31,8 @@ export function StartingPage() {
         </NavLink>
         <NavLink
           to="/menu-planner"
-          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
+          className="card-stagger-in group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
+          style={{ animationDelay: "240ms" }}
         >
           <div
             className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
@@ -46,7 +48,8 @@ export function StartingPage() {
           href={KITCHEN_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
+          className="card-stagger-in group relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-6 text-center transition-transform duration-300 ease-out hover:scale-[1.02]"
+          style={{ animationDelay: "360ms" }}
         >
           <div
             className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat transition-[filter] duration-300 ease-out"
