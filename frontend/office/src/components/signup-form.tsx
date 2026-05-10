@@ -237,7 +237,7 @@ export function SignupForm({
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By creatin an account, you agree to our <a href="/terms">Terms of Service</a>{" "}
+        By creating an account, you agree to our <a href="/terms">Terms of Service</a>{" "}
         and <a href="/privacy">Privacy Policy</a>.
       </FieldDescription>
     </div>
