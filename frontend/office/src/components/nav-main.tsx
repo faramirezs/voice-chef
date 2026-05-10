@@ -15,7 +15,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowRight01Icon, Calendar03Icon, ComponentIcon, CookBookIcon, Files01Icon, Home07Icon, RoboticIcon } from "@hugeicons/core-free-icons"
+import { ArrowRight01Icon, Calendar03Icon, ComponentIcon, CookBookIcon, Files01Icon, Home07Icon, RoboticIcon, Key01Icon } from "@hugeicons/core-free-icons"
 import { NavLink } from "react-router-dom"
 
 
@@ -90,6 +90,13 @@ const NAV_ITEMS = [
 			<HugeiconsIcon icon={RoboticIcon} strokeWidth={2} />
 		)
 	},
+	{
+		title: "API Keys",
+		url: "/api-keys",
+		icon: (
+			<HugeiconsIcon icon={Key01Icon} strokeWidth={2} />
+		)
+	},
 	// 	{
 	// 	title: "Analytics",
 	// 	url: "/analytics",
@@ -119,13 +126,13 @@ export function NavMain({
       <SidebarMenu>
 				{NAV_ITEMS.map((item) => (
 					<SidebarMenuItem key={item.title}>
+						<SidebarMenuButton asChild>
 							<NavLink to={item.url} className={({ isActive }) => isActive ? "bg-primary/10 text-primary" : ""}>
-						<SidebarMenuButton>
 								{item.icon}
 								<span>{item.title}</span>
-						</SidebarMenuButton>
 							</NavLink>
-					</SidebarMenuItem>
+						</SidebarMenuButton>
+						</SidebarMenuItem>
 				))}
 
         {items.map((item) => (

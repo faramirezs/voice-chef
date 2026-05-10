@@ -89,7 +89,7 @@ prod: $(ENV)
 	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
 	$(COMPOSE) -f $(PROD_FILE) down
 	$(COMPOSE) -f $(PROD_FILE) build --no-cache
-	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
+	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
 # ── Lifecycle targets ──────────────────────────────────────────────────────
@@ -118,11 +118,11 @@ stop:
 
 clean:
 	@echo "Stopping the app and removing containers + images..."
-	$(COMPOSE) down --rmi local
+	$(COMPOSE) down --rmi local --remove-orphans
 
-clean-nginx:
+clean-nginx: clean
 	@echo "Removing ALL Docker images (including nginx-proxy)..."
-	$(COMPOSE) down --rmi all --remove-orphans
+	$(COMPOSE) stop nginx-proxy  || true	
 	$(COMPOSE) rm -f nginx-proxy
 	docker rmi voice-chef-nginx-proxy:latest
 	@echo "All images removed. Database volume preserved."
@@ -157,7 +157,7 @@ status:
 			--format "{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}"; \
 	) | column -t; \
 		printf '\n'
-	@echo "Docker compose containers status:"
+
 logs:
 	@docker compose logs
 

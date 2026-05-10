@@ -15,6 +15,7 @@ import { AnalyticsPage } from '@/pages/AnalyticsPage';
 import { TimersPage } from '@/pages/TimersPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { FilesPage } from '@/pages/FilesPage';
+import { APIKeysPage } from '@/pages/APIKeysPage';
 import { useAuth } from '@/hooks/useAuth';
 
 import { LoginPage } from '@/pages/LoginPage';
@@ -78,6 +79,7 @@ function App() {
           <Route path="ingredients" element={<IngredientsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="files" element={<FilesPage />} />
+          <Route path="api-keys" element={<APIKeysPage />} />
 
           <Route path="settings/*" element={<SettingsGeneralPage />} />
           <Route path="profile" element={<ProfilePage />} />
