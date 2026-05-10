@@ -128,13 +128,18 @@ def login(
     access_token = create_access_token(
         data={"sub": user.email, "id": str(user.id)})
      
-    # 5. Set cookie for shared auth across frontends
+    # 5. Set cookie for shared auth across frontends.
+    # max_age makes the cookie persist across browser restarts; without
+    # it the cookie is session-scoped and dies when Chromium exits,
+    # logging the kitchen kiosk out on every reboot (issue #243).
+    # Aligned with the JWT's own lifetime so both expire together.
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=False,
         samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
 
 
@@ -161,5 +166,13 @@ def me(current_user: Users = Depends(get_current_user)) -> UserMeResponse:
 @router.post("/logout")
 def logout(response: Response) -> dict:
     """Clear the auth cookie."""
-    response.delete_cookie("access_token")
+    # path + samesite must match the attributes used in /login. Some
+    # browsers refuse to delete a cookie when the deletion's attributes
+    # differ from the original, leaving the user stuck "logged in" on
+    # the cookie path even after a successful logout.
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        samesite="lax",
+    )
     return {"detail": "Logged out"}

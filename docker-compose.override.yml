@@ -44,7 +44,7 @@ services:
       - "8000:80"
     volumes:
       - ./backend/app:/code/app
-      - uploads:/code/uploads
+      - backend_data:/code/data
 
   stt:
     volumes:

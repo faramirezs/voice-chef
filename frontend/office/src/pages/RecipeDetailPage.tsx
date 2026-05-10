@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   useDeleteRecipe, 
@@ -14,7 +14,6 @@ import { formatDatetime } from '../components/Format-Datetime.tsx';
 import { DetailRow } from '../components/Detail-row';
 import { Grid } from '../components/Grid';
 import { cn } from '@/lib/utils';
-import { useRef } from 'react';
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-yellow-100 text-yellow-800',
@@ -38,6 +37,7 @@ export function RecipeDetailPage() {
   const uploadPhoto = useUploadRecipePicture();
   const deletePhoto = useDeleteRecipePicture();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Navigate away immediately after successful deletion
   useEffect(() => {
@@ -76,12 +76,83 @@ export function RecipeDetailPage() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && recipe) {
-      uploadPhoto.mutate({ id: recipe.id, file });
-    }
-    // Reset input so the same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (!file) return;
+
+    const validateImage = (f: File) => {
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
+      const MAX_SIZE_MB = 1;
+      const MAX_SIZE = MAX_SIZE_MB * 1024 * 1024; // 10MB
+      const MIN_DIM = 200;
+      const MAX_DIM = 6000;
+
+      return new Promise<void>((resolve, reject) => {
+        if (!ALLOWED_TYPES.includes(f.type)) {
+          reject('Only JPG, JPEG and PNG images are allowed');
+          return;
+        }
+
+        if (f.size === 0) {
+          reject('File is empty');
+          return;
+        }
+
+        if (f.size > MAX_SIZE) {
+          reject(`File size exceeds the limit of ${MAX_SIZE_MB}MB`);
+          return;
+        }
+
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => {
+          const { width, height } = img;
+          URL.revokeObjectURL(url);
+          if (width < MIN_DIM || height < MIN_DIM) {
+            reject(`Image dimensions too small. Minimum is ${MIN_DIM}x${MIN_DIM}px`);
+            return;
+          }
+          if (width > MAX_DIM || height > MAX_DIM) {
+            reject(`Image dimensions too large. Maximum is ${MAX_DIM}x${MAX_DIM}px`);
+            return;
+          }
+          // simple format verification by attempting to draw to canvas (detects some corruptions)
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              // if no context, still accept (uncommon)
+              resolve();
+              return;
+            }
+            ctx.drawImage(img, 0, 0);
+            // attempt to read a few pixels
+            ctx.getImageData(0, 0, 1, 1);
+            resolve();
+          } catch (err) {
+            reject('Invalid or corrupted image file');
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject('Invalid or corrupted image file');
+        };
+        img.src = url;
+      });
+    };
+
+    setUploadError(null);
+    if (recipe) {
+      validateImage(file)
+        .then(() => {
+          uploadPhoto.mutate({ id: recipe.id, file });
+        })
+        .catch((err) => {
+          setUploadError(typeof err === 'string' ? err : 'Invalid image file');
+        })
+        .finally(() => {
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        });
     }
   };
 
@@ -133,8 +204,13 @@ export function RecipeDetailPage() {
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="space-y-3">
         <Button size="sm" onClick={() => navigate('/recipes')}>← Back</Button>
+        <div className="relative mb-6">
+          <span className={cn(badgeClass, 'absolute -top-12 right-0 z-20 px-4 py-2 text-base font-semibold capitalize')}>
+            {recipe.status}
+          </span>
+        </div>
         <div
-          className="h-72 w-full overflow-hidden rounded-xl border cursor-pointer relative hover:opacity-80 transition-opacity bg-muted flex items-center justify-center"
+          className="h-72 w-full overflow-hidden rounded-xl border cursor-pointer relative hover:opacity-80 transition-opacity bg-muted flex items-center justify-center group"
           onClick={handlePhotoClick}
         >
           {uploadPhoto.isPending && (
@@ -143,12 +219,17 @@ export function RecipeDetailPage() {
             </div>
           )}
           {recipe.photo_url ? (
-            <img
-              key={recipe.photo_url}
-              src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
-              alt={recipe.name}
-              className="w-full h-full object-cover"
-            />
+            <>
+              <img
+                key={recipe.photo_url}
+                src={`/api/recipe_images/${recipe.id}?v=${new Date(recipe.updated_at).getTime()}`}
+                alt={recipe.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <p className="text-white text-lg font-medium">Replace image</p>
+              </div>
+            </>
           ) : (
             <div className="text-center text-muted-foreground">
               <p className="text-lg font-medium">Click here to upload a picture</p>
@@ -163,6 +244,11 @@ export function RecipeDetailPage() {
           className="hidden"
           disabled={uploadPhoto.isPending}
         />
+        {uploadError && (
+          <div className="mt-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            {uploadError}
+          </div>
+        )}
         <div className="flex items-center gap-3 flex-wrap">
           <InlineEditableRecipeText
             recipeId={recipe.id}
@@ -170,9 +256,8 @@ export function RecipeDetailPage() {
             value={recipe.name}
             label=""
             className="w-full sm:w-auto sm:min-w-[28rem]"
-            displayClassName="text-2xl font-semibold"
+            displayClassName="text-2xl font-semibold break-words hyphens-auto"
           />
-          <span className={badgeClass}>{recipe.status}</span>
         </div>
         <div className="flex flex-wrap gap-3 justify-between">
           <div className="flex flex-wrap gap-3">
@@ -186,12 +271,12 @@ export function RecipeDetailPage() {
             >
               Change status
             </Button>
-            <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
+            {/* <Button size="lg" onClick={() => alert('Edit recipe functionality coming soon!')}>
               Edit
             </Button>
             <Button size="lg" variant="outline" onClick={() => alert('Duplicate recipe functionality coming soon!')}>
               Duplicate
-            </Button>
+            </Button> */}
             <Button
               size="lg"
               variant="destructive"
@@ -228,46 +313,54 @@ export function RecipeDetailPage() {
       {/* 1 column */}
       <div className="lg:col-span-3">
        <Section title="PREP TIME">
-        {recipe.preparation_time_minutes}
-        {(!recipe.preparation_time_minutes || recipe.preparation_time_minutes === 0) && (
-          <p className="text-sm text-muted-foreground italic">No preparation time minutes added yet.</p>
-          )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="preparation_time_minutes"
+          value={recipe.preparation_time_minutes}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
 
       {/* column 2 */}
       <div className="lg:col-span-3">
        <Section title="COOK TIME">
-        {recipe.cooking_time_minutes}
-        {(!recipe.cooking_time_minutes || recipe.cooking_time_minutes === 0) && (
-          <p className="text-sm text-muted-foreground italic">No cooking time minutes added yet.</p>
-          )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="cooking_time_minutes"
+          value={recipe.cooking_time_minutes}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
       {/* column 3 */}
       <div className="lg:col-span-3">
        <Section title="SERVINGS">
-        {/* Ternary operator for conditional rendering to ensure the math 
-        only happens if a valid value exists. */}
-        {recipe.portions_count_resolved ? (
-          // Only render the number if portion_size_grams is not null or empty
-          Math.round(Number(recipe.portions_count_resolved))
-        ) : (
-          // Fallback message if it is null, 0, or an empty string
-          <p className="text-sm text-muted-foreground italic">No portions count resolved added yet.</p>
-        )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="portions_count_resolved"
+          value={recipe.portions_count_resolved}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
       {/* column 4 */}
       <div className="lg:col-span-3">
        <Section title="PORTION SIZE">
-        {recipe.portion_size_grams ? (
-          Math.round(Number(recipe.portion_size_grams))
-        ) : (
-          <p className="text-sm text-muted-foreground italic">
-            No portion size grams resolved added yet.
-          </p>
-        )}
+        <InlineEditableRecipeText
+          recipeId={recipe.id}
+          field="portion_size_grams"
+          value={recipe.portion_size_grams}
+          label=""
+          type="number"
+          displayClassName="text-lg"
+        />
        </Section>
       </div>
     </div>
@@ -328,16 +421,6 @@ export function RecipeDetailPage() {
        </Section>
       </div>
     </div>
-
-         {/* ── Identity ───────────────────────────────────────── */}
-      <Section title="Identity">
-        <Grid>
-          <DetailRow label="ID" value={recipe.id} />
-          <DetailRow label="Is component" value={recipe.is_component} />
-          <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
-          <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
-        </Grid>
-      </Section>
       {/* <Section title="yield_mode">
         yield_mode
       </Section> */}
@@ -350,11 +433,39 @@ export function RecipeDetailPage() {
       {/* ── Yield & Weights ────────────────────────────────── */}
       <Section title="Yield & Weights">
           <Grid>
-            {/* <DetailRow label="Yield" value={recipe.yield_amount != null ? `${recipe.yield_amount}${recipe.yield_unit ? ` ${recipe.yield_unit}` : ''}` : null} /> */}
-            {/* <DetailRow label="Reduction factor" value={recipe.reduction_factor} /> */}
-            <DetailRow label="Total cooked weight (g)" value={recipe.total_cooked_weight_grams} />
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total raw weight (g)</p>
+              <InlineEditableRecipeText
+                recipeId={recipe.id}
+                field="total_raw_weight_grams"
+                value={recipe.total_raw_weight_grams}
+                label=""
+                type="number"
+                displayClassName="text-sm"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Total cooked weight (g)</p>
+              <InlineEditableRecipeText
+                recipeId={recipe.id}
+                field="total_cooked_weight_grams"
+                value={recipe.total_cooked_weight_grams}
+                label=""
+                type="number"
+                displayClassName="text-sm"
+              />
+            </div>
           </Grid>
         </Section>
+                 {/* ── Identity ───────────────────────────────────────── */}
+      <Section title="Identity">
+        <Grid>
+          <DetailRow label="ID" value={recipe.id} />
+          <DetailRow label="Is component" value={recipe.is_component} />
+          <DetailRow label="Created" value={formatDatetime(recipe.created_at)} />
+          <DetailRow label="Updated" value={formatDatetime(recipe.updated_at)} />
+        </Grid>
+      </Section>
     </div>
   );
 }

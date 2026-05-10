@@ -5,7 +5,6 @@ import uuid
 import shutil
 from sqlalchemy import create_engine, text
 from app.core.config import settings
-from app.utils.file_service_image_utils import delete_file
 
 DATABASE_URL = settings.DATABASE_URL
 
@@ -36,13 +35,11 @@ def link_images_to_db():
         """)).fetchall()
 
         for recipe_id, name, photo_url in recipes:
-
-            # Skip if the file already exists on disk (user-uploaded or previously seeded)
+            # Only seed recipes that do not already have a photo_url.
+            # This avoids overwriting or interfering with user-uploaded images
+            # added after startup.
             if photo_url:
-                filename = os.path.basename(photo_url)
-                file_path = os.path.join(UPLOAD_DIR, filename)
-                if os.path.exists(file_path):
-                    continue
+                continue
 
             slug = slugify(name)
             filename_guess = f"{slug}.jpg"
@@ -51,11 +48,6 @@ def link_images_to_db():
             
             if not os.path.exists(src_path):
                 continue
-
-            # Delete old photo reference from DB if it exists but file is gone
-            if photo_url:
-                delete_file(photo_url)
-
             file_uuid = str(uuid.uuid4())
             filename = f"{file_uuid}.jpg"
 
@@ -64,7 +56,7 @@ def link_images_to_db():
             os.makedirs(UPLOAD_DIR, exist_ok=True)
             shutil.copyfile(src_path, dst_path)
 
-            photo_url = f"{UPLOAD_URL_PREFIX}/{filename}"
+            photo_url = f"{UPLOAD_URL_PREFIX}/{filename}"                                           
 
             conn.execute(
                 text("""

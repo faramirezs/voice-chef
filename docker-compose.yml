@@ -70,13 +70,14 @@ services:
       DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
-      - uploads:/code/uploads
+      - backend_data:/code/data
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:80/health').read()\""]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
 
   agent:
     build:
@@ -182,9 +183,13 @@ services:
 volumes:
   whisper_models:
   postgres_data:
+<<<<<<< HEAD
   qdrant_storage:
   embedding_models:
   uploads:
+=======
+  backend_data:
+>>>>>>> main
   nginx_ssl:
 
 networks:
