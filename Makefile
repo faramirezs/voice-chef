@@ -63,7 +63,7 @@ dev-back-office: $(ENV)
 	@echo "Building and running db, backend and office-frontend services in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up -d --build db backend office-frontend
 
-up: $(ENV)
+dev-up: $(ENV)
 	@echo "Starting in dev_mode"
 	$(COMPOSE) -f $(PROD_FILE) -f $(DEV_FILE) up
 	@echo "VOICE-CHEF is running in dev_mode"
@@ -94,11 +94,16 @@ prod: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
-prod-fresh: $(ENV)
-	@echo "Building all images from scratch (--no-cache)..."
+prod-fast: $(ENV)
+	@echo "Building all images from scratch..."
 	$(COMPOSE) -f $(PROD_FILE) build
 	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode (fresh build)"
+
+prod-up: $(ENV)
+	@echo "Starting in prod_mode"
+	$(COMPOSE) -f $(PROD_FILE) up
+	@echo "VOICE-CHEF is running in prod_mode"
 
 # ── Lifecycle targets ──────────────────────────────────────────────────────
 #   make down   Stop and remove containers (images + volumes are kept)
