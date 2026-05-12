@@ -85,7 +85,7 @@ dev-up: $(ENV)
 #   /docs        → backend (Swagger)
 #   /openapi.json → backend
 
-prod: $(ENV)
+us-prod: $(ENV)
 	@echo "Stopping existing containers, building fresh images and restarting in prod_mode"
 	@echo "Building rag (heavy) first..."
 	$(COMPOSE) -f $(PROD_FILE) down
@@ -94,7 +94,7 @@ prod: $(ENV)
 	$(COMPOSE) -f $(PROD_FILE) up --remove-orphans
 	@echo "VOICE-CHEF is running in prod_mode"
 
-prod-fast: $(ENV)
+us-prod-fast: $(ENV)
 	@echo "Building all images from scratch..."
 	$(COMPOSE) -f $(PROD_FILE) build
 	$(COMPOSE) -f $(PROD_FILE) up --detach --remove-orphans
