@@ -179,7 +179,7 @@ source .venv/bin/activate
 
 ## Demo path
 
-The database seeds itself on first start: `db/init/04_legacy_data.sql` inserts 83 recipes, about 12,300 ingredients, 13 tenants and 305 nutrition rows (all 83 recipes verified after a fresh load). All seeded recipes belong to the tenant in `DEFAULT_TENANT_ID`, and signup assigns new users to that same tenant, so a fresh account sees the seed data immediately. Recipe and ingredient names come from the source data and are mostly German.
+The database seeds itself on first start. `db/init/04_legacy_data.sql` loads 12,301 ingredient rows, 83 recipe rows, 13 tenant rows and 305 nutrition rows. All seeded recipes belong to the tenant in `DEFAULT_TENANT_ID`, and signup assigns new users to that same tenant, so a fresh account sees the seed data immediately. Recipe and ingredient names come from the source data and are mostly German.
 
 1. Run `make dev` and wait until the backend log shows `Starting FastAPI` (the container runs the migrations first).
 2. Open http://localhost:5173, click **Sign up**, create an account, then log in. The office app is the only place with a login form.
